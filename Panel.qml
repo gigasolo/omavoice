@@ -317,7 +317,7 @@ Panel {
           Item {
             id: header
             width: parent.width
-            implicitHeight: Math.max(heroIcon.implicitHeight, heroLabels.implicitHeight, powerButton.implicitHeight)
+            implicitHeight: Math.max(heroIcon.implicitHeight, heroLabels.implicitHeight, headerActions.implicitHeight)
             readonly property bool ringVisible: root.headerHasCursor
             function focusHero() { root.setHeaderCursor() }
 
@@ -334,7 +334,7 @@ Panel {
               id: heroLabels
               anchors.left: heroIcon.right
               anchors.leftMargin: Style.space(14)
-              anchors.right: settingsButton.left
+              anchors.right: headerActions.left
               anchors.rightMargin: Style.space(12)
               anchors.verticalCenter: parent.verticalCenter
               spacing: Style.space(3)
@@ -359,29 +359,39 @@ Panel {
               }
             }
 
-            PanelActionButton {
-              id: settingsButton
-              anchors.right: powerButton.left
-              anchors.rightMargin: Style.space(4)
-              anchors.verticalCenter: parent.verticalCenter
-              iconText: "󰒓"
-              tooltipText: "Settings"
-              foreground: root.foreground
-              fontFamily: root.fontFamily
-              onClicked: root.showSettings(true)
-            }
-
-            PanelActionButton {
-              id: powerButton
+            Row {
+              id: headerActions
               anchors.right: parent.right
               anchors.verticalCenter: parent.verticalCenter
-              iconText: "󰐥"
-              tooltipText: root.toggleHint
-              foreground: service.enabled ? root.foreground : root.dim
-              hasCursor: header.ringVisible
-              fontFamily: root.fontFamily
-              onHovered: function(on) { if (on) header.focusHero() }
-              onClicked: root.toggleEnabled()
+              spacing: Style.space(8)
+
+              PanelActionButton {
+                id: settingsButton
+                size: powerSwitch.trackHeight
+                bordered: true
+                iconText: "󰒓"
+                tooltipText: "Settings"
+                foreground: root.foreground
+                fontFamily: root.fontFamily
+                anchors.verticalCenter: parent.verticalCenter
+                onClicked: root.showSettings(true)
+              }
+
+              ToggleSwitch {
+                id: powerSwitch
+                checked: service.enabled
+                busy: service.busy && !service.running
+                hasCursor: header.ringVisible
+                foreground: root.foreground
+                anchors.verticalCenter: parent.verticalCenter
+                onHovered: function(on) { if (on) header.focusHero() }
+                onToggled: root.toggleEnabled()
+                PanelToolTip {
+                  visible: powerSwitch.containsMouse
+                  text: root.toggleHint
+                  fontFamily: root.fontFamily
+                }
+              }
             }
           }
 
