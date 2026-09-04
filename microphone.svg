@@ -1,15 +1,17 @@
-<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24">
+<svg xmlns="http://www.w3.org/2000/svg" width="256" height="256" viewBox="0 0 256 256">
   <title>Omavoice</title>
+  <!-- Close-cropped orb with four long sound-wave cutouts, matching the Grok-style mark. -->
   <defs>
     <mask id="wave">
-      <circle cx="12" cy="12" r="11" fill="#fff"/>
-      <circle cx="8.8" cy="12.2" r="2.15" fill="#000"/>
-      <g fill="none" stroke="#000" stroke-width="1.7" stroke-linecap="round">
-        <path d="M7.30 8.07 A4.4 4.4 0 1 1 9.18 16.58"/>
-        <path d="M6.54 6.00 A6.6 6.6 0 1 1 9.38 18.77"/>
-        <path d="M5.79 3.93 A8.8 8.8 0 1 1 9.57 20.97"/>
+      <circle cx="100" cy="148" r="140" fill="#fff"/>
+      <circle cx="84" cy="122" r="22" fill="#000"/>
+      <g fill="none" stroke="#000" stroke-width="18" stroke-linecap="round">
+        <path d="M 71.02 82.06 A 42 42 0 0 1 99.73 160.94"/>
+        <path d="M 62.37 55.43 A 70 70 0 0 1 110.22 186.90"/>
+        <path d="M 53.72 28.80 A 98 98 0 0 1 120.71 212.86"/>
+        <path d="M 43.21 -3.54 A 132 132 0 0 1 133.45 244.39"/>
       </g>
     </mask>
   </defs>
-  <circle cx="12" cy="12" r="11" fill="#fff" mask="url(#wave)"/>
+  <circle cx="100" cy="148" r="140" fill="#fff" mask="url(#wave)"/>
 </svg>

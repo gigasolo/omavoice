@@ -6,28 +6,29 @@
       <stop offset="0%" stop-color="#1A1F1C"/>
       <stop offset="100%" stop-color="#101412"/>
     </linearGradient>
-    <radialGradient id="orb" cx="36%" cy="30%" r="72%">
-      <stop offset="0%" stop-color="#F4F7F5"/>
-      <stop offset="55%" stop-color="#9AE6B4"/>
-      <stop offset="100%" stop-color="#3ECF8E"/>
+    <radialGradient id="orb" cx="38%" cy="28%" r="70%">
+      <stop offset="0%" stop-color="#F7F8F8"/>
+      <stop offset="42%" stop-color="#D8D8D8"/>
+      <stop offset="100%" stop-color="#9A9A9A"/>
     </radialGradient>
     <mask id="wave">
-      <circle cx="12" cy="12" r="11" fill="#fff"/>
-      <circle cx="8.8" cy="12.2" r="2.15" fill="#000"/>
-      <g fill="none" stroke="#000" stroke-width="1.7" stroke-linecap="round">
-        <path d="M7.30 8.07 A4.4 4.4 0 1 1 9.18 16.58"/>
-        <path d="M6.54 6.00 A6.6 6.6 0 1 1 9.38 18.77"/>
-        <path d="M5.79 3.93 A8.8 8.8 0 1 1 9.57 20.97"/>
+      <circle cx="100" cy="148" r="140" fill="#fff"/>
+      <circle cx="84" cy="122" r="22" fill="#000"/>
+      <g fill="none" stroke="#000" stroke-width="18" stroke-linecap="round">
+        <path d="M 71.02 82.06 A 42 42 0 0 1 99.73 160.94"/>
+        <path d="M 62.37 55.43 A 70 70 0 0 1 110.22 186.90"/>
+        <path d="M 53.72 28.80 A 98 98 0 0 1 120.71 212.86"/>
+        <path d="M 43.21 -3.54 A 132 132 0 0 1 133.45 244.39"/>
       </g>
     </mask>
   </defs>
   <rect width="720" height="220" rx="28" fill="url(#panel)"/>
   <rect x="1.5" y="1.5" width="717" height="217" rx="26.5" fill="none" stroke="#2A332E" stroke-width="3"/>
 
-  <g transform="translate(52 54) scale(4.7)">
-    <circle cx="12" cy="12" r="11" fill="url(#orb)" mask="url(#wave)"/>
+  <g transform="translate(8 -20) scale(0.92)">
+    <circle cx="100" cy="148" r="140" fill="url(#orb)" mask="url(#wave)"/>
   </g>
 
-  <text x="200" y="108" fill="#F4F7F5" font-family="ui-sans-serif, system-ui, -apple-system, Segoe UI, Helvetica, Arial, sans-serif" font-size="54" font-weight="700" letter-spacing="-1.2">Omavoice</text>
-  <text x="202" y="148" fill="#8B9A92" font-family="ui-sans-serif, system-ui, -apple-system, Segoe UI, Helvetica, Arial, sans-serif" font-size="20" font-weight="500">Your voice, better heard.</text>
+  <text x="248" y="108" fill="#F4F7F5" font-family="ui-sans-serif, system-ui, -apple-system, Segoe UI, Helvetica, Arial, sans-serif" font-size="54" font-weight="700" letter-spacing="-1.2">Omavoice</text>
+  <text x="250" y="148" fill="#8B9A92" font-family="ui-sans-serif, system-ui, -apple-system, Segoe UI, Helvetica, Arial, sans-serif" font-size="20" font-weight="500">Your voice, better heard.</text>
 </svg>
