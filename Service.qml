@@ -25,6 +25,7 @@ Item {
   property string hostKey: ""
   property var sources: []
   property bool promoted: false
+  property bool meterHoldWanted: false
 
   // Quickshell leaves PwNode.name empty until the node is bound.
   readonly property var nodes: Pipewire.nodes ? Pipewire.nodes.values : []
@@ -40,6 +41,14 @@ Item {
 
   readonly property bool busy: hostProcess.running && !running
   readonly property bool running: hostProcess.running
+  readonly property var beforeNode: {
+    var _ = nodes
+    return nodeNamed(targetName)
+  }
+  readonly property var afterNode: {
+    var _ = nodes
+    return omavoiceNode()
+  }
 
   readonly property string pluginDir: manifest && manifest.__sourceDir ? String(manifest.__sourceDir) : Qt.resolvedUrl(".").toString().replace(/^file:\/\//, "").replace(/\/$/, "")
   readonly property bool enabled: setting("enabled", true) !== false
@@ -92,6 +101,16 @@ Item {
     for (var i = 0; i < nodes.length; i++) {
       var node = nodes[i]
       if (node && !node.isSink && !node.isStream && Model.isOmavoiceNode(node)) return node
+    }
+    return null
+  }
+
+  function nodeNamed(name) {
+    var want = String(name || "")
+    if (!want) return null
+    for (var i = 0; i < nodes.length; i++) {
+      var node = nodes[i]
+      if (node && !node.isSink && !node.isStream && String(node.name || "") === want) return node
     }
     return null
   }
@@ -178,6 +197,35 @@ Item {
     listenProcess.running = true
   }
 
+  // Filter-chain sources are node.passive, so After peaks stay at 0 unless
+  // something captures Omavoice. A silent pw-cat hold while the panel is
+  // open pulls the graph without starting a call or Listen.
+  function setMeterHold(on) {
+    meterHoldWanted = on === true
+    syncMeterHold()
+  }
+
+  function syncMeterHold() {
+    var want = meterHoldWanted && running && enabled
+    if (!want) {
+      meterHoldRetry.stop()
+      if (meterHoldProcess.running) meterHoldProcess.running = false
+      return
+    }
+    if (meterHoldProcess.running) return
+    meterHoldProcess.command = [
+      "pw-cat",
+      "-r",
+      "-a",
+      "--target", Model.NODE_NAME,
+      "--rate", "48000",
+      "--channels", "1",
+      "-P", "{ node.name=omavoice.meter.hold }",
+      "/dev/null"
+    ]
+    meterHoldProcess.running = true
+  }
+
   function promoteDefault() {
     if (!setDefaultSource) return
     var node = omavoiceNode()
@@ -233,6 +281,7 @@ Item {
 
   Component.onDestruction: {
     restoreDefault()
+    setMeterHold(false)
     stopHost()
   }
 
@@ -283,13 +332,28 @@ Item {
       }
     }
     onRunningChanged: {
-      if (running) return
-      root.promoted = false
+      if (!running) root.promoted = false
+      root.syncMeterHold()
     }
   }
 
   Process {
     id: listenProcess
     onRunningChanged: if (!running && root.listen) root.listen = false
+  }
+
+  Process {
+    id: meterHoldProcess
+    onRunningChanged: {
+      if (running) return
+      if (root.meterHoldWanted && root.running) meterHoldRetry.restart()
+    }
+  }
+
+  Timer {
+    id: meterHoldRetry
+    interval: 400
+    repeat: false
+    onTriggered: root.syncMeterHold()
   }
 }

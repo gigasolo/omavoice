@@ -13,7 +13,7 @@
   <a href="LICENSE"><img src="https://img.shields.io/badge/license-MIT-22c55e?style=flat-square" alt="License: MIT"></a>
   <img src="https://img.shields.io/badge/omarchy-4%20Quattro-0ea5e9?style=flat-square" alt="Omarchy 4 Quattro">
   <img src="https://img.shields.io/badge/pipewire-filter--chain-a3e635?style=flat-square" alt="PipeWire filter-chain">
-  <img src="https://img.shields.io/badge/version-0.1.4-111827?style=flat-square" alt="Version 0.1.4">
+  <img src="https://img.shields.io/badge/version-0.1.5-111827?style=flat-square" alt="Version 0.1.5">
 </p>
 
 Pick **Omavoice** in Zoom, Google Meet, OBS, or a browser. The plugin sits under those apps as a PipeWire source, so you do not configure each one. USB mics attach themselves when you plug them in.
@@ -30,7 +30,7 @@ An independent [MIT](LICENSE)-licensed plugin by [GigaSolo](https://github.com/g
 | **Does** | Monitor-mode AEC + RNNoise mono + compressor | High-pass + DeepFilterNet3 (or RNNoise) + compressor | High-pass only |
 | **Keeps** | Your voice on a laptop with speakers | Speech that sounds finished | Applause, keys, and music |
 
-Right-click the mark to toggle. Open the panel to switch presets, pick a microphone, or listen — use headphones for that last one.
+Right-click the mark to toggle. Open the panel to switch presets, pick a microphone, or listen — use headphones for that last one. While the panel is open, Before and After meters show the raw mic against the filtered voice.
 
 In the app itself, choose **Omavoice** as the microphone and turn *its* noise cancellation off. Two denoisers stacked sound hollow.
 

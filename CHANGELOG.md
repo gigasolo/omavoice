@@ -5,6 +5,15 @@ All notable changes to Omavoice are documented here.
 The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.1.5] — 2026-09-04
+
+### Added
+
+- Open panel shows Before and After peak meters (raw mic vs Omavoice), using
+  the same PipeWire peak monitor as the Omarchy audio panel. A silent
+  `pw-cat` hold keeps the filter-chain flowing so After moves without a
+  call. Meters and the hold stop when the panel closes.
+
 ## [0.1.4] — 2026-09-04
 
 ### Changed
@@ -73,6 +82,7 @@ and this project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html)
   guidance.
 - MIT license (GigaSolo LLC).
 
+[0.1.5]: https://github.com/gigasolo/omavoice/compare/v0.1.4...v0.1.5
 [0.1.4]: https://github.com/gigasolo/omavoice/compare/v0.1.3...v0.1.4
 [0.1.3]: https://github.com/gigasolo/omavoice/compare/v0.1.2...v0.1.3
 [0.1.2]: https://github.com/gigasolo/omavoice/compare/v0.1.1...v0.1.2

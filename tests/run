@@ -5,4 +5,5 @@ root="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 
 node --test "$root/tests"/*.test.js
 "$root/tests/dump.test.sh"
+"$root/tests/qml.test.sh"
 omarchy plugin validate "$root"

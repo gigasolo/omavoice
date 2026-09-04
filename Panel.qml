@@ -3,6 +3,7 @@ import QtQuick.Controls
 import QtQuick.Layouts
 import Quickshell
 import Quickshell.Io
+import Quickshell.Services.Pipewire
 import qs.Commons
 import qs.Ui
 import "Model.js" as Model
@@ -165,6 +166,7 @@ Panel {
   onOpenedChanged: {
     if (!opened) {
       if (service.listen) service.setListen(false)
+      if (typeof service.setMeterHold === "function") service.setMeterHold(false)
       return
     }
     cursorActive = false
@@ -172,7 +174,50 @@ Panel {
     displaySources = captureSources.slice()
     ensureCursor()
     if (panelFlick) panelFlick.contentY = 0
+    if (typeof service.setMeterHold === "function") service.setMeterHold(true)
     Qt.callLater(function() { keyCatcher.forceActiveFocus() })
+  }
+
+  PwNodePeakMonitor {
+    id: beforePeakMonitor
+    node: service.beforeNode
+    enabled: root.opened && service.running && !!service.beforeNode
+  }
+
+  PwNodePeakMonitor {
+    id: afterPeakMonitor
+    node: service.afterNode
+    enabled: root.opened && service.running && !!service.afterNode
+  }
+
+  component PeakBar: RowLayout {
+    required property string label
+    required property real peak
+    width: parent.width
+    spacing: Style.space(8)
+
+    Text {
+      text: label
+      color: root.dim
+      font.family: root.fontFamily
+      font.pixelSize: Style.font.caption
+      Layout.preferredWidth: Style.space(52)
+      Layout.alignment: Qt.AlignVCenter
+    }
+
+    Rectangle {
+      Layout.fillWidth: true
+      Layout.preferredHeight: Math.max(Style.space(5), Style.spacing.xs)
+      Layout.alignment: Qt.AlignVCenter
+      color: Util.alpha(root.foreground, 0.18)
+
+      Rectangle {
+        height: parent.height
+        width: parent.width * Math.max(0, Math.min(1, peak))
+        color: root.foreground
+        Behavior on width { NumberAnimation { duration: 70 } }
+      }
+    }
   }
 
   onCaptureSourcesChanged: if (opened) sourceRefreshTimer.restart()
@@ -315,6 +360,22 @@ Panel {
             font.family: root.fontFamily
             font.pixelSize: Style.font.bodySmall
             wrapMode: Text.WordWrap
+          }
+
+          Column {
+            visible: service.running
+            width: parent.width
+            spacing: Style.space(6)
+
+            PeakBar {
+              label: "Before"
+              peak: beforePeakMonitor.peak
+            }
+
+            PeakBar {
+              label: "After"
+              peak: afterPeakMonitor.peak
+            }
           }
 
           Column {
