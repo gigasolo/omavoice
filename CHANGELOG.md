@@ -5,6 +5,13 @@ All notable changes to Omavoice are documented here.
 The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.1.4] — 2026-09-04
+
+### Changed
+
+- Bar mark is a microphone, tinted like HEY’s SVG icon, with a tooltip for
+  off / preset / error.
+
 ## [0.1.3] — 2026-09-04
 
 ### Fixed
@@ -66,6 +73,7 @@ and this project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html)
   guidance.
 - MIT license (GigaSolo LLC).
 
+[0.1.4]: https://github.com/gigasolo/omavoice/compare/v0.1.3...v0.1.4
 [0.1.3]: https://github.com/gigasolo/omavoice/compare/v0.1.2...v0.1.3
 [0.1.2]: https://github.com/gigasolo/omavoice/compare/v0.1.1...v0.1.2
 [0.1.1]: https://github.com/gigasolo/omavoice/compare/v0.1.0...v0.1.1

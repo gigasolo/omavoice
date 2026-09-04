@@ -52,6 +52,12 @@ Panel {
   readonly property color barIconColor: service.enabled && service.running ? barForeground : Qt.darker(barForeground, 1.55)
   readonly property bool headerHasCursor: cursorActive && focusSection === "header"
   readonly property string toggleHint: service.enabled ? "Turn Omavoice off" : "Turn Omavoice on"
+  readonly property string barTooltip: {
+    if (!service.enabled) return "Omavoice · off"
+    if (service.lastError !== "") return "Omavoice · " + service.lastError
+    if (!service.running) return "Omavoice · " + service.statusText
+    return "Omavoice · " + Model.presetLabel(service.preset)
+  }
   readonly property var activePhrases: [
     "Clearing the room",
     "Hushing the fans",
@@ -199,6 +205,8 @@ Panel {
     id: button
     anchors.fill: parent
     bar: root.bar
+    active: service.enabled && service.running
+    tooltipText: root.barTooltip
     iconComponent: Component {
       Item {
         OmavoiceIcon {
