@@ -17,7 +17,9 @@ function isOmavoiceName(name) {
 
 function isOmavoiceNode(node) {
   if (!node) return false
-  if (isOmavoiceName(node.name)) return true
+  var name = String(node.name || "")
+  if (name === NODE_NAME) return true
+  if (name) return false
   return String(node.description || node.nickname || "") === NODE_DESCRIPTION
 }
 

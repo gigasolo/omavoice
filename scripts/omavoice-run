@@ -7,10 +7,11 @@ set -euo pipefail
 preset="meeting"
 target=""
 plugin_dir=""
+dump=0
 runtime_dir="${XDG_RUNTIME_DIR:-/tmp}/omavoice"
 
 usage() {
-  echo "Usage: omavoice-run --preset meeting|podcast|clean --target <node.name> --dir <plugin-dir>" >&2
+  echo "Usage: omavoice-run [--dump] --preset meeting|podcast|clean --target <node.name> --dir <plugin-dir>" >&2
   exit 2
 }
 
@@ -19,6 +20,7 @@ while [[ $# -gt 0 ]]; do
     --preset) preset="${2:-}"; shift 2 ;;
     --target) target="${2:-}"; shift 2 ;;
     --dir) plugin_dir="${2:-}"; shift 2 ;;
+    --dump) dump=1; shift ;;
     -h|--help) usage ;;
     *) usage ;;
   esac
@@ -51,6 +53,9 @@ for candidate in /usr/lib/spa-0.2/aec/libspa-aec-webrtc.so /usr/lib64/spa-0.2/ae
   fi
 done
 
+have_lsp=0
+[[ -f /usr/lib/lv2/lsp-plugins.lv2/compressor_mono.ttl && -f /usr/lib/lv2/lsp-plugins.lv2/limiter_mono.ttl ]] && have_lsp=1
+
 engine="clean"
 if [[ $preset == podcast && -n $deepfilter ]]; then
   engine="deepfilter"
@@ -70,8 +75,54 @@ if [[ $use_aec -eq 1 ]]; then
   capture_target="omavoice.aec"
 fi
 
-# SPA-JSON. Node names are copied literally; PipeWire node names from ALSA
-# are [A-Za-z0-9._-].
+stream_props() {
+  local name=$1
+  local desc=$2
+  local klass=$3
+  local extra=${4:-}
+  cat <<EOF
+                node.name = "$name"
+                node.description = "$desc"
+                media.class = $klass
+                audio.rate = 48000
+                audio.position = [ MONO ]
+                node.latency = 256/48000
+$extra
+EOF
+}
+
+# Light makeup after NS: ~2.5:1 into a −1 dB ceiling. LSP gains are linear.
+# Attack threshold 0.251 ≈ −12 dB; makeup 2.0 ≈ +6 dB.
+dynamics_nodes() {
+  [[ $have_lsp -eq 1 ]] || return 0
+  cat <<'EOF'
+                    {
+                        type = lv2
+                        name = comp
+                        plugin = "http://lsp-plug.in/plugins/lv2/compressor_mono"
+                        control = {
+                            "cm" = 0
+                            "al" = 0.25119
+                            "cr" = 2.5
+                            "at" = 15.0
+                            "rt" = 120.0
+                            "mk" = 2.0
+                        }
+                    }
+                    {
+                        type = lv2
+                        name = lim
+                        plugin = "http://lsp-plug.in/plugins/lv2/limiter_mono"
+                        control = {
+                            "alr" = 0
+                            "boost" = 0
+                            "th" = 0.891
+                            "g_in" = 1.0
+                        }
+                    }
+EOF
+}
+
 cat >"$conf" <<EOF
 context.properties = {
     log.level = 0
@@ -80,7 +131,7 @@ context.properties = {
 context.spa-libs = {
     audio.convert.* = audioconvert/libspa-audioconvert
     support.*       = support/libspa-support
-    aec.*           = aec/libspa-aec
+    audio.aec       = aec/libspa-aec-webrtc
 }
 
 context.modules = [
@@ -99,9 +150,11 @@ if [[ $use_aec -eq 1 ]]; then
         flags = [ ifexists nofail ]
         args = {
             library.name = aec/libspa-aec-webrtc
+            monitor.mode = true
             aec.args = {
-                webrtc.gain_control = true
+                webrtc.gain_control = false
                 webrtc.extended_filter = true
+                webrtc.delay_agnostic = true
                 webrtc.noise_suppression = false
                 webrtc.high_pass_filter = true
             }
@@ -113,57 +166,45 @@ if [[ $use_aec -eq 1 ]]; then
             capture.props = {
                 node.name = "omavoice.aec.capture"
                 node.passive = true
-                audio.rate = 48000
                 target.object = "$target"
             }
             playback.props = {
                 node.name = "omavoice.aec.playback"
                 node.passive = true
-                media.class = Audio/Sink
             }
         }
     }
 EOF
 fi
 
-vad="50.0"
-grace="200"
-if [[ $preset == podcast ]]; then
-  vad="85.0"
-  grace="150"
-elif [[ $preset == meeting ]]; then
-  vad="60.0"
-  grace="200"
-fi
-
-if [[ $engine == rnnoise ]]; then
-  cat >>"$conf" <<EOF
+# Build the voice graph as an explicit series so PipeWire does not duplicate
+# it per channel. Mono RNNoise/DFN ports are Input/Output; LSP uses in/out.
+graph_head() {
+  cat <<EOF
     { name = libpipewire-module-filter-chain
         flags = [ nofail ]
         args = {
             node.description = "Omavoice"
             media.name = "Omavoice"
+            node.latency = 256/48000
+            audio.rate = 48000
+            audio.position = [ MONO ]
             filter.graph = {
                 nodes = [
-                    {
-                        type = ladspa
-                        name = denoise
-                        plugin = "$rnnoise"
-                        label = noise_suppressor_stereo
-                        control = {
-                            "VAD Threshold (%)" = $vad
-                            "VAD Grace Period (ms)" = $grace
-                            "Retroactive VAD Grace (ms)" = 0
-                        }
-                    }
+EOF
+}
+
+graph_tail() {
+  cat <<EOF
                 ]
+$1
             }
-            audio.rate = 48000
-            audio.position = [ FL FR ]
             capture.props = {
                 node.name = "omavoice.capture"
                 node.passive = true
                 audio.rate = 48000
+                audio.position = [ MONO ]
+                node.latency = 256/48000
                 target.object = "$capture_target"
             }
             playback.props = {
@@ -171,85 +212,123 @@ if [[ $engine == rnnoise ]]; then
                 node.description = "Omavoice"
                 media.class = Audio/Source
                 audio.rate = 48000
+                audio.position = [ MONO ]
+                node.latency = 256/48000
             }
         }
     }
 EOF
-elif [[ $engine == deepfilter ]]; then
-  cat >>"$conf" <<EOF
-    { name = libpipewire-module-filter-chain
-        flags = [ nofail ]
-        args = {
-            node.description = "Omavoice"
-            media.name = "Omavoice"
-            filter.graph = {
-                nodes = [
-                    {
-                        type = ladspa
-                        name = denoise
-                        plugin = "$deepfilter"
-                        label = deep_filter_stereo
-                        control = {
-                            "Attenuation Limit (dB)" = 100
-                        }
-                    }
-                ]
-            }
-            audio.rate = 48000
-            audio.position = [ FL FR ]
-            capture.props = {
-                node.name = "omavoice.capture"
-                node.passive = true
-                audio.rate = 48000
-                target.object = "$capture_target"
-            }
-            playback.props = {
-                node.name = "omavoice"
-                node.description = "Omavoice"
-                media.class = Audio/Source
-                audio.rate = 48000
-            }
-        }
-    }
-EOF
-else
-  cat >>"$conf" <<EOF
-    { name = libpipewire-module-filter-chain
-        flags = [ nofail ]
-        args = {
-            node.description = "Omavoice"
-            media.name = "Omavoice"
-            filter.graph = {
-                nodes = [
+}
+
+hpf_node() {
+  cat <<'EOF'
                     {
                         type = builtin
                         name = hp
                         label = bq_highpass
                         control = { "Freq" = 80.0 "Q" = 0.707 }
                     }
-                ]
-            }
-            audio.rate = 48000
-            audio.position = [ FL FR ]
-            capture.props = {
-                node.name = "omavoice.capture"
-                node.passive = true
-                audio.rate = 48000
-                target.object = "$capture_target"
-            }
-            playback.props = {
-                node.name = "omavoice"
-                node.description = "Omavoice"
-                media.class = Audio/Source
-                audio.rate = 48000
-            }
-        }
-    }
 EOF
-fi
+}
+
+rnnoise_node() {
+  local vad=$1 grace=$2
+  cat <<EOF
+                    {
+                        type = ladspa
+                        name = denoise
+                        plugin = "$rnnoise"
+                        label = noise_suppressor_mono
+                        control = {
+                            "VAD Threshold (%)" = $vad
+                            "VAD Grace Period (ms)" = $grace
+                            "Retroactive VAD Grace (ms)" = 0
+                        }
+                    }
+EOF
+}
+
+dfn_node() {
+  cat <<EOF
+                    {
+                        type = ladspa
+                        name = denoise
+                        plugin = "$deepfilter"
+                        label = deep_filter_mono
+                        control = {
+                            "Attenuation Limit (dB)" = 70
+                        }
+                    }
+EOF
+}
+
+{
+  graph_head
+  links=""
+  if [[ $engine == rnnoise ]]; then
+    if [[ $preset == podcast ]]; then
+      hpf_node
+      rnnoise_node 85.0 200
+      dynamics_nodes
+      if [[ $have_lsp -eq 1 ]]; then
+        links='                links = [
+                    { output = "hp:Out" input = "denoise:Input" }
+                    { output = "denoise:Output" input = "comp:in" }
+                    { output = "comp:out" input = "lim:in" }
+                ]
+                inputs = [ "hp:In" ]
+                outputs = [ "lim:out" ]'
+      else
+        links='                links = [
+                    { output = "hp:Out" input = "denoise:Input" }
+                ]
+                inputs = [ "hp:In" ]
+                outputs = [ "denoise:Output" ]'
+      fi
+    else
+      rnnoise_node 85.0 200
+      dynamics_nodes
+      if [[ $have_lsp -eq 1 ]]; then
+        links='                links = [
+                    { output = "denoise:Output" input = "comp:in" }
+                    { output = "comp:out" input = "lim:in" }
+                ]
+                inputs = [ "denoise:Input" ]
+                outputs = [ "lim:out" ]'
+      fi
+    fi
+  elif [[ $engine == deepfilter ]]; then
+    hpf_node
+    dfn_node
+    dynamics_nodes
+    if [[ $have_lsp -eq 1 ]]; then
+      links='                links = [
+                    { output = "hp:Out" input = "denoise:Input" }
+                    { output = "denoise:Output" input = "comp:in" }
+                    { output = "comp:out" input = "lim:in" }
+                ]
+                inputs = [ "hp:In" ]
+                outputs = [ "lim:out" ]'
+    else
+      links='                links = [
+                    { output = "hp:Out" input = "denoise:Input" }
+                ]
+                inputs = [ "hp:In" ]
+                outputs = [ "denoise:Output" ]'
+    fi
+  else
+    hpf_node
+  fi
+  graph_tail "$links"
+} >>"$conf"
 
 cat >>"$conf" <<EOF
 ]
 EOF
+
+if [[ $dump -eq 1 ]]; then
+  cat "$conf"
+  exit 0
+fi
 
 exec /usr/bin/pipewire -c "$conf"

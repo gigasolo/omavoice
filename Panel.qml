@@ -432,6 +432,16 @@ Panel {
             }
 
             Text {
+              visible: Model.sourceKind(service.targetName) === "bluetooth"
+              width: parent.width
+              text: "Headset mics are narrow-band. USB is better for Omavoice."
+              color: root.dim
+              font.family: root.fontFamily
+              font.pixelSize: Style.font.caption
+              wrapMode: Text.WordWrap
+            }
+
+            Text {
               visible: displaySources.length === 0
               width: parent.width
               text: "No capture sources. Plug in a USB mic."

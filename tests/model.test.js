@@ -28,7 +28,9 @@ test("normalizePreset falls back to meeting", () => {
 
 test("isOmavoiceNode matches name or description when name is still unbound", () => {
   assert.equal(Model.isOmavoiceNode({ name: "omavoice" }), true)
+  assert.equal(Model.isOmavoiceNode({ name: "omavoice.aec" }), false)
   assert.equal(Model.isOmavoiceNode({ name: "", description: "Omavoice" }), true)
+  assert.equal(Model.isOmavoiceNode({ name: "", description: "Omavoice echo cancel" }), false)
   assert.equal(Model.isOmavoiceNode({ name: "", description: "Microphones" }), false)
   assert.equal(Model.isOmavoiceNode(null), false)
 })

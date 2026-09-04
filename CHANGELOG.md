@@ -5,6 +5,28 @@ All notable changes to Omavoice are documented here.
 The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.1.2] — 2026-09-04
+
+### Fixed
+
+- Meeting echo cancel now uses `monitor.mode = true` so WebRTC AEC reads the
+  default sink’s monitor instead of a virtual sink Zoom/Meet never play into.
+  The isolated client maps `audio.aec` to `libspa-aec-webrtc`; without that
+  the module was skipped. Do not force MONO/`node.latency` on the AEC module
+  itself — that SIGFPE’d against a stereo speaker monitor.
+- Disabled `webrtc.gain_control`; PipeWire’s WebRTC backend documents that AGC
+  wrecks delay-agnostic AEC, especially on speech.
+
+### Changed
+
+- Denoisers run **mono** (`noise_suppressor_mono` / `deep_filter_mono`) at
+  48 kHz with `node.latency = 256/48000`.
+- Meeting RNNoise VAD is 85% with a 200 ms grace; Podcast grace matches.
+- DeepFilterNet attenuation cap is 70 dB (was unlimited 100 dB).
+- Meeting and Podcast add a light LSP compressor + limiter after denoise so
+  speech does not come out thin.
+- Bluetooth sources show a narrow-band warning in the panel.
+
 ## [0.1.1] — 2026-09-03
 
 ### Fixed
@@ -36,5 +58,6 @@ and this project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html)
   guidance.
 - MIT license (GigaSolo LLC).
 
+[0.1.2]: https://github.com/gigasolo/omavoice/compare/v0.1.1...v0.1.2
 [0.1.1]: https://github.com/gigasolo/omavoice/compare/v0.1.0...v0.1.1
 [0.1.0]: https://github.com/gigasolo/omavoice/releases/tag/v0.1.0
