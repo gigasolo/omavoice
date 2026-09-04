@@ -71,8 +71,14 @@ if [[ $preset == meeting && -n $webrtc ]]; then
   use_aec=1
 fi
 
-mkdir -p "$runtime_dir"
-conf="$runtime_dir/host.conf"
+# --dump is for tests. Do not replace the live runtime host.conf.
+if [[ $dump -eq 1 ]]; then
+  conf=$(mktemp)
+  trap 'rm -f -- "$conf"' EXIT
+else
+  mkdir -p "$runtime_dir"
+  conf="$runtime_dir/host.conf"
+fi
 capture_target=$target
 if [[ $use_aec -eq 1 ]]; then
   capture_target="omavoice.aec"
