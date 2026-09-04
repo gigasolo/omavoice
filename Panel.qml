@@ -108,6 +108,62 @@ Panel {
     persistSettings({ setDefaultSource: !service.setDefaultSource })
   }
 
+  function setMeetingQuality(value) {
+    persistSettings({ meetingQuality: Model.normalizeQuality(value) })
+  }
+
+  function setPodcastQuality(value) {
+    persistSettings({ podcastQuality: Model.normalizeQuality(value) })
+  }
+
+  component QualitySlider: Column {
+    required property string title
+    required property string quality
+    signal chosen(string value)
+
+    width: parent.width
+    spacing: Style.space(8)
+
+    Text {
+      text: title
+      color: root.foreground
+      font.family: root.fontFamily
+      font.pixelSize: Style.font.subtitle
+      font.bold: true
+    }
+
+    PanelSlider {
+      bar: root.bar
+      width: parent.width
+      minimum: 0
+      maximum: 2
+      step: 1
+      integer: true
+      tickCount: 3
+      value: Model.qualityIndex(quality)
+      onMoved: function(v) { chosen(Model.qualityFromIndex(v)) }
+      onReleased: function(v) { chosen(Model.qualityFromIndex(v)) }
+    }
+
+    Row {
+      width: parent.width
+      Repeater {
+        model: ["Good", "Better", "Best"]
+        Text {
+          required property string modelData
+          required property int index
+          width: parent.width / 3
+          text: modelData
+          color: Model.qualityIndex(quality) === index ? root.foreground : root.dim
+          font.family: root.fontFamily
+          font.pixelSize: Style.font.caption
+          font.bold: Model.qualityIndex(quality) === index
+          horizontalAlignment: index === 0 ? Text.AlignLeft : (index === 2 ? Text.AlignRight : Text.AlignHCenter)
+        }
+      }
+    }
+  }
+
   function launchSetup() {
     if (!bar || !setup.command) return
     bar.run("omarchy-launch-floating-terminal-with-presentation " + Util.shellQuote(setup.command))
@@ -706,6 +762,20 @@ Panel {
             checked: service.setDefaultSource
             foreground: root.foreground
             onClicked: root.toggleDefaultSource()
+          }
+
+          PanelSeparator { foreground: root.foreground }
+
+          QualitySlider {
+            title: "Meeting"
+            quality: service.meetingQuality
+            onChosen: function(value) { root.setMeetingQuality(value) }
+          }
+
+          QualitySlider {
+            title: "Podcast"
+            quality: service.podcastQuality
+            onChosen: function(value) { root.setPodcastQuality(value) }
           }
         }
       }

@@ -71,6 +71,17 @@ test("pickSource falls back to the default builtin when no USB is present", () =
   assert.equal(picked.name, builtin.name)
 })
 
+test("normalizeQuality defaults to better", () => {
+  assert.equal(Model.normalizeQuality("good"), "good")
+  assert.equal(Model.normalizeQuality("BEST"), "best")
+  assert.equal(Model.normalizeQuality(""), "better")
+  assert.equal(Model.normalizeQuality("nope"), "better")
+  assert.equal(Model.qualityIndex("better"), 1)
+  assert.equal(Model.qualityFromIndex(0), "good")
+  assert.equal(Model.qualityFromIndex(2), "best")
+  assert.equal(Model.qualityFromIndex(99), "best")
+})
+
 test("shouldDeferSourcePick keeps the mic while PipeWire names are unbound", () => {
   assert.equal(Model.shouldDeferSourcePick(usb.name, true), true)
   assert.equal(Model.shouldDeferSourcePick(usb.name, false), false)

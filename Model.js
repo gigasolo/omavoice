@@ -1,11 +1,29 @@
 var NODE_NAME = "omavoice"
 var NODE_DESCRIPTION = "Omavoice"
 var PRESETS = ["meeting", "podcast", "clean"]
+var QUALITIES = ["good", "better", "best"]
 
 function normalizePreset(value) {
   var preset = String(value || "").toLowerCase()
   if (PRESETS.indexOf(preset) >= 0) return preset
   return "meeting"
+}
+
+function normalizeQuality(value) {
+  var quality = String(value || "").toLowerCase()
+  if (QUALITIES.indexOf(quality) >= 0) return quality
+  return "better"
+}
+
+function qualityIndex(value) {
+  return QUALITIES.indexOf(normalizeQuality(value))
+}
+
+function qualityFromIndex(index) {
+  var i = Math.round(Number(index))
+  if (!isFinite(i) || i < 0) i = 1
+  if (i > 2) i = 2
+  return QUALITIES[i]
 }
 
 function isOmavoiceName(name) {
@@ -158,7 +176,11 @@ if (typeof module !== "undefined") {
     NODE_NAME: NODE_NAME,
     NODE_DESCRIPTION: NODE_DESCRIPTION,
     PRESETS: PRESETS,
+    QUALITIES: QUALITIES,
     normalizePreset: normalizePreset,
+    normalizeQuality: normalizeQuality,
+    qualityIndex: qualityIndex,
+    qualityFromIndex: qualityFromIndex,
     isOmavoiceName: isOmavoiceName,
     isOmavoiceNode: isOmavoiceNode,
     isUsbSourceName: isUsbSourceName,

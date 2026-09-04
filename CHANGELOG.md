@@ -5,6 +5,14 @@ All notable changes to Omavoice are documented here.
 The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.1.11] — 2026-09-04
+
+### Added
+
+- Settings has a three-stop slider for **Meeting** and **Podcast**: Good,
+  Better, Best. Default is Better (today’s tune). Good is gentler; Best
+  is tighter. Clean is unchanged.
+
 ## [0.1.10] — 2026-09-04
 
 ### Changed
@@ -137,6 +145,7 @@ and this project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html)
   guidance.
 - MIT license (GigaSolo LLC).
 
+[0.1.11]: https://github.com/gigasolo/omavoice/compare/v0.1.10...v0.1.11
 [0.1.10]: https://github.com/gigasolo/omavoice/compare/v0.1.9...v0.1.10
 [0.1.9]: https://github.com/gigasolo/omavoice/compare/v0.1.8...v0.1.9
 [0.1.8]: https://github.com/gigasolo/omavoice/compare/v0.1.7...v0.1.8

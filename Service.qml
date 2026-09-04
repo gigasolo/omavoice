@@ -49,6 +49,9 @@ Item {
   readonly property string pluginDir: manifest && manifest.__sourceDir ? String(manifest.__sourceDir) : Qt.resolvedUrl(".").toString().replace(/^file:\/\//, "").replace(/\/$/, "")
   readonly property bool enabled: setting("enabled", true) !== false
   readonly property string preset: Model.normalizePreset(setting("preset", "meeting"))
+  readonly property string meetingQuality: Model.normalizeQuality(setting("meetingQuality", "better"))
+  readonly property string podcastQuality: Model.normalizeQuality(setting("podcastQuality", "better"))
+  readonly property string quality: preset === "podcast" ? podcastQuality : meetingQuality
   readonly property string pinnedSource: String(setting("pinnedSource", "") || "")
   readonly property bool setDefaultSource: setting("setDefaultSource", true) !== false
   readonly property var setup: Model.setupGuide(haveRnnoise)
@@ -153,7 +156,7 @@ Item {
 
   function startHostNow() {
     if (!root.active || !enabled || !targetName) return
-    var key = preset + "\0" + targetName + "\0" + pluginDir
+    var key = preset + "\0" + quality + "\0" + targetName + "\0" + pluginDir
     if (hostProcess.running && hostKey === key) return
     if (meterHoldProcess.running) meterHoldProcess.running = false
     meterHoldNodeId = ""
@@ -161,7 +164,7 @@ Item {
     lastError = ""
     promoted = false
     hostProcess.running = false
-    hostProcess.command = [scriptPath("omavoice-run"), "--preset", preset, "--target", targetName, "--dir", pluginDir]
+    hostProcess.command = [scriptPath("omavoice-run"), "--preset", preset, "--quality", quality, "--target", targetName, "--dir", pluginDir]
     hostProcess.running = true
   }
 
@@ -278,6 +281,7 @@ Item {
 
   onEnabledChanged: syncHost()
   onPresetChanged: syncHost()
+  onQualityChanged: syncHost()
   onPinnedSourceChanged: refreshSources()
   onTargetNameChanged: syncHost()
   onAfterNodeChanged: syncMeterHold()

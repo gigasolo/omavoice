@@ -5,19 +5,21 @@
 set -euo pipefail
 
 preset="meeting"
+quality="better"
 target=""
 plugin_dir=""
 dump=0
 runtime_dir="${XDG_RUNTIME_DIR:-/tmp}/omavoice"
 
 usage() {
-  echo "Usage: omavoice-run [--dump] --preset meeting|podcast|clean --target <node.name> --dir <plugin-dir>" >&2
+  echo "Usage: omavoice-run [--dump] --preset meeting|podcast|clean [--quality good|better|best] --target <node.name> --dir <plugin-dir>" >&2
   exit 2
 }
 
 while [[ $# -gt 0 ]]; do
   case "$1" in
     --preset) preset="${2:-}"; shift 2 ;;
+    --quality) quality="${2:-}"; shift 2 ;;
     --target) target="${2:-}"; shift 2 ;;
     --dir) plugin_dir="${2:-}"; shift 2 ;;
     --dump) dump=1; shift ;;
@@ -28,6 +30,7 @@ done
 
 [[ -n $target && -n $plugin_dir ]] || usage
 [[ $preset == meeting || $preset == podcast || $preset == clean ]] || usage
+[[ $quality == good || $quality == better || $quality == best ]] || quality=better
 
 rnnoise=""
 for candidate in /usr/lib/ladspa/librnnoise_ladspa.so /usr/lib64/ladspa/librnnoise_ladspa.so; do
@@ -254,6 +257,7 @@ EOF
 }
 
 dfn_node() {
+  local atten=$1
   cat <<EOF
                     {
                         type = ladspa
@@ -261,11 +265,33 @@ dfn_node() {
                         plugin = "$deepfilter"
                         label = deep_filter_mono
                         control = {
-                            "Attenuation Limit (dB)" = 70
+                            "Attenuation Limit (dB)" = $atten
                         }
                     }
 EOF
 }
+
+meeting_vad=80.0
+meeting_grace=400
+podcast_vad=85.0
+podcast_grace=200
+podcast_dfn=70
+case $quality in
+  good)
+    meeting_vad=70.0
+    meeting_grace=500
+    podcast_vad=75.0
+    podcast_grace=400
+    podcast_dfn=50
+    ;;
+  best)
+    meeting_vad=85.0
+    meeting_grace=250
+    podcast_vad=90.0
+    podcast_grace=150
+    podcast_dfn=85
+    ;;
+esac
 
 {
   graph_head
@@ -273,7 +299,7 @@ EOF
   if [[ $engine == rnnoise ]]; then
     if [[ $preset == podcast ]]; then
       hpf_node
-      rnnoise_node 85.0 200
+      rnnoise_node $podcast_vad $podcast_grace
       dynamics_nodes
       if [[ $have_lsp -eq 1 ]]; then
         links='                links = [
@@ -291,7 +317,7 @@ EOF
                 outputs = [ "denoise:Output" ]'
       fi
     else
-      rnnoise_node 80.0 400
+      rnnoise_node $meeting_vad $meeting_grace
       dynamics_nodes
       if [[ $have_lsp -eq 1 ]]; then
         links='                links = [
@@ -304,7 +330,7 @@ EOF
     fi
   elif [[ $engine == deepfilter ]]; then
     hpf_node
-    dfn_node
+    dfn_node $podcast_dfn
     dynamics_nodes
     if [[ $have_lsp -eq 1 ]]; then
       links='                links = [

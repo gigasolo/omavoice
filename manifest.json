@@ -2,7 +2,7 @@
   "schemaVersion": 1,
   "id": "gigasolo.omavoice",
   "name": "Omavoice",
-  "version": "0.1.10",
+  "version": "0.1.11",
   "author": "GigaSolo",
   "license": "MIT",
   "homepage": "https://github.com/gigasolo/omavoice",
@@ -31,7 +31,9 @@
       "enabled": true,
       "preset": "meeting",
       "pinnedSource": "",
-      "setDefaultSource": true
+      "setDefaultSource": true,
+      "meetingQuality": "better",
+      "podcastQuality": "better"
     },
     "schema": [
       {
@@ -63,6 +65,28 @@
         "type": "boolean",
         "label": "Make Omavoice the default input",
         "defaultValue": true
+      },
+      {
+        "key": "meetingQuality",
+        "type": "enum",
+        "label": "Meeting processing",
+        "options": [
+          "good",
+          "better",
+          "best"
+        ],
+        "defaultValue": "better"
+      },
+      {
+        "key": "podcastQuality",
+        "type": "enum",
+        "label": "Podcast processing",
+        "options": [
+          "good",
+          "better",
+          "best"
+        ],
+        "defaultValue": "better"
       }
     ]
   }

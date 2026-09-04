@@ -6,13 +6,17 @@ run="$root/scripts/omavoice-run"
 target="alsa_input.usb-TEST_MIC-00.analog-stereo"
 
 dump() {
-  "$run" --dump --preset "$1" --target "$target" --dir "$root"
+  "$run" --dump --preset "$1" --target "$target" --dir "$root" "${@:2}"
 }
 
 fail() { echo "dump.test: $*" >&2; exit 1; }
 
 meeting="$(dump meeting)"
+meeting_good="$(dump meeting --quality good)"
+meeting_best="$(dump meeting --quality best)"
 podcast="$(dump podcast)"
+podcast_good="$(dump podcast --quality good)"
+podcast_best="$(dump podcast --quality best)"
 clean="$(dump clean)"
 
 echo "$meeting" | grep -q 'audio.aec' || fail "meeting must map audio.aec spa lib"
@@ -23,8 +27,12 @@ echo "$meeting" | grep -q 'media.class = Audio/Sink' && fail "meeting must not i
 echo "$meeting" | grep -A8 'node.name = "omavoice.aec"' | grep -q 'Stream/Output/Audio/Internal' \
   || fail "AEC source must be internal, not a second microphone"
 echo "$meeting" | grep -q 'noise_suppressor_mono' || fail "meeting must use RNNoise mono"
-echo "$meeting" | grep -q '"VAD Threshold (%)" = 80.0' || fail "meeting VAD must be 80"
-echo "$meeting" | grep -q '"VAD Grace Period (ms)" = 400' || fail "meeting grace must be 400"
+echo "$meeting" | grep -q '"VAD Threshold (%)" = 80.0' || fail "meeting better VAD must be 80"
+echo "$meeting" | grep -q '"VAD Grace Period (ms)" = 400' || fail "meeting better grace must be 400"
+echo "$meeting_good" | grep -q '"VAD Threshold (%)" = 70.0' || fail "meeting good VAD must be 70"
+echo "$meeting_good" | grep -q '"VAD Grace Period (ms)" = 500' || fail "meeting good grace must be 500"
+echo "$meeting_best" | grep -q '"VAD Threshold (%)" = 85.0' || fail "meeting best VAD must be 85"
+echo "$meeting_best" | grep -q '"VAD Grace Period (ms)" = 250' || fail "meeting best grace must be 250"
 echo "$meeting" | grep -A10 'node.name = "omavoice.capture"' | grep -q 'node.dont-fallback = true' \
   || fail "omavoice.capture must not fall back to another mic"
 echo "$meeting" | grep -q 'audio.position = \[ MONO \]' || fail "meeting must be mono"
@@ -39,12 +47,16 @@ echo "$podcast" | grep -q 'audio.position = \[ MONO \]' || fail "podcast must be
 echo "$podcast" | grep -q 'node.latency = 256/48000' || fail "podcast must pin 256/48000"
 if grep -q libdeep_filter_ladspa.so <<<"$podcast"; then
   echo "$podcast" | grep -q 'deep_filter_mono' || fail "podcast must use DFN mono when present"
-  echo "$podcast" | grep -q '"Attenuation Limit (dB)" = 70' || fail "podcast DFN cap must be 70 dB"
+  echo "$podcast" | grep -q '"Attenuation Limit (dB)" = 70' || fail "podcast better DFN cap must be 70 dB"
+  echo "$podcast_good" | grep -q '"Attenuation Limit (dB)" = 50' || fail "podcast good DFN cap must be 50 dB"
+  echo "$podcast_best" | grep -q '"Attenuation Limit (dB)" = 85' || fail "podcast best DFN cap must be 85 dB"
   echo "$podcast" | grep -q 'deep_filter_stereo' && fail "podcast must not use stereo DFN"
 else
   echo "$podcast" | grep -q 'noise_suppressor_mono' || fail "podcast RNNoise fallback must be mono"
-  echo "$podcast" | grep -q '"VAD Threshold (%)" = 85.0' || fail "podcast VAD must be 85"
-  echo "$podcast" | grep -q '"VAD Grace Period (ms)" = 200' || fail "podcast grace must be 200"
+  echo "$podcast" | grep -q '"VAD Threshold (%)" = 85.0' || fail "podcast better VAD must be 85"
+  echo "$podcast" | grep -q '"VAD Grace Period (ms)" = 200' || fail "podcast better grace must be 200"
+  echo "$podcast_good" | grep -q '"VAD Threshold (%)" = 75.0' || fail "podcast good VAD must be 75"
+  echo "$podcast_best" | grep -q '"VAD Threshold (%)" = 90.0' || fail "podcast best VAD must be 90"
 fi
 
 echo "$clean" | grep -q 'bq_highpass' || fail "clean must high-pass"
