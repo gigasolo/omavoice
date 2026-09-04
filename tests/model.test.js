@@ -42,6 +42,13 @@ test("USB and omavoice name detection", () => {
   assert.equal(Model.isCaptureSourceName(usb.name), true)
 })
 
+test("sourcesUnchanged ignores object identity and node ids", () => {
+  const a = [{ name: usb.name, description: usb.description, id: 1 }]
+  const b = [{ name: usb.name, description: usb.description, id: 99 }]
+  assert.equal(Model.sourcesUnchanged(a, b), true)
+  assert.equal(Model.sourcesUnchanged(a, [usb, builtin]), false)
+})
+
 test("pickSource prefers a pinned USB node", () => {
   const picked = Model.pickSource([builtin, usb, usb2], usb2.name, builtin.name)
   assert.equal(picked.name, usb2.name)

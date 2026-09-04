@@ -41,6 +41,9 @@ Panel {
     }
     return list
   }
+  // Snapshot the list while the panel is open. A live Repeater model that
+  // is replaced on every PipeWire poll destroys the row mid-click.
+  property var displaySources: []
   readonly property color foreground: bar ? bar.foreground : Color.foreground
   readonly property color urgent: bar ? bar.urgent : Color.urgent
   readonly property color dim: Qt.darker(foreground, 1.55)
@@ -82,6 +85,7 @@ Panel {
 
   function chooseSource(name) {
     persistSettings({ pinnedSource: String(name || "") })
+    if (service && typeof service.pinSource === "function") service.pinSource(name)
   }
 
   function toggleListen() {
@@ -100,12 +104,12 @@ Panel {
         if (presets[i].value === service.preset) { presetIndex = i; break }
       }
     }
-    if (captureSources.length === 0) {
+    if (displaySources.length === 0) {
       if (focusSection === "sources") focusSection = "presets"
       sourceIndex = 0
       return
     }
-    if (sourceIndex >= captureSources.length) sourceIndex = captureSources.length - 1
+    if (sourceIndex >= displaySources.length) sourceIndex = displaySources.length - 1
     if (sourceIndex < 0) sourceIndex = 0
   }
 
@@ -128,23 +132,23 @@ Panel {
       presetIndex = Math.max(0, Math.min(presets.length - 1, presetIndex + dx))
       return
     }
-    if (focusSection === "sources" && dy !== 0 && captureSources.length > 0) {
+    if (focusSection === "sources" && dy !== 0 && displaySources.length > 0) {
       var next = sourceIndex + dy
-      if (next >= 0 && next < captureSources.length) {
+      if (next >= 0 && next < displaySources.length) {
         sourceIndex = next
         return
       }
     }
     var ni = Math.max(0, Math.min(sections.length - 1, idx + dy))
     focusSection = sections[ni]
-    if (focusSection === "sources") sourceIndex = dy > 0 ? 0 : Math.max(0, captureSources.length - 1)
+    if (focusSection === "sources") sourceIndex = dy > 0 ? 0 : Math.max(0, displaySources.length - 1)
   }
 
   function activateCursor() {
     ensureCursor()
     if (focusSection === "header") toggleEnabled()
     else if (focusSection === "presets") choosePreset(presets[presetIndex].value)
-    else if (focusSection === "sources" && captureSources[sourceIndex]) chooseSource(captureSources[sourceIndex].name)
+    else if (focusSection === "sources" && displaySources[sourceIndex]) chooseSource(displaySources[sourceIndex].name)
     else if (focusSection === "setup") launchSetup()
     else if (focusSection === "listen") toggleListen()
   }
@@ -159,9 +163,18 @@ Panel {
     }
     cursorActive = false
     focusSection = "header"
+    displaySources = captureSources.slice()
     ensureCursor()
     if (panelFlick) panelFlick.contentY = 0
     Qt.callLater(function() { keyCatcher.forceActiveFocus() })
+  }
+
+  onCaptureSourcesChanged: if (opened) sourceRefreshTimer.restart()
+
+  Timer {
+    id: sourceRefreshTimer
+    interval: 400
+    onTriggered: if (root.opened) root.displaySources = root.captureSources.slice()
   }
 
   Service {
@@ -419,7 +432,7 @@ Panel {
             }
 
             Text {
-              visible: captureSources.length === 0
+              visible: displaySources.length === 0
               width: parent.width
               text: "No capture sources. Plug in a USB mic."
               color: root.dim
@@ -432,25 +445,20 @@ Panel {
               width: parent.width
               spacing: Style.space(4)
               Repeater {
-                model: captureSources
+                model: displaySources
                 CursorSurface {
+                  id: sourceRow
                   required property var modelData
                   required property int index
+                  readonly property bool isActive: service.targetName === modelData.name
                   width: parent.width
                   implicitHeight: sourceCol.implicitHeight + Style.space(8)
                   hasCursor: root.cursorActive && root.focusSection === "sources" && root.sourceIndex === index
+                  current: isActive
                   foreground: root.foreground
-                  MouseArea {
-                    anchors.fill: parent
-                    hoverEnabled: true
-                    cursorShape: Qt.PointingHandCursor
-                    onEntered: {
-                      root.cursorActive = true
-                      root.focusSection = "sources"
-                      root.sourceIndex = index
-                    }
-                    onClicked: root.chooseSource(modelData.name)
-                  }
+                  fill: root.bar ? Style.hoverFillFor(root.bar.foreground, Color.accent) : "transparent"
+                  currentFill: root.bar ? Style.selectedFillFor(root.bar.foreground, Color.accent) : "transparent"
+
                   Column {
                     id: sourceCol
                     anchors.left: parent.left
@@ -465,7 +473,7 @@ Panel {
                       color: root.foreground
                       font.family: root.fontFamily
                       font.pixelSize: Style.font.body
-                      font.bold: service.targetName === modelData.name
+                      font.bold: sourceRow.isActive
                       elide: Text.ElideRight
                     }
                     Text {
@@ -475,6 +483,19 @@ Panel {
                       font.family: root.fontFamily
                       font.pixelSize: Style.font.caption
                     }
+                  }
+
+                  MouseArea {
+                    anchors.fill: parent
+                    hoverEnabled: true
+                    preventStealing: true
+                    cursorShape: Qt.PointingHandCursor
+                    onContainsMouseChanged: if (containsMouse) {
+                      root.cursorActive = true
+                      root.focusSection = "sources"
+                      root.sourceIndex = index
+                    }
+                    onClicked: root.chooseSource(modelData.name)
                   }
                 }
               }

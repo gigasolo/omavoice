@@ -97,7 +97,8 @@ Item {
   }
 
   function refreshSources() {
-    sources = snapshotSources()
+    var next = snapshotSources()
+    if (!Model.sourcesUnchanged(sources, next)) sources = next
     var picked = Model.pickSource(sources, pinnedSource, defaultSourceName)
     var nextName = picked ? String(picked.name) : ""
     var nextLabel = picked ? String(picked.description || picked.name) : ""

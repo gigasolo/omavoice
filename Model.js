@@ -57,6 +57,19 @@ function friendlyDeviceLabel(text) {
   return label || "Microphone"
 }
 
+function sourceSignature(list) {
+  var parts = []
+  var rows = Array.isArray(list) ? list : []
+  for (var i = 0; i < rows.length; i++) {
+    parts.push(String(rows[i].name || "") + "\t" + String(rows[i].description || ""))
+  }
+  return parts.join("\n")
+}
+
+function sourcesUnchanged(before, after) {
+  return sourceSignature(before) === sourceSignature(after)
+}
+
 function pickSource(sources, pinnedName, defaultName) {
   var list = Array.isArray(sources) ? sources : []
   function findName(name) {
@@ -144,6 +157,8 @@ if (typeof module !== "undefined") {
     isCaptureSourceName: isCaptureSourceName,
     sourceKind: sourceKind,
     friendlyDeviceLabel: friendlyDeviceLabel,
+    sourceSignature: sourceSignature,
+    sourcesUnchanged: sourcesUnchanged,
     pickSource: pickSource,
     presetLabel: presetLabel,
     presetHint: presetHint,
