@@ -13,7 +13,7 @@
   <a href="LICENSE"><img src="https://img.shields.io/badge/license-MIT-22c55e?style=flat-square" alt="License: MIT"></a>
   <img src="https://img.shields.io/badge/omarchy-4%20Quattro-0ea5e9?style=flat-square" alt="Omarchy 4 Quattro">
   <img src="https://img.shields.io/badge/pipewire-filter--chain-a3e635?style=flat-square" alt="PipeWire filter-chain">
-  <img src="https://img.shields.io/badge/version-0.1.5-111827?style=flat-square" alt="Version 0.1.5">
+  <img src="https://img.shields.io/badge/version-0.1.6-111827?style=flat-square" alt="Version 0.1.6">
 </p>
 
 Pick **Omavoice** in Zoom, Google Meet, OBS, or a browser. The plugin sits under those apps as a PipeWire source, so you do not configure each one. USB mics attach themselves when you plug them in.
@@ -30,7 +30,7 @@ An independent [MIT](LICENSE)-licensed plugin by [GigaSolo](https://github.com/g
 | **Does** | Monitor-mode AEC + RNNoise mono + compressor | High-pass + DeepFilterNet3 (or RNNoise) + compressor | High-pass only |
 | **Keeps** | Your voice on a laptop with speakers | Speech that sounds finished | Applause, keys, and music |
 
-Right-click the mark to toggle. Open the panel to switch presets, pick a microphone, or listen — use headphones for that last one. While the panel is open, Before and After meters show the raw mic against the filtered voice.
+Right-click the mark to toggle. Open the panel to switch presets and pick a microphone. Each mic row shows a live level; the selected row adds a hairline of what Omavoice is sending.
 
 In the app itself, choose **Omavoice** as the microphone and turn *its* noise cancellation off. Two denoisers stacked sound hollow.
 
@@ -77,7 +77,6 @@ If that plugin is missing, Podcast uses RNNoise. Meeting still echo-cancels with
 | Open or close the panel | Left-click the mark |
 | Toggle Omavoice | Right-click, or `o` |
 | Meeting / Podcast / Clean | `m` / `p` / `c` |
-| Listen (headphones) | Middle-click, or `l` |
 | Move | Arrow keys or `h` `j` `k` `l` |
 | Activate | Enter |
 | Close | Escape |
@@ -120,8 +119,6 @@ omarchy plugin enable gigasolo.omavoice --section right
 **The panel asks for RNNoise.** Run `omarchy pkg add noise-suppression-for-voice`, or click the setup row.
 
 **The app still hears the raw USB mic.** Select **Omavoice** inside Zoom / Meet / OBS, not the hardware device.
-
-**You hear yourself delayed.** Listen is a monitor. Use headphones, or turn Listen off.
 
 **The voice sounds hollow.** The call app is probably denoising too. Turn that off.
 

@@ -95,10 +95,6 @@ Panel {
     if (service && typeof service.pinSource === "function") service.pinSource(name)
   }
 
-  function toggleListen() {
-    service.setListen(!service.listen)
-  }
-
   function launchSetup() {
     if (!bar || !setup.command) return
     bar.run("omarchy-launch-floating-terminal-with-presentation " + Util.shellQuote(setup.command))
@@ -132,7 +128,6 @@ Panel {
     if (dy === 0) return
     var sections = ["header", "presets", "sources"]
     if (setup.needed) sections.push("setup")
-    sections.push("listen")
     var idx = sections.indexOf(focusSection)
     if (idx < 0) idx = 0
     if (focusSection === "presets" && dx !== 0) {
@@ -157,7 +152,6 @@ Panel {
     else if (focusSection === "presets") choosePreset(presets[presetIndex].value)
     else if (focusSection === "sources" && displaySources[sourceIndex]) chooseSource(displaySources[sourceIndex].name)
     else if (focusSection === "setup") launchSetup()
-    else if (focusSection === "listen") toggleListen()
   }
 
   implicitWidth: button.implicitWidth
@@ -165,7 +159,6 @@ Panel {
 
   onOpenedChanged: {
     if (!opened) {
-      if (service.listen) service.setListen(false)
       if (typeof service.setMeterHold === "function") service.setMeterHold(false)
       return
     }
@@ -179,45 +172,9 @@ Panel {
   }
 
   PwNodePeakMonitor {
-    id: beforePeakMonitor
-    node: service.beforeNode
-    enabled: root.opened && service.running && !!service.beforeNode
-  }
-
-  PwNodePeakMonitor {
     id: afterPeakMonitor
     node: service.afterNode
     enabled: root.opened && service.running && !!service.afterNode
-  }
-
-  component PeakBar: RowLayout {
-    required property string label
-    required property real peak
-    width: parent.width
-    spacing: Style.space(8)
-
-    Text {
-      text: label
-      color: root.dim
-      font.family: root.fontFamily
-      font.pixelSize: Style.font.caption
-      Layout.preferredWidth: Style.space(52)
-      Layout.alignment: Qt.AlignVCenter
-    }
-
-    Rectangle {
-      Layout.fillWidth: true
-      Layout.preferredHeight: Math.max(Style.space(5), Style.spacing.xs)
-      Layout.alignment: Qt.AlignVCenter
-      color: Util.alpha(root.foreground, 0.18)
-
-      Rectangle {
-        height: parent.height
-        width: parent.width * Math.max(0, Math.min(1, peak))
-        color: root.foreground
-        Behavior on width { NumberAnimation { duration: 70 } }
-      }
-    }
   }
 
   onCaptureSourcesChanged: if (opened) sourceRefreshTimer.restart()
@@ -263,8 +220,7 @@ Panel {
     }
     onPressed: function(buttonCode) {
       if (buttonCode === Qt.RightButton) root.toggleEnabled()
-      else if (buttonCode === Qt.MiddleButton) root.toggleListen()
-      else root.toggle()
+      else if (buttonCode === Qt.LeftButton) root.toggle()
     }
   }
 
@@ -292,7 +248,6 @@ Panel {
         if (t === "m" || t === "M") root.choosePreset("meeting")
         else if (t === "p" || t === "P") root.choosePreset("podcast")
         else if (t === "c" || t === "C") root.choosePreset("clean")
-        else if (t === "l" || t === "L") root.toggleListen()
         else if (t === "o" || t === "O") root.toggleEnabled()
       }
 
@@ -360,22 +315,6 @@ Panel {
             font.family: root.fontFamily
             font.pixelSize: Style.font.bodySmall
             wrapMode: Text.WordWrap
-          }
-
-          Column {
-            visible: service.running
-            width: parent.width
-            spacing: Style.space(6)
-
-            PeakBar {
-              label: "Before"
-              peak: beforePeakMonitor.peak
-            }
-
-            PeakBar {
-              label: "After"
-              peak: afterPeakMonitor.peak
-            }
           }
 
           Column {
@@ -531,36 +470,80 @@ Panel {
                   required property int index
                   readonly property bool isActive: service.targetName === modelData.name
                   width: parent.width
-                  implicitHeight: sourceCol.implicitHeight + Style.space(8)
+                  implicitHeight: sourceInner.implicitHeight + Style.space(8)
                   hasCursor: root.cursorActive && root.focusSection === "sources" && root.sourceIndex === index
                   current: isActive
                   foreground: root.foreground
                   fill: root.bar ? Style.hoverFillFor(root.bar.foreground, Color.accent) : "transparent"
                   currentFill: root.bar ? Style.selectedFillFor(root.bar.foreground, Color.accent) : "transparent"
 
-                  Column {
-                    id: sourceCol
+                  PwNodePeakMonitor {
+                    id: rowPeak
+                    node: {
+                      var _ = service.nodes
+                      return service.nodeNamed ? service.nodeNamed(modelData.name) : null
+                    }
+                    enabled: root.opened && !!node
+                  }
+
+                  RowLayout {
+                    id: sourceInner
                     anchors.left: parent.left
                     anchors.right: parent.right
                     anchors.verticalCenter: parent.verticalCenter
                     anchors.leftMargin: Style.space(8)
                     anchors.rightMargin: Style.space(8)
-                    spacing: 1
-                    Text {
-                      width: parent.width
-                      text: Model.friendlyDeviceLabel(modelData.description || modelData.name)
-                      color: root.foreground
-                      font.family: root.fontFamily
-                      font.pixelSize: Style.font.body
-                      font.bold: sourceRow.isActive
-                      elide: Text.ElideRight
+                    spacing: Style.space(10)
+
+                    Column {
+                      Layout.fillWidth: true
+                      Layout.alignment: Qt.AlignVCenter
+                      spacing: 1
+                      Text {
+                        width: parent.width
+                        text: Model.friendlyDeviceLabel(modelData.description || modelData.name)
+                        color: root.foreground
+                        font.family: root.fontFamily
+                        font.pixelSize: Style.font.body
+                        font.bold: sourceRow.isActive
+                        elide: Text.ElideRight
+                      }
+                      Text {
+                        width: parent.width
+                        text: Model.sourceKind(modelData.name) === "usb" ? "USB" : Model.sourceKind(modelData.name)
+                        color: root.dim
+                        font.family: root.fontFamily
+                        font.pixelSize: Style.font.caption
+                      }
                     }
-                    Text {
-                      width: parent.width
-                      text: Model.sourceKind(modelData.name) === "usb" ? "USB" : Model.sourceKind(modelData.name)
-                      color: root.dim
-                      font.family: root.fontFamily
-                      font.pixelSize: Style.font.caption
+
+                    Item {
+                      Layout.preferredWidth: Style.space(72)
+                      Layout.preferredHeight: Style.space(8)
+                      Layout.alignment: Qt.AlignVCenter
+
+                      Rectangle {
+                        anchors.fill: parent
+                        color: Util.alpha(root.foreground, 0.18)
+
+                        Rectangle {
+                          height: parent.height
+                          width: parent.width * Math.max(0, Math.min(1, rowPeak.peak))
+                          color: sourceRow.isActive
+                            ? Util.alpha(root.foreground, 0.40)
+                            : Util.alpha(root.foreground, 0.55)
+                          Behavior on width { NumberAnimation { duration: 70 } }
+                        }
+
+                        Rectangle {
+                          visible: sourceRow.isActive && service.running
+                          height: Math.max(2, Math.ceil(parent.height * 0.4))
+                          width: parent.width * Math.max(0, Math.min(1, afterPeakMonitor.peak))
+                          anchors.verticalCenter: parent.verticalCenter
+                          color: root.foreground
+                          Behavior on width { NumberAnimation { duration: 70 } }
+                        }
+                      }
                     }
                   }
 
@@ -577,42 +560,6 @@ Panel {
                     onClicked: root.chooseSource(modelData.name)
                   }
                 }
-              }
-            }
-          }
-
-          PanelSeparator { foreground: root.foreground }
-
-          CursorSurface {
-            width: parent.width
-            implicitHeight: listenRow.implicitHeight + Style.space(8)
-            hasCursor: root.cursorActive && root.focusSection === "listen"
-            foreground: root.foreground
-            MouseArea {
-              anchors.fill: parent
-              hoverEnabled: true
-              cursorShape: Qt.PointingHandCursor
-              onEntered: { root.cursorActive = true; root.focusSection = "listen" }
-              onClicked: root.toggleListen()
-            }
-            RowLayout {
-              id: listenRow
-              anchors.left: parent.left
-              anchors.right: parent.right
-              anchors.verticalCenter: parent.verticalCenter
-              anchors.leftMargin: Style.space(8)
-              anchors.rightMargin: Style.space(8)
-              Text {
-                text: service.listen ? "Listening to Omavoice" : "Listen (use headphones)"
-                color: root.foreground
-                font.family: root.fontFamily
-                font.pixelSize: Style.font.body
-                Layout.fillWidth: true
-              }
-              ToggleSwitch {
-                checked: service.listen
-                foreground: root.foreground
-                onToggled: root.toggleListen()
               }
             }
           }

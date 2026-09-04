@@ -16,7 +16,6 @@ Item {
   property bool haveRnnoise: false
   property bool haveDeepfilter: false
   property bool haveWebrtc: false
-  property bool listen: false
   property string lastError: ""
   property string actionStatus: ""
   property string targetName: ""
@@ -41,10 +40,6 @@ Item {
 
   readonly property bool busy: hostProcess.running && !running
   readonly property bool running: hostProcess.running
-  readonly property var beforeNode: {
-    var _ = nodes
-    return nodeNamed(targetName)
-  }
   readonly property var afterNode: {
     var _ = nodes
     return omavoiceNode()
@@ -148,7 +143,6 @@ Item {
   }
 
   function stopHost() {
-    if (listen) setListen(false)
     if (hostProcess.running) hostProcess.running = false
     hostKey = ""
     promoted = false
@@ -183,23 +177,9 @@ Item {
     shell.updateEntryInline("gigasolo.omavoice", entry)
   }
 
-  function setListen(on) {
-    listen = on === true
-    if (!listen) {
-      listenProcess.running = false
-      return
-    }
-    listenProcess.command = [
-      "pw-loopback",
-      "--capture-props=target.object=omavoice node.passive=true node.name=omavoice.listen.capture",
-      "--playback-props=node.passive=true node.name=omavoice.listen.playback"
-    ]
-    listenProcess.running = true
-  }
-
   // Filter-chain sources are node.passive, so After peaks stay at 0 unless
   // something captures Omavoice. A silent pw-cat hold while the panel is
-  // open pulls the graph without starting a call or Listen.
+  // open pulls the graph without starting a call.
   function setMeterHold(on) {
     meterHoldWanted = on === true
     syncMeterHold()
@@ -335,11 +315,6 @@ Item {
       if (!running) root.promoted = false
       root.syncMeterHold()
     }
-  }
-
-  Process {
-    id: listenProcess
-    onRunningChanged: if (!running && root.listen) root.listen = false
   }
 
   Process {

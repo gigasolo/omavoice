@@ -5,6 +5,20 @@ All notable changes to Omavoice are documented here.
 The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.1.6] — 2026-09-04
+
+### Changed
+
+- Peak meters sit on the microphone rows. Each row shows that device’s live
+  level; the selected row adds a hairline **After** for Omavoice. The silent
+  `pw-cat` hold still runs while the panel is open so After moves without a
+  call.
+
+### Removed
+
+- Listen (headphones), including the panel toggle, middle-click, and `l`.
+  The chain is what Zoom hears; a speaker monitor was a feedback trap.
+
 ## [0.1.5] — 2026-09-04
 
 ### Added
@@ -82,6 +96,7 @@ and this project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html)
   guidance.
 - MIT license (GigaSolo LLC).
 
+[0.1.6]: https://github.com/gigasolo/omavoice/compare/v0.1.5...v0.1.6
 [0.1.5]: https://github.com/gigasolo/omavoice/compare/v0.1.4...v0.1.5
 [0.1.4]: https://github.com/gigasolo/omavoice/compare/v0.1.3...v0.1.4
 [0.1.3]: https://github.com/gigasolo/omavoice/compare/v0.1.2...v0.1.3
