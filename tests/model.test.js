@@ -71,6 +71,13 @@ test("pickSource falls back to the default builtin when no USB is present", () =
   assert.equal(picked.name, builtin.name)
 })
 
+test("shouldDeferSourcePick keeps the mic while PipeWire names are unbound", () => {
+  assert.equal(Model.shouldDeferSourcePick(usb.name, true), true)
+  assert.equal(Model.shouldDeferSourcePick(usb.name, false), false)
+  assert.equal(Model.shouldDeferSourcePick("", true), false)
+  assert.equal(Model.shouldDeferSourcePick(null, true), false)
+})
+
 test("engineForPreset uses DeepFilterNet only for podcast when present", () => {
   assert.equal(Model.engineForPreset("clean", true, true), "clean")
   assert.equal(Model.engineForPreset("meeting", true, true), "rnnoise")

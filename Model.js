@@ -72,6 +72,12 @@ function sourcesUnchanged(before, after) {
   return sourceSignature(before) === sourceSignature(after)
 }
 
+// Quickshell unbinds PwNode.name when the registry churns (host restart).
+// An empty snapshot is a flicker, not "no microphones".
+function shouldDeferSourcePick(currentName, hasUnboundNodes) {
+  return !!String(currentName || "") && hasUnboundNodes === true
+}
+
 function pickSource(sources, pinnedName, defaultName) {
   var list = Array.isArray(sources) ? sources : []
   function findName(name) {
@@ -161,6 +167,7 @@ if (typeof module !== "undefined") {
     friendlyDeviceLabel: friendlyDeviceLabel,
     sourceSignature: sourceSignature,
     sourcesUnchanged: sourcesUnchanged,
+    shouldDeferSourcePick: shouldDeferSourcePick,
     pickSource: pickSource,
     presetLabel: presetLabel,
     presetHint: presetHint,

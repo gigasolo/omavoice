@@ -25,6 +25,7 @@ Item {
   property var sources: []
   property bool promoted: false
   property bool meterHoldWanted: false
+  property string meterHoldNodeId: ""
 
   // Quickshell leaves PwNode.name empty until the node is bound.
   readonly property var nodes: Pipewire.nodes ? Pipewire.nodes.values : []
@@ -110,8 +111,26 @@ Item {
     return null
   }
 
+  function hasUnboundNodes() {
+    for (var i = 0; i < nodes.length; i++) {
+      var node = nodes[i]
+      if (node && !node.isSink && !node.isStream && !String(node.name || "")) return true
+    }
+    return false
+  }
+
+  function afterNodeId() {
+    var node = afterNode
+    return node && node.id !== undefined ? String(node.id) : ""
+  }
+
   function refreshSources() {
     var next = snapshotSources()
+    if (Model.shouldDeferSourcePick(targetName, hasUnboundNodes())) {
+      if (next.length > 0 && !Model.sourcesUnchanged(sources, next)) sources = next
+      syncHost()
+      return
+    }
     if (!Model.sourcesUnchanged(sources, next)) sources = next
     var picked = Model.pickSource(sources, pinnedSource, defaultSourceName)
     var nextName = picked ? String(picked.name) : ""
@@ -125,15 +144,19 @@ Item {
 
   function syncHost() {
     if (!root.active || !enabled || !targetName) {
+      startDebounce.stop()
       stopHost()
       return
     }
-    startHost()
+    startDebounce.restart()
   }
 
-  function startHost() {
+  function startHostNow() {
+    if (!root.active || !enabled || !targetName) return
     var key = preset + "\0" + targetName + "\0" + pluginDir
     if (hostProcess.running && hostKey === key) return
+    if (meterHoldProcess.running) meterHoldProcess.running = false
+    meterHoldNodeId = ""
     hostKey = key
     lastError = ""
     promoted = false
@@ -143,6 +166,9 @@ Item {
   }
 
   function stopHost() {
+    startDebounce.stop()
+    if (meterHoldProcess.running) meterHoldProcess.running = false
+    meterHoldNodeId = ""
     if (hostProcess.running) hostProcess.running = false
     hostKey = ""
     promoted = false
@@ -186,13 +212,17 @@ Item {
   }
 
   function syncMeterHold() {
-    var want = meterHoldWanted && running && enabled
+    var nodeId = afterNodeId()
+    var want = meterHoldWanted && running && enabled && !!nodeId
     if (!want) {
       meterHoldRetry.stop()
       if (meterHoldProcess.running) meterHoldProcess.running = false
+      meterHoldNodeId = ""
       return
     }
-    if (meterHoldProcess.running) return
+    if (meterHoldProcess.running && meterHoldNodeId === nodeId) return
+    if (meterHoldProcess.running) meterHoldProcess.running = false
+    meterHoldNodeId = nodeId
     meterHoldProcess.command = [
       "pw-cat",
       "-r",
@@ -200,7 +230,7 @@ Item {
       "--target", Model.NODE_NAME,
       "--rate", "48000",
       "--channels", "1",
-      "-P", "{ node.name=omavoice.meter.hold }",
+      "-P", "{ node.name=omavoice.meter.hold node.dont-fallback=true }",
       "/dev/null"
     ]
     meterHoldProcess.running = true
@@ -208,9 +238,13 @@ Item {
 
   function promoteDefault() {
     if (!setDefaultSource) return
+    if (Model.isOmavoiceName(defaultSourceName)) {
+      promoted = true
+      return
+    }
     var node = omavoiceNode()
     if (!node || node.id === undefined) return
-    if (defaultSourceName && !Model.isOmavoiceName(defaultSourceName) && previousDefaultName === "") {
+    if (defaultSourceName && previousDefaultName === "") {
       previousDefaultName = defaultSourceName
     }
     Quickshell.execDetached([
@@ -246,6 +280,7 @@ Item {
   onPresetChanged: syncHost()
   onPinnedSourceChanged: refreshSources()
   onTargetNameChanged: syncHost()
+  onAfterNodeChanged: syncMeterHold()
   onActiveChanged: {
     if (!active) stopHost()
     else {
@@ -263,6 +298,13 @@ Item {
     restoreDefault()
     setMeterHold(false)
     stopHost()
+  }
+
+  Timer {
+    id: startDebounce
+    interval: 150
+    repeat: false
+    onTriggered: root.startHostNow()
   }
 
   Timer {
@@ -312,7 +354,8 @@ Item {
       }
     }
     onRunningChanged: {
-      if (!running) root.promoted = false
+      if (running) return
+      root.promoted = false
       root.syncMeterHold()
     }
   }
@@ -321,7 +364,7 @@ Item {
     id: meterHoldProcess
     onRunningChanged: {
       if (running) return
-      if (root.meterHoldWanted && root.running) meterHoldRetry.restart()
+      if (root.meterHoldWanted && root.running && root.afterNodeId()) meterHoldRetry.restart()
     }
   }
 

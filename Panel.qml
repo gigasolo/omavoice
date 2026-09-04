@@ -171,10 +171,21 @@ Panel {
     Qt.callLater(function() { keyCatcher.forceActiveFocus() })
   }
 
+  readonly property string meterEpoch: {
+    var node = service.afterNode
+    if (node && node.id !== undefined) return String(node.id)
+    return service.running ? "starting" : "off"
+  }
+  property bool metersArmed: true
+  onMeterEpochChanged: {
+    metersArmed = false
+    Qt.callLater(function() { root.metersArmed = true })
+  }
+
   PwNodePeakMonitor {
     id: afterPeakMonitor
     node: service.afterNode
-    enabled: root.opened && service.running && !!service.afterNode
+    enabled: root.opened && root.metersArmed && service.running && !!service.afterNode
   }
 
   onCaptureSourcesChanged: if (opened) sourceRefreshTimer.restart()
@@ -483,7 +494,7 @@ Panel {
                       var _ = service.nodes
                       return service.nodeNamed ? service.nodeNamed(modelData.name) : null
                     }
-                    enabled: root.opened && !!node
+                    enabled: root.opened && root.metersArmed && !!node
                   }
 
                   RowLayout {

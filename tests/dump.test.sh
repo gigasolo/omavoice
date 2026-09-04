@@ -25,6 +25,8 @@ echo "$meeting" | grep -A8 'node.name = "omavoice.aec"' | grep -q 'Stream/Output
 echo "$meeting" | grep -q 'noise_suppressor_mono' || fail "meeting must use RNNoise mono"
 echo "$meeting" | grep -q '"VAD Threshold (%)" = 85.0' || fail "meeting VAD must be 85"
 echo "$meeting" | grep -q '"VAD Grace Period (ms)" = 200' || fail "meeting grace must be 200"
+echo "$meeting" | grep -A10 'node.name = "omavoice.capture"' | grep -q 'node.dont-fallback = true' \
+  || fail "omavoice.capture must not fall back to another mic"
 echo "$meeting" | grep -q 'audio.position = \[ MONO \]' || fail "meeting must be mono"
 echo "$meeting" | grep -q 'node.latency = 256/48000' || fail "meeting must pin 256/48000"
 echo "$meeting" | grep -q 'lsp-plug.in/plugins/lv2/compressor_mono' || fail "meeting needs compressor_mono"

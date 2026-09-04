@@ -5,6 +5,18 @@ All notable changes to Omavoice are documented here.
 The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.1.7] — 2026-09-04
+
+### Fixed
+
+- Preset and on/off switches no longer drop the selected mic while PipeWire
+  rebinds node names, which was restarting the host extra times and making
+  the call stutter.
+- After meters wait for the new Omavoice node before `pw-cat` holds the
+  graph, and they refuse to fall back to another source. Peak monitors are
+  rebound after each graph generation so Before/After stay honest without
+  closing the panel.
+
 ## [0.1.6] — 2026-09-04
 
 ### Changed
@@ -96,6 +108,7 @@ and this project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html)
   guidance.
 - MIT license (GigaSolo LLC).
 
+[0.1.7]: https://github.com/gigasolo/omavoice/compare/v0.1.6...v0.1.7
 [0.1.6]: https://github.com/gigasolo/omavoice/compare/v0.1.5...v0.1.6
 [0.1.5]: https://github.com/gigasolo/omavoice/compare/v0.1.4...v0.1.5
 [0.1.4]: https://github.com/gigasolo/omavoice/compare/v0.1.3...v0.1.4

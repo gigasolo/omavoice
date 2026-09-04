@@ -169,6 +169,7 @@ if [[ $use_aec -eq 1 ]]; then
             capture.props = {
                 node.name = "omavoice.aec.capture"
                 node.passive = true
+                node.dont-fallback = true
                 target.object = "$target"
             }
             playback.props = {
@@ -205,6 +206,7 @@ $1
             capture.props = {
                 node.name = "omavoice.capture"
                 node.passive = true
+                node.dont-fallback = true
                 audio.rate = 48000
                 audio.position = [ MONO ]
                 node.latency = 256/48000
