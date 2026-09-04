@@ -5,6 +5,14 @@ All notable changes to Omavoice are documented here.
 The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.1.18] — 2026-09-04
+
+### Fixed
+
+- After meters work again. The panel hold used `node.dont-fallback`, which
+  made `pw-cat` fail to attach to Omavoice, so the chain stayed suspended.
+  The hold now targets the live node id.
+
 ## [0.1.17] — 2026-09-04
 
 ### Changed
@@ -190,6 +198,7 @@ and this project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html)
   guidance.
 - MIT license (GigaSolo LLC).
 
+[0.1.18]: https://github.com/gigasolo/omavoice/compare/v0.1.17...v0.1.18
 [0.1.17]: https://github.com/gigasolo/omavoice/compare/v0.1.16...v0.1.17
 [0.1.16]: https://github.com/gigasolo/omavoice/compare/v0.1.15...v0.1.16
 [0.1.15]: https://github.com/gigasolo/omavoice/compare/v0.1.14...v0.1.15

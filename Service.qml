@@ -224,16 +224,21 @@ Item {
       return
     }
     if (meterHoldProcess.running && meterHoldNodeId === nodeId) return
-    if (meterHoldProcess.running) meterHoldProcess.running = false
+    // Same-tick stop+start often does not relaunch Process. Stop, then retry.
+    if (meterHoldProcess.running) {
+      meterHoldProcess.running = false
+      meterHoldRetry.restart()
+      return
+    }
     meterHoldNodeId = nodeId
     meterHoldProcess.command = [
       "pw-cat",
       "-r",
       "-a",
-      "--target", Model.NODE_NAME,
+      "--target", nodeId,
       "--rate", "48000",
       "--channels", "1",
-      "-P", "{ node.name=omavoice.meter.hold node.dont-fallback=true }",
+      "-P", "{ node.name=omavoice.meter.hold }",
       "/dev/null"
     ]
     meterHoldProcess.running = true
