@@ -1,19 +1,19 @@
 # Omavoice
 
 <p align="center">
-  <img src="docs/omavoice.svg" alt="Omavoice — your voice, better heard" width="720">
+  <img src="docs/omavoice.png" alt="Omavoice — your voice, better heard" width="720">
 </p>
 
 <p align="center">
-  <strong>A virtual microphone for Zoom, Meet, and OBS.</strong><br>
-  One source. Three presets. Noise and echo stay on this side of the call.
+  <strong>Your voice, better heard.</strong><br>
+  A virtual microphone for Zoom, Meet, and OBS. One source. Three presets. Noise and echo stay on this side of the call.
 </p>
 
 <p align="center">
   <a href="LICENSE"><img src="https://img.shields.io/badge/license-MIT-22c55e?style=flat-square" alt="License: MIT"></a>
   <img src="https://img.shields.io/badge/omarchy-4%20Quattro-0ea5e9?style=flat-square" alt="Omarchy 4 Quattro">
   <img src="https://img.shields.io/badge/pipewire-filter--chain-a3e635?style=flat-square" alt="PipeWire filter-chain">
-  <img src="https://img.shields.io/badge/version-0.1.14-111827?style=flat-square" alt="Version 0.1.14">
+  <img src="https://img.shields.io/badge/version-0.1.15-111827?style=flat-square" alt="Version 0.1.15">
 </p>
 
 Pick **Omavoice** in Zoom, Google Meet, OBS, or a browser. The plugin sits under those apps as a PipeWire source, so you do not configure each one. USB mics attach themselves when you plug them in.

@@ -5,6 +5,13 @@ All notable changes to Omavoice are documented here.
 The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.1.15] — 2026-09-04
+
+### Changed
+
+- Bar, panel, and README use the rendered wave orb (`4.jpg`) as a PNG, so
+  the mark matches the image instead of a traced SVG.
+
 ## [0.1.14] — 2026-09-04
 
 ### Changed
@@ -170,6 +177,7 @@ and this project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html)
   guidance.
 - MIT license (GigaSolo LLC).
 
+[0.1.15]: https://github.com/gigasolo/omavoice/compare/v0.1.14...v0.1.15
 [0.1.14]: https://github.com/gigasolo/omavoice/compare/v0.1.13...v0.1.14
 [0.1.13]: https://github.com/gigasolo/omavoice/compare/v0.1.12...v0.1.13
 [0.1.12]: https://github.com/gigasolo/omavoice/compare/v0.1.11...v0.1.12
