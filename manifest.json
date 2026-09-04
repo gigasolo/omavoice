@@ -1,0 +1,69 @@
+{
+  "schemaVersion": 1,
+  "id": "gigasolo.omavoice",
+  "name": "Omavoice",
+  "version": "0.1.0",
+  "author": "GigaSolo",
+  "license": "MIT",
+  "homepage": "https://github.com/gigasolo/omavoice",
+  "description": "A virtual microphone for Zoom, Meet, and podcasts: noise cancellation, echo cancel, and a clean speech chain on USB or any PipeWire source.",
+  "kinds": [
+    "service",
+    "bar-widget"
+  ],
+  "entryPoints": {
+    "service": "Service.qml",
+    "barWidget": "Panel.qml"
+  },
+  "barWidget": {
+    "displayName": "Omavoice",
+    "description": "Toggle Omavoice, pick a USB mic, and switch Meeting, Podcast, or Clean presets.",
+    "category": "Audio",
+    "aliases": [
+      "omavoice",
+      "noise",
+      "microphone",
+      "voice"
+    ],
+    "allowMultiple": false,
+    "defaultSection": "right",
+    "defaults": {
+      "enabled": true,
+      "preset": "meeting",
+      "pinnedSource": "",
+      "setDefaultSource": true
+    },
+    "schema": [
+      {
+        "key": "enabled",
+        "type": "boolean",
+        "label": "Omavoice on",
+        "defaultValue": true
+      },
+      {
+        "key": "preset",
+        "type": "enum",
+        "label": "Preset",
+        "options": [
+          "meeting",
+          "podcast",
+          "clean"
+        ],
+        "defaultValue": "meeting"
+      },
+      {
+        "key": "pinnedSource",
+        "type": "string",
+        "label": "Pinned source node name",
+        "description": "Empty means auto: prefer a USB capture, otherwise the default mic.",
+        "defaultValue": ""
+      },
+      {
+        "key": "setDefaultSource",
+        "type": "boolean",
+        "label": "Make Omavoice the default input",
+        "defaultValue": true
+      }
+    ]
+  }
+}

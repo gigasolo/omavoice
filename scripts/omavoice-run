@@ -1,0 +1,255 @@
+#!/usr/bin/env bash
+# Generate an isolated PipeWire client config and exec it.
+# This is the Omarchy speaker-tuning pattern: pipewire -c <our conf>, never
+# the daemon's pipewire.conf.d and never stock filter-chain.conf.d.
+set -euo pipefail
+
+preset="meeting"
+target=""
+plugin_dir=""
+runtime_dir="${XDG_RUNTIME_DIR:-/tmp}/omavoice"
+
+usage() {
+  echo "Usage: omavoice-run --preset meeting|podcast|clean --target <node.name> --dir <plugin-dir>" >&2
+  exit 2
+}
+
+while [[ $# -gt 0 ]]; do
+  case "$1" in
+    --preset) preset="${2:-}"; shift 2 ;;
+    --target) target="${2:-}"; shift 2 ;;
+    --dir) plugin_dir="${2:-}"; shift 2 ;;
+    -h|--help) usage ;;
+    *) usage ;;
+  esac
+done
+
+[[ -n $target && -n $plugin_dir ]] || usage
+[[ $preset == meeting || $preset == podcast || $preset == clean ]] || usage
+
+rnnoise=""
+for candidate in /usr/lib/ladspa/librnnoise_ladspa.so /usr/lib64/ladspa/librnnoise_ladspa.so; do
+  if [[ -f $candidate ]]; then
+    rnnoise=$candidate
+    break
+  fi
+done
+
+deepfilter=""
+for candidate in /usr/lib/ladspa/libdeep_filter_ladspa.so /usr/lib64/ladspa/libdeep_filter_ladspa.so; do
+  if [[ -f $candidate ]]; then
+    deepfilter=$candidate
+    break
+  fi
+done
+
+webrtc=""
+for candidate in /usr/lib/spa-0.2/aec/libspa-aec-webrtc.so /usr/lib64/spa-0.2/aec/libspa-aec-webrtc.so; do
+  if [[ -f $candidate ]]; then
+    webrtc=$candidate
+    break
+  fi
+done
+
+engine="clean"
+if [[ $preset == podcast && -n $deepfilter ]]; then
+  engine="deepfilter"
+elif [[ $preset != clean && -n $rnnoise ]]; then
+  engine="rnnoise"
+fi
+
+use_aec=0
+if [[ $preset == meeting && -n $webrtc ]]; then
+  use_aec=1
+fi
+
+mkdir -p "$runtime_dir"
+conf="$runtime_dir/host.conf"
+capture_target=$target
+if [[ $use_aec -eq 1 ]]; then
+  capture_target="omavoice.aec"
+fi
+
+# SPA-JSON. Node names are copied literally; PipeWire node names from ALSA
+# are [A-Za-z0-9._-].
+cat >"$conf" <<EOF
+context.properties = {
+    log.level = 0
+}
+
+context.spa-libs = {
+    audio.convert.* = audioconvert/libspa-audioconvert
+    support.*       = support/libspa-support
+    aec.*           = aec/libspa-aec
+}
+
+context.modules = [
+    { name = libpipewire-module-rt
+        args = { }
+        flags = [ ifexists nofail ]
+    }
+    { name = libpipewire-module-protocol-native }
+    { name = libpipewire-module-client-node }
+    { name = libpipewire-module-adapter }
+EOF
+
+if [[ $use_aec -eq 1 ]]; then
+  cat >>"$conf" <<EOF
+    { name = libpipewire-module-echo-cancel
+        flags = [ ifexists nofail ]
+        args = {
+            library.name = aec/libspa-aec-webrtc
+            aec.args = {
+                webrtc.gain_control = true
+                webrtc.extended_filter = true
+                webrtc.noise_suppression = false
+                webrtc.high_pass_filter = true
+            }
+            source.props = {
+                node.name = "omavoice.aec"
+                node.description = "Omavoice echo cancel"
+                media.class = Audio/Source
+            }
+            capture.props = {
+                node.name = "omavoice.aec.capture"
+                node.passive = true
+                audio.rate = 48000
+                target.object = "$target"
+            }
+            playback.props = {
+                node.name = "omavoice.aec.playback"
+                node.passive = true
+                media.class = Audio/Sink
+            }
+        }
+    }
+EOF
+fi
+
+vad="50.0"
+grace="200"
+if [[ $preset == podcast ]]; then
+  vad="85.0"
+  grace="150"
+elif [[ $preset == meeting ]]; then
+  vad="60.0"
+  grace="200"
+fi
+
+if [[ $engine == rnnoise ]]; then
+  cat >>"$conf" <<EOF
+    { name = libpipewire-module-filter-chain
+        flags = [ nofail ]
+        args = {
+            node.description = "Omavoice"
+            media.name = "Omavoice"
+            filter.graph = {
+                nodes = [
+                    {
+                        type = ladspa
+                        name = denoise
+                        plugin = "$rnnoise"
+                        label = noise_suppressor_stereo
+                        control = {
+                            "VAD Threshold (%)" = $vad
+                            "VAD Grace Period (ms)" = $grace
+                            "Retroactive VAD Grace (ms)" = 0
+                        }
+                    }
+                ]
+            }
+            audio.rate = 48000
+            audio.position = [ FL FR ]
+            capture.props = {
+                node.name = "omavoice.capture"
+                node.passive = true
+                audio.rate = 48000
+                target.object = "$capture_target"
+            }
+            playback.props = {
+                node.name = "omavoice"
+                node.description = "Omavoice"
+                media.class = Audio/Source
+                audio.rate = 48000
+            }
+        }
+    }
+EOF
+elif [[ $engine == deepfilter ]]; then
+  cat >>"$conf" <<EOF
+    { name = libpipewire-module-filter-chain
+        flags = [ nofail ]
+        args = {
+            node.description = "Omavoice"
+            media.name = "Omavoice"
+            filter.graph = {
+                nodes = [
+                    {
+                        type = ladspa
+                        name = denoise
+                        plugin = "$deepfilter"
+                        label = deep_filter_stereo
+                        control = {
+                            "Attenuation Limit (dB)" = 100
+                        }
+                    }
+                ]
+            }
+            audio.rate = 48000
+            audio.position = [ FL FR ]
+            capture.props = {
+                node.name = "omavoice.capture"
+                node.passive = true
+                audio.rate = 48000
+                target.object = "$capture_target"
+            }
+            playback.props = {
+                node.name = "omavoice"
+                node.description = "Omavoice"
+                media.class = Audio/Source
+                audio.rate = 48000
+            }
+        }
+    }
+EOF
+else
+  cat >>"$conf" <<EOF
+    { name = libpipewire-module-filter-chain
+        flags = [ nofail ]
+        args = {
+            node.description = "Omavoice"
+            media.name = "Omavoice"
+            filter.graph = {
+                nodes = [
+                    {
+                        type = builtin
+                        name = hp
+                        label = bq_highpass
+                        control = { "Freq" = 80.0 "Q" = 0.707 }
+                    }
+                ]
+            }
+            audio.rate = 48000
+            audio.position = [ FL FR ]
+            capture.props = {
+                node.name = "omavoice.capture"
+                node.passive = true
+                audio.rate = 48000
+                target.object = "$capture_target"
+            }
+            playback.props = {
+                node.name = "omavoice"
+                node.description = "Omavoice"
+                media.class = Audio/Source
+                audio.rate = 48000
+            }
+        }
+    }
+EOF
+fi
+
+cat >>"$conf" <<EOF
+]
+EOF
+
+exec /usr/bin/pipewire -c "$conf"

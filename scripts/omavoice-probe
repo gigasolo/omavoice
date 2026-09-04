@@ -1,0 +1,19 @@
+#!/usr/bin/env bash
+# Print a one-line JSON probe the QML service can parse without jq in-process.
+set -euo pipefail
+
+have_rnnoise=false
+have_deepfilter=false
+have_webrtc=false
+
+for candidate in /usr/lib/ladspa/librnnoise_ladspa.so /usr/lib64/ladspa/librnnoise_ladspa.so; do
+  [[ -f $candidate ]] && have_rnnoise=true && break
+done
+for candidate in /usr/lib/ladspa/libdeep_filter_ladspa.so /usr/lib64/ladspa/libdeep_filter_ladspa.so; do
+  [[ -f $candidate ]] && have_deepfilter=true && break
+done
+for candidate in /usr/lib/spa-0.2/aec/libspa-aec-webrtc.so /usr/lib64/spa-0.2/aec/libspa-aec-webrtc.so; do
+  [[ -f $candidate ]] && have_webrtc=true && break
+done
+
+printf '{"rnnoise":%s,"deepfilter":%s,"webrtc":%s}\n' "$have_rnnoise" "$have_deepfilter" "$have_webrtc"

@@ -1,0 +1,28 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="720" height="220" viewBox="0 0 720 220" role="img" aria-labelledby="title desc">
+  <title id="title">Omavoice</title>
+  <desc id="desc">GigaSolo Omavoice wordmark — a virtual microphone for Omarchy</desc>
+  <defs>
+    <linearGradient id="glow" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#7CFFB2"/>
+      <stop offset="100%" stop-color="#3ECF8E"/>
+    </linearGradient>
+    <linearGradient id="panel" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#1A1F1C"/>
+      <stop offset="100%" stop-color="#101412"/>
+    </linearGradient>
+  </defs>
+  <rect width="720" height="220" rx="28" fill="url(#panel)"/>
+  <rect x="1.5" y="1.5" width="717" height="217" rx="26.5" fill="none" stroke="#2A332E" stroke-width="3"/>
+
+  <g transform="translate(56 48)" fill="none" stroke="url(#glow)" stroke-width="5" stroke-linecap="round">
+    <rect x="28" y="18" width="36" height="58" rx="18"/>
+    <path d="M22 52c0 22 16 38 32 38s32-16 32-38"/>
+    <path d="M54 90v18"/>
+    <path d="M36 108h36"/>
+    <path d="M86 36c10 10 10 42 0 52" opacity="0.9"/>
+    <path d="M100 24c16 16 16 60 0 76" opacity="0.55"/>
+  </g>
+
+  <text x="200" y="108" fill="#F4F7F5" font-family="ui-sans-serif, system-ui, -apple-system, Segoe UI, Helvetica, Arial, sans-serif" font-size="54" font-weight="700" letter-spacing="-1.2">Omavoice</text>
+  <text x="202" y="148" fill="#8B9A92" font-family="ui-sans-serif, system-ui, -apple-system, Segoe UI, Helvetica, Arial, sans-serif" font-size="20" font-weight="500">Your voice, below every app.</text>
+</svg>
