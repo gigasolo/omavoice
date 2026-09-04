@@ -13,7 +13,7 @@
   <a href="LICENSE"><img src="https://img.shields.io/badge/license-MIT-22c55e?style=flat-square" alt="License: MIT"></a>
   <img src="https://img.shields.io/badge/omarchy-4%20Quattro-0ea5e9?style=flat-square" alt="Omarchy 4 Quattro">
   <img src="https://img.shields.io/badge/pipewire-filter--chain-a3e635?style=flat-square" alt="PipeWire filter-chain">
-  <img src="https://img.shields.io/badge/version-0.1.21-111827?style=flat-square" alt="Version 0.1.21">
+  <img src="https://img.shields.io/badge/version-0.1.22-111827?style=flat-square" alt="Version 0.1.22">
 </p>
 
 Pick **Omavoice** in Zoom, Google Meet, OBS, or a browser. The plugin sits under those apps as a PipeWire source, so you do not configure each one. USB mics attach themselves when you plug them in.
@@ -65,7 +65,7 @@ Do not symlink the checkout into `~/.config/omarchy/plugins` — Omarchy refuses
 ### Optional Podcast engine
 
 ```sh
-omarchy pkg aur add deepfilternet-ladspa
+omarchy pkg aur add libdeep_filter_ladspa-bin
 ```
 
 If that plugin is missing, Podcast uses RNNoise. Meeting still echo-cancels without RNNoise, but the neural denoise needs `noise-suppression-for-voice`.
