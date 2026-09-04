@@ -161,7 +161,10 @@ if [[ $use_aec -eq 1 ]]; then
             source.props = {
                 node.name = "omavoice.aec"
                 node.description = "Omavoice echo cancel"
-                media.class = Audio/Source
+                media.class = Stream/Output/Audio/Internal
+                node.virtual = true
+                node.dont-fallback = true
+                priority.session = 0
             }
             capture.props = {
                 node.name = "omavoice.aec.capture"

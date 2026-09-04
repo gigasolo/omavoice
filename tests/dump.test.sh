@@ -20,6 +20,8 @@ echo "$meeting" | grep -q 'monitor.mode = true' || fail "meeting AEC must use mo
 echo "$meeting" | grep -q 'webrtc.gain_control = false' || fail "meeting must disable webrtc AGC"
 echo "$meeting" | grep -q 'webrtc.noise_suppression = false' || fail "meeting must not stack WebRTC NS"
 echo "$meeting" | grep -q 'media.class = Audio/Sink' && fail "meeting must not invent an AEC sink"
+echo "$meeting" | grep -A8 'node.name = "omavoice.aec"' | grep -q 'Stream/Output/Audio/Internal' \
+  || fail "AEC source must be internal, not a second microphone"
 echo "$meeting" | grep -q 'noise_suppressor_mono' || fail "meeting must use RNNoise mono"
 echo "$meeting" | grep -q '"VAD Threshold (%)" = 85.0' || fail "meeting VAD must be 85"
 echo "$meeting" | grep -q '"VAD Grace Period (ms)" = 200' || fail "meeting grace must be 200"
