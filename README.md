@@ -13,7 +13,7 @@
   <a href="LICENSE"><img src="https://img.shields.io/badge/license-MIT-22c55e?style=flat-square" alt="License: MIT"></a>
   <img src="https://img.shields.io/badge/omarchy-4%20Quattro-0ea5e9?style=flat-square" alt="Omarchy 4 Quattro">
   <img src="https://img.shields.io/badge/pipewire-filter--chain-a3e635?style=flat-square" alt="PipeWire filter-chain">
-  <img src="https://img.shields.io/badge/version-0.1.11-111827?style=flat-square" alt="Version 0.1.11">
+  <img src="https://img.shields.io/badge/version-0.1.12-111827?style=flat-square" alt="Version 0.1.12">
 </p>
 
 Pick **Omavoice** in Zoom, Google Meet, OBS, or a browser. The plugin sits under those apps as a PipeWire source, so you do not configure each one. USB mics attach themselves when you plug them in.
@@ -75,7 +75,7 @@ If that plugin is missing, Podcast uses RNNoise. Meeting still echo-cancels with
 | Action | How |
 | --- | --- |
 | Open or close the panel | Left-click the mark |
-| Settings | Cog, then the back arrow. Meeting and Podcast have Good / Better / Best. |
+| Settings | Cog, then the back arrow. Meeting and Podcast: Softer / Balanced / Stronger. |
 | Toggle Omavoice | Right-click, or `o` |
 | Meeting / Podcast / Clean | `m` / `p` / `c` |
 | Move | Arrow keys or `h` `j` `k` `l` |

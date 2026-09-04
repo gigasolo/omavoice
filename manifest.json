@@ -2,7 +2,7 @@
   "schemaVersion": 1,
   "id": "gigasolo.omavoice",
   "name": "Omavoice",
-  "version": "0.1.11",
+  "version": "0.1.12",
   "author": "GigaSolo",
   "license": "MIT",
   "homepage": "https://github.com/gigasolo/omavoice",
@@ -69,7 +69,7 @@
       {
         "key": "meetingQuality",
         "type": "enum",
-        "label": "Meeting processing",
+        "label": "Meeting: Softer, Balanced, or Stronger",
         "options": [
           "good",
           "better",
@@ -80,7 +80,7 @@
       {
         "key": "podcastQuality",
         "type": "enum",
-        "label": "Podcast processing",
+        "label": "Podcast: Softer, Balanced, or Stronger",
         "options": [
           "good",
           "better",

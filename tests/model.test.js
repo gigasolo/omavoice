@@ -80,6 +80,12 @@ test("normalizeQuality defaults to better", () => {
   assert.equal(Model.qualityFromIndex(0), "good")
   assert.equal(Model.qualityFromIndex(2), "best")
   assert.equal(Model.qualityFromIndex(99), "best")
+  assert.equal(Model.qualityLabel("good"), "Softer")
+  assert.equal(Model.qualityLabel("better"), "Balanced")
+  assert.equal(Model.qualityLabel("best"), "Stronger")
+  assert.match(Model.qualityHint("meeting", "good"), /voice/)
+  assert.match(Model.qualityHint("meeting", "best"), /clip/)
+  assert.match(Model.qualityHint("podcast", "best"), /Heavier/)
 })
 
 test("shouldDeferSourcePick keeps the mic while PipeWire names are unbound", () => {

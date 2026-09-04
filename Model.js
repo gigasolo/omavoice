@@ -26,6 +26,26 @@ function qualityFromIndex(index) {
   return QUALITIES[i]
 }
 
+function qualityLabel(value) {
+  var quality = normalizeQuality(value)
+  if (quality === "good") return "Softer"
+  if (quality === "best") return "Stronger"
+  return "Balanced"
+}
+
+function qualityHint(preset, quality) {
+  var kind = normalizePreset(preset)
+  var level = normalizeQuality(quality)
+  if (kind === "podcast") {
+    if (level === "good") return "Light denoise. More of the room stays."
+    if (level === "best") return "Heavier denoise. Less air, less noise."
+    return "Speech that sounds finished."
+  }
+  if (level === "good") return "More of your voice. Some room stays."
+  if (level === "best") return "Quieter room. May clip a word ending."
+  return "Echo and noise cut for calls."
+}
+
 function isOmavoiceName(name) {
   var value = String(name || "")
   return value === NODE_NAME
@@ -181,6 +201,8 @@ if (typeof module !== "undefined") {
     normalizeQuality: normalizeQuality,
     qualityIndex: qualityIndex,
     qualityFromIndex: qualityFromIndex,
+    qualityLabel: qualityLabel,
+    qualityHint: qualityHint,
     isOmavoiceName: isOmavoiceName,
     isOmavoiceNode: isOmavoiceNode,
     isUsbSourceName: isUsbSourceName,

@@ -118,6 +118,7 @@ Panel {
 
   component QualitySlider: Column {
     required property string title
+    required property string preset
     required property string quality
     signal chosen(string value)
 
@@ -130,6 +131,15 @@ Panel {
       font.family: root.fontFamily
       font.pixelSize: Style.font.subtitle
       font.bold: true
+    }
+
+    Text {
+      width: parent.width
+      text: Model.qualityHint(preset, quality)
+      color: root.dim
+      font.family: root.fontFamily
+      font.pixelSize: Style.font.caption
+      wrapMode: Text.WordWrap
     }
 
     PanelSlider {
@@ -148,7 +158,7 @@ Panel {
     Row {
       width: parent.width
       Repeater {
-        model: ["Good", "Better", "Best"]
+        model: ["Softer", "Balanced", "Stronger"]
         Text {
           required property string modelData
           required property int index
@@ -768,12 +778,14 @@ Panel {
 
           QualitySlider {
             title: "Meeting"
+            preset: "meeting"
             quality: service.meetingQuality
             onChosen: function(value) { root.setMeetingQuality(value) }
           }
 
           QualitySlider {
             title: "Podcast"
+            preset: "podcast"
             quality: service.podcastQuality
             onChosen: function(value) { root.setPodcastQuality(value) }
           }
