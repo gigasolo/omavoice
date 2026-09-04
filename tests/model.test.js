@@ -26,6 +26,13 @@ test("normalizePreset falls back to meeting", () => {
   assert.equal(Model.normalizePreset(""), "meeting")
 })
 
+test("isOmavoiceNode matches name or description when name is still unbound", () => {
+  assert.equal(Model.isOmavoiceNode({ name: "omavoice" }), true)
+  assert.equal(Model.isOmavoiceNode({ name: "", description: "Omavoice" }), true)
+  assert.equal(Model.isOmavoiceNode({ name: "", description: "Microphones" }), false)
+  assert.equal(Model.isOmavoiceNode(null), false)
+})
+
 test("USB and omavoice name detection", () => {
   assert.equal(Model.isUsbSourceName(usb.name), true)
   assert.equal(Model.isUsbSourceName(builtin.name), false)

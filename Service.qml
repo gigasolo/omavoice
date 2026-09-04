@@ -16,15 +16,30 @@ Item {
   property bool haveRnnoise: false
   property bool haveDeepfilter: false
   property bool haveWebrtc: false
-  property bool running: false
-  property bool busy: hostProcess.running
   property bool listen: false
   property string lastError: ""
   property string actionStatus: ""
   property string targetName: ""
   property string targetLabel: ""
   property string previousDefaultName: ""
+  property string hostKey: ""
   property var sources: []
+  property bool promoted: false
+
+  // Quickshell leaves PwNode.name empty until the node is bound.
+  readonly property var nodes: Pipewire.nodes ? Pipewire.nodes.values : []
+  readonly property var trackedNodes: {
+    var list = []
+    for (var i = 0; i < nodes.length; i++) {
+      var n = nodes[i]
+      if (n && !n.isStream) list.push(n)
+    }
+    return list
+  }
+  PwObjectTracker { objects: root.trackedNodes }
+
+  readonly property bool busy: hostProcess.running && !running
+  readonly property bool running: hostProcess.running
 
   readonly property string pluginDir: manifest && manifest.__sourceDir ? String(manifest.__sourceDir) : Qt.resolvedUrl(".").toString().replace(/^file:\/\//, "").replace(/\/$/, "")
   readonly property bool enabled: setting("enabled", true) !== false
@@ -58,13 +73,12 @@ Item {
   }
 
   function snapshotSources() {
-    var nodes = Pipewire.nodes && Pipewire.nodes.values ? Pipewire.nodes.values : []
     var list = []
     for (var i = 0; i < nodes.length; i++) {
       var node = nodes[i]
       if (!node || node.isSink || node.isStream) continue
       var name = String(node.name || "")
-      if (!Model.isCaptureSourceName(name) && !Model.isOmavoiceName(name)) continue
+      if (!Model.isCaptureSourceName(name)) continue
       list.push({
         name: name,
         description: String(node.description || node.nickname || name),
@@ -75,10 +89,9 @@ Item {
   }
 
   function omavoiceNode() {
-    var nodes = Pipewire.nodes && Pipewire.nodes.values ? Pipewire.nodes.values : []
     for (var i = 0; i < nodes.length; i++) {
       var node = nodes[i]
-      if (node && !node.isSink && String(node.name || "") === Model.NODE_NAME) return node
+      if (node && !node.isSink && !node.isStream && Model.isOmavoiceNode(node)) return node
     }
     return null
   }
@@ -104,21 +117,21 @@ Item {
   }
 
   function startHost() {
-    var cmd = [scriptPath("omavoice-run"), "--preset", preset, "--target", targetName, "--dir", pluginDir]
-    var same = hostProcess.running && hostProcess.command && hostProcess.command.join("\0") === cmd.join("\0")
-    if (same) return
-    if (hostProcess.running) {
-      hostProcess.running = false
-    }
+    var key = preset + "\0" + targetName + "\0" + pluginDir
+    if (hostProcess.running && hostKey === key) return
+    hostKey = key
     lastError = ""
-    hostProcess.command = cmd
+    promoted = false
+    hostProcess.running = false
+    hostProcess.command = [scriptPath("omavoice-run"), "--preset", preset, "--target", targetName, "--dir", pluginDir]
     hostProcess.running = true
   }
 
   function stopHost() {
     if (listen) setListen(false)
     if (hostProcess.running) hostProcess.running = false
-    running = false
+    hostKey = ""
+    promoted = false
     if (!enabled) restoreDefault()
   }
 
@@ -231,12 +244,12 @@ Item {
 
   Timer {
     interval: 400
-    running: root.active && hostProcess.running && root.setDefaultSource
+    running: root.active && hostProcess.running && root.setDefaultSource && !root.promoted
     repeat: true
     onTriggered: {
       if (root.omavoiceNode()) {
-        running = true
         root.promoteDefault()
+        root.promoted = true
       }
     }
   }
@@ -270,7 +283,7 @@ Item {
     }
     onRunningChanged: {
       if (running) return
-      root.running = false
+      root.promoted = false
     }
   }
 

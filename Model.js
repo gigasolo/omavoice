@@ -15,6 +15,12 @@ function isOmavoiceName(name) {
     || value.indexOf("capture.omavoice") === 0
 }
 
+function isOmavoiceNode(node) {
+  if (!node) return false
+  if (isOmavoiceName(node.name)) return true
+  return String(node.description || node.nickname || "") === NODE_DESCRIPTION
+}
+
 function isUsbSourceName(name) {
   return String(name || "").indexOf("alsa_input.usb-") === 0
 }
@@ -133,6 +139,7 @@ if (typeof module !== "undefined") {
     PRESETS: PRESETS,
     normalizePreset: normalizePreset,
     isOmavoiceName: isOmavoiceName,
+    isOmavoiceNode: isOmavoiceNode,
     isUsbSourceName: isUsbSourceName,
     isCaptureSourceName: isCaptureSourceName,
     sourceKind: sourceKind,
