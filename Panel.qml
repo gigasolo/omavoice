@@ -504,12 +504,12 @@ Panel {
 
             Item {
               width: parent.width
-              implicitHeight: Math.max(presetHeader.implicitHeight, presetWrench.implicitHeight)
+              implicitHeight: Math.max(presetHeader.implicitHeight, presetTuneButton.implicitHeight)
 
               PanelSectionHeader {
                 id: presetHeader
                 anchors.left: parent.left
-                anchors.right: presetWrench.left
+                anchors.right: presetTuneButton.left
                 anchors.rightMargin: Style.space(8)
                 anchors.verticalCenter: parent.verticalCenter
                 text: "PRESET"
@@ -518,10 +518,10 @@ Panel {
               }
 
               PanelActionButton {
-                id: presetWrench
+                id: presetTuneButton
                 anchors.right: parent.right
                 anchors.verticalCenter: parent.verticalCenter
-                iconText: "󰚩"
+                iconText: "󰒓"
                 tooltipText: "Tune Meeting and Podcast"
                 foreground: root.foreground
                 fontFamily: root.fontFamily
@@ -592,42 +592,47 @@ Panel {
 
             Item {
               width: parent.width
-              implicitHeight: Math.max(micHeader.implicitHeight, defaultMicSwitch.implicitHeight)
+              implicitHeight: Math.max(micHeader.implicitHeight, micAutoRow.implicitHeight)
 
               PanelSectionHeader {
                 id: micHeader
                 anchors.left: parent.left
-                anchors.right: defaultMicLabel.left
-                anchors.rightMargin: Style.space(8)
                 anchors.verticalCenter: parent.verticalCenter
                 text: "MICROPHONE"
                 foreground: root.foreground
                 fontFamily: root.fontFamily
               }
 
-              Text {
-                id: defaultMicLabel
-                anchors.right: defaultMicSwitch.left
-                anchors.rightMargin: Style.space(8)
-                anchors.verticalCenter: parent.verticalCenter
-                text: "Auto"
-                color: root.dim
-                font.family: root.fontFamily
-                font.pixelSize: Style.font.caption
-                font.bold: true
-              }
-
-              ToggleSwitch {
-                id: defaultMicSwitch
+              Row {
+                id: micAutoRow
                 anchors.right: parent.right
                 anchors.verticalCenter: parent.verticalCenter
-                checked: service.setDefaultSource
-                foreground: root.foreground
-                onToggled: root.toggleDefaultSource()
-                PanelToolTip {
-                  visible: defaultMicSwitch.containsMouse
-                  text: "Apps pick Omavoice automatically"
+                spacing: Style.space(6)
+
+                PanelSectionHeader {
+                  id: micAutoLabel
+                  text: "AUTOMATIC"
+                  foreground: root.foreground
                   fontFamily: root.fontFamily
+                  anchors.verticalCenter: parent.verticalCenter
+                }
+
+                ToggleSwitch {
+                  id: defaultMicSwitch
+                  trackHeight: Math.round(micAutoLabel.font.pixelSize * 1.2)
+                  cursorPad: Style.space(3)
+                  anchors.verticalCenter: micAutoLabel.verticalCenter
+                  anchors.verticalCenterOffset: Math.round(micAutoLabel.topPadding / 2)
+                  checked: service.setDefaultSource
+                  foreground: root.foreground
+                  onToggled: root.toggleDefaultSource()
+                  PanelToolTip {
+                    visible: defaultMicSwitch.containsMouse
+                    text: service.setDefaultSource
+                      ? "Apps pick Omavoice automatically"
+                      : "Pick Omavoice in each app"
+                    fontFamily: root.fontFamily
+                  }
                 }
               }
             }
