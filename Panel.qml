@@ -356,6 +356,9 @@ Panel {
         else if (t === "p" || t === "P") root.choosePreset("podcast")
         else if (t === "c" || t === "C") root.choosePreset("clean")
         else if (t === "o" || t === "O") root.toggleEnabled()
+        else if (t === "r" || t === "R") {
+          if (typeof service.reload === "function") service.reload()
+        }
       }
 
       transform: Rotation {
@@ -387,7 +390,7 @@ Panel {
           Item {
             id: header
             width: parent.width
-            implicitHeight: Math.max(heroIcon.implicitHeight, heroLabels.implicitHeight, powerSwitch.implicitHeight)
+            implicitHeight: Math.max(heroIcon.implicitHeight, heroLabels.implicitHeight, reloadButton.implicitHeight, powerSwitch.implicitHeight)
             readonly property bool ringVisible: root.headerHasCursor
             function focusHero() { root.setHeaderCursor() }
 
@@ -404,7 +407,7 @@ Panel {
               id: heroLabels
               anchors.left: heroIcon.right
               anchors.leftMargin: Style.space(14)
-              anchors.right: powerSwitch.left
+              anchors.right: reloadButton.left
               anchors.rightMargin: Style.space(12)
               anchors.verticalCenter: parent.verticalCenter
               spacing: Style.space(3)
@@ -427,6 +430,19 @@ Panel {
                 font.pixelSize: Style.font.bodySmall
                 elide: Text.ElideRight
               }
+            }
+
+            PanelActionButton {
+              id: reloadButton
+              anchors.right: powerSwitch.left
+              anchors.rightMargin: Style.space(4)
+              anchors.verticalCenter: parent.verticalCenter
+              iconText: service.reloading ? "󰑓" : "󰑐"
+              tooltipText: "Reload processing"
+              foreground: root.foreground
+              fontFamily: root.fontFamily
+              enabled: !service.reloading
+              onClicked: if (typeof service.reload === "function") service.reload()
             }
 
             ToggleSwitch {

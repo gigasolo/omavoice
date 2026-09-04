@@ -26,6 +26,7 @@ Item {
   property bool promoted: false
   property bool meterHoldWanted: false
   property string meterHoldTarget: ""
+  property bool reloading: false
 
   // Quickshell leaves PwNode.name empty until the node is bound.
   readonly property var nodes: Pipewire.nodes ? Pipewire.nodes.values : []
@@ -295,6 +296,19 @@ Item {
     probeProcess.running = true
   }
 
+  // Re-scan LADSPA plugins and rebuild the chain. Needed after installing
+  // RNNoise or DeepFilterNet without restarting the shell.
+  function reload() {
+    reloading = true
+    probe()
+    if (!root.active || !enabled || !targetName) {
+      reloading = false
+      return
+    }
+    hostKey = ""
+    startHostNow()
+  }
+
   onEnabledChanged: syncHost()
   onPresetChanged: syncHost()
   onQualityChanged: syncHost()
@@ -385,7 +399,10 @@ Item {
       }
     }
     onRunningChanged: {
-      if (running) return
+      if (running) {
+        root.reloading = false
+        return
+      }
       root.promoted = false
       root.syncMeterHold()
     }
