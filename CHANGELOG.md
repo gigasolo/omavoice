@@ -5,6 +5,15 @@ All notable changes to Omavoice are documented here.
 The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.1.19] — 2026-09-04
+
+### Fixed
+
+- After meters show the processed level on first panel open after an
+  update. The hold used to attach before PipeWire bound the `omavoice`
+  name, so After sat at Before until a no-op preset toggle recreated the
+  node.
+
 ## [0.1.18] — 2026-09-04
 
 ### Fixed
@@ -198,6 +207,7 @@ and this project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html)
   guidance.
 - MIT license (GigaSolo LLC).
 
+[0.1.19]: https://github.com/gigasolo/omavoice/compare/v0.1.18...v0.1.19
 [0.1.18]: https://github.com/gigasolo/omavoice/compare/v0.1.17...v0.1.18
 [0.1.17]: https://github.com/gigasolo/omavoice/compare/v0.1.16...v0.1.17
 [0.1.16]: https://github.com/gigasolo/omavoice/compare/v0.1.15...v0.1.16

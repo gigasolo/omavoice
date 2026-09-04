@@ -256,8 +256,12 @@ Panel {
   }
 
   readonly property string meterEpoch: {
-    var node = service.afterNode
-    if (node && node.id !== undefined) return String(node.id)
+    var name = service.afterNodeName || ""
+    if (name) {
+      var node = service.afterNode
+      var id = node && node.id !== undefined ? String(node.id) : ""
+      return name + ":" + id
+    }
     return service.running ? "starting" : "off"
   }
   property bool metersArmed: true

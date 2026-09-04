@@ -25,7 +25,7 @@ Item {
   property var sources: []
   property bool promoted: false
   property bool meterHoldWanted: false
-  property string meterHoldNodeId: ""
+  property string meterHoldTarget: ""
 
   // Quickshell leaves PwNode.name empty until the node is bound.
   readonly property var nodes: Pipewire.nodes ? Pipewire.nodes.values : []
@@ -41,9 +41,25 @@ Item {
 
   readonly property bool busy: hostProcess.running && !running
   readonly property bool running: hostProcess.running
+  // After meters and the panel hold need the bound source. Matching the
+  // unbound description fires onAfterNodeChanged too early, then the same
+  // object later gets name "omavoice" with no second change — After stays
+  // at Before until a preset toggle recreates the node.
+  readonly property string afterNodeName: {
+    for (var i = 0; i < trackedNodes.length; i++) {
+      var n = trackedNodes[i]
+      if (n && String(n.name || "") === Model.NODE_NAME) return Model.NODE_NAME
+    }
+    return ""
+  }
   readonly property var afterNode: {
-    var _ = nodes
-    return omavoiceNode()
+    var name = afterNodeName
+    if (!name) return null
+    return nodeNamed(name)
+  }
+  readonly property string afterNodeId: {
+    var node = afterNode
+    return node && node.id !== undefined ? String(node.id) : ""
   }
 
   readonly property string pluginDir: manifest && manifest.__sourceDir ? String(manifest.__sourceDir) : Qt.resolvedUrl(".").toString().replace(/^file:\/\//, "").replace(/\/$/, "")
@@ -122,11 +138,6 @@ Item {
     return false
   }
 
-  function afterNodeId() {
-    var node = afterNode
-    return node && node.id !== undefined ? String(node.id) : ""
-  }
-
   function refreshSources() {
     var next = snapshotSources()
     if (Model.shouldDeferSourcePick(targetName, hasUnboundNodes())) {
@@ -159,7 +170,7 @@ Item {
     var key = preset + "\0" + quality + "\0" + targetName + "\0" + pluginDir
     if (hostProcess.running && hostKey === key) return
     if (meterHoldProcess.running) meterHoldProcess.running = false
-    meterHoldNodeId = ""
+    meterHoldTarget = ""
     hostKey = key
     lastError = ""
     promoted = false
@@ -171,7 +182,7 @@ Item {
   function stopHost() {
     startDebounce.stop()
     if (meterHoldProcess.running) meterHoldProcess.running = false
-    meterHoldNodeId = ""
+    meterHoldTarget = ""
     if (hostProcess.running) hostProcess.running = false
     hostKey = ""
     promoted = false
@@ -215,27 +226,27 @@ Item {
   }
 
   function syncMeterHold() {
-    var nodeId = afterNodeId()
-    var want = meterHoldWanted && running && enabled && !!nodeId
+    var name = afterNodeName
+    var want = meterHoldWanted && running && enabled && !!name
     if (!want) {
       meterHoldRetry.stop()
       if (meterHoldProcess.running) meterHoldProcess.running = false
-      meterHoldNodeId = ""
+      meterHoldTarget = ""
       return
     }
-    if (meterHoldProcess.running && meterHoldNodeId === nodeId) return
+    if (meterHoldProcess.running && meterHoldTarget === name) return
     // Same-tick stop+start often does not relaunch Process. Stop, then retry.
     if (meterHoldProcess.running) {
       meterHoldProcess.running = false
       meterHoldRetry.restart()
       return
     }
-    meterHoldNodeId = nodeId
+    meterHoldTarget = name
     meterHoldProcess.command = [
       "pw-cat",
       "-r",
       "-a",
-      "--target", nodeId,
+      "--target", name,
       "--rate", "48000",
       "--channels", "1",
       "-P", "{ node.name=omavoice.meter.hold }",
@@ -290,6 +301,8 @@ Item {
   onPinnedSourceChanged: refreshSources()
   onTargetNameChanged: syncHost()
   onAfterNodeChanged: syncMeterHold()
+  onAfterNodeNameChanged: syncMeterHold()
+  onAfterNodeIdChanged: syncMeterHold()
   onSetDefaultSourceChanged: {
     if (setDefaultSource) {
       promoted = false
@@ -381,7 +394,7 @@ Item {
     id: meterHoldProcess
     onRunningChanged: {
       if (running) return
-      if (root.meterHoldWanted && root.running && root.afterNodeId()) meterHoldRetry.restart()
+      if (root.meterHoldWanted && root.running && root.afterNodeName) meterHoldRetry.restart()
     }
   }
 
@@ -389,6 +402,14 @@ Item {
     id: meterHoldRetry
     interval: 400
     repeat: false
+    onTriggered: root.syncMeterHold()
+  }
+
+  Timer {
+    id: meterHoldWatch
+    interval: 800
+    running: root.meterHoldWanted && root.running && root.enabled && !!root.afterNodeName && !meterHoldProcess.running
+    repeat: true
     onTriggered: root.syncMeterHold()
   }
 }
