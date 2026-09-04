@@ -13,7 +13,7 @@
   <a href="LICENSE"><img src="https://img.shields.io/badge/license-MIT-22c55e?style=flat-square" alt="License: MIT"></a>
   <img src="https://img.shields.io/badge/omarchy-4%20Quattro-0ea5e9?style=flat-square" alt="Omarchy 4 Quattro">
   <img src="https://img.shields.io/badge/pipewire-filter--chain-a3e635?style=flat-square" alt="PipeWire filter-chain">
-  <img src="https://img.shields.io/badge/version-0.1.19-111827?style=flat-square" alt="Version 0.1.19">
+  <img src="https://img.shields.io/badge/version-0.1.20-111827?style=flat-square" alt="Version 0.1.20">
 </p>
 
 Pick **Omavoice** in Zoom, Google Meet, OBS, or a browser. The plugin sits under those apps as a PipeWire source, so you do not configure each one. USB mics attach themselves when you plug them in.
@@ -100,6 +100,10 @@ USB / laptop / BT mic
 
 The host is a dedicated PipeWire client, the same isolation Omarchy uses for speaker tuning. It does not write into that tuning, and it does not load stock `filter-chain.conf.d`. Disable the plugin and the chain stops.
 
+## While it's running
+
+Meeting echo cancel can use CPU while speakers play, even with no call. After meters and `pw-cat` run only while the panel is open. Disable the plugin to stop the host.
+
 ## Update and remove
 
 ```sh
@@ -138,7 +142,7 @@ That runs the Model tests and `omarchy plugin validate .`, the same checks Omarc
 
 Omarchy distributes third-party plugins as public git repos. Anyone can run `omarchy plugin add` against this URL.
 
-To help people find it, list it at [omarchyplugins.com](https://omarchyplugins.com).
+To help people find it, list it at [plugins.omarchy.org](https://plugins.omarchy.org).
 
 ## Changelog
 

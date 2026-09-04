@@ -33,7 +33,7 @@ Item {
     var list = []
     for (var i = 0; i < nodes.length; i++) {
       var n = nodes[i]
-      if (n && !n.isStream) list.push(n)
+      if (n && !n.isSink && !n.isStream) list.push(n)
     }
     return list
   }
@@ -130,7 +130,7 @@ Item {
     return null
   }
 
-  function hasUnboundNodes() {
+  readonly property bool hasUnboundNodes: {
     for (var i = 0; i < nodes.length; i++) {
       var node = nodes[i]
       if (node && !node.isSink && !node.isStream && !String(node.name || "")) return true
@@ -140,7 +140,7 @@ Item {
 
   function refreshSources() {
     var next = snapshotSources()
-    if (Model.shouldDeferSourcePick(targetName, hasUnboundNodes())) {
+    if (Model.shouldDeferSourcePick(targetName, hasUnboundNodes)) {
       if (next.length > 0 && !Model.sourcesUnchanged(sources, next)) sources = next
       syncHost()
       return
@@ -299,6 +299,7 @@ Item {
   onPresetChanged: syncHost()
   onQualityChanged: syncHost()
   onPinnedSourceChanged: refreshSources()
+  onNodesChanged: refreshSources()
   onTargetNameChanged: syncHost()
   onAfterNodeChanged: syncMeterHold()
   onAfterNodeNameChanged: syncMeterHold()
@@ -339,7 +340,7 @@ Item {
 
   Timer {
     interval: 750
-    running: root.active
+    running: root.active && root.hasUnboundNodes
     repeat: true
     onTriggered: root.refreshSources()
   }

@@ -35,6 +35,16 @@ echo "$meeting_best" | grep -q '"VAD Threshold (%)" = 85.0' || fail "meeting bes
 echo "$meeting_best" | grep -q '"VAD Grace Period (ms)" = 250' || fail "meeting best grace must be 250"
 echo "$meeting" | grep -A10 'node.name = "omavoice.capture"' | grep -q 'node.dont-fallback = true' \
   || fail "omavoice.capture must not fall back to another mic"
+echo "$meeting" | grep -A12 'node.name = "omavoice.capture"' | grep -q 'stream.dont-remix = true' \
+  || fail "omavoice.capture must not remix"
+echo "$meeting" | grep -A16 'media.class = Audio/Source' | grep -q 'node.virtual = true' \
+  || fail "omavoice source must be node.virtual"
+echo "$meeting" | grep -A16 'media.class = Audio/Source' | grep -q 'media.role = Communication' \
+  || fail "omavoice source must be Communication"
+echo "$meeting" | grep -A16 'media.class = Audio/Source' | grep -q 'session.suspend-timeout-seconds = 3' \
+  || fail "omavoice source must suspend after 3s idle"
+echo "$meeting" | grep -A16 'media.class = Audio/Source' | grep -q 'stream.dont-remix = true' \
+  || fail "omavoice source must not remix"
 echo "$meeting" | grep -q 'audio.position = \[ MONO \]' || fail "meeting must be mono"
 echo "$meeting" | grep -q 'node.latency = 256/48000' || fail "meeting must pin 256/48000"
 echo "$meeting" | grep -q 'lsp-plug.in/plugins/lv2/compressor_mono' || fail "meeting needs compressor_mono"

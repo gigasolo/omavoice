@@ -173,6 +173,7 @@ if [[ $use_aec -eq 1 ]]; then
                 node.name = "omavoice.aec.capture"
                 node.passive = true
                 node.dont-fallback = true
+                stream.dont-remix = true
                 target.object = "$target"
             }
             playback.props = {
@@ -210,6 +211,7 @@ $1
                 node.name = "omavoice.capture"
                 node.passive = true
                 node.dont-fallback = true
+                stream.dont-remix = true
                 audio.rate = 48000
                 audio.position = [ MONO ]
                 node.latency = 256/48000
@@ -219,6 +221,10 @@ $1
                 node.name = "omavoice"
                 node.description = "Omavoice"
                 media.class = Audio/Source
+                node.virtual = true
+                media.role = Communication
+                session.suspend-timeout-seconds = 3
+                stream.dont-remix = true
                 audio.rate = 48000
                 audio.position = [ MONO ]
                 node.latency = 256/48000

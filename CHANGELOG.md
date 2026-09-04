@@ -5,6 +5,25 @@ All notable changes to Omavoice are documented here.
 The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.1.20] — 2026-09-04
+
+### Added
+
+- Marketplace `preview.png` of the open panel.
+
+### Changed
+
+- Track capture sources only, and refresh the mic list when PipeWire
+  nodes change instead of polling every 750 ms.
+- Mark Omavoice as a virtual Communication source with a 3s suspend
+  timeout, and keep mono capture from being remixed.
+- README lists the plugin at [plugins.omarchy.org](https://plugins.omarchy.org)
+  and notes Meeting AEC cost while speakers play.
+
+### Removed
+
+- Unused wave-orb PNGs. The bar and README keep the microphone mark.
+
 ## [0.1.19] — 2026-09-04
 
 ### Fixed
@@ -207,6 +226,7 @@ and this project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html)
   guidance.
 - MIT license (GigaSolo LLC).
 
+[0.1.20]: https://github.com/gigasolo/omavoice/compare/v0.1.19...v0.1.20
 [0.1.19]: https://github.com/gigasolo/omavoice/compare/v0.1.18...v0.1.19
 [0.1.18]: https://github.com/gigasolo/omavoice/compare/v0.1.17...v0.1.18
 [0.1.17]: https://github.com/gigasolo/omavoice/compare/v0.1.16...v0.1.17
