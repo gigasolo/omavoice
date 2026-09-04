@@ -317,50 +317,71 @@ Panel {
           Item {
             id: header
             width: parent.width
-            implicitHeight: hero.implicitHeight
+            implicitHeight: Math.max(heroIcon.implicitHeight, heroLabels.implicitHeight, powerButton.implicitHeight)
             readonly property bool ringVisible: root.headerHasCursor
             function focusHero() { root.setHeaderCursor() }
 
-            PanelHero {
-              id: hero
-              width: parent.width
-              title: "Omavoice"
-              meta: root.heroPhraseText
+            OmavoiceIcon {
+              id: heroIcon
+              anchors.left: parent.left
+              anchors.verticalCenter: parent.verticalCenter
+              iconSize: Style.font.display
+              color: root.iconColor
+              opacity: service.enabled ? 1.0 : 0.5
+            }
+
+            Column {
+              id: heroLabels
+              anchors.left: heroIcon.right
+              anchors.leftMargin: Style.space(14)
+              anchors.right: settingsButton.left
+              anchors.rightMargin: Style.space(12)
+              anchors.verticalCenter: parent.verticalCenter
+              spacing: Style.space(3)
+
+              Text {
+                text: "Omavoice"
+                color: root.foreground
+                font.family: root.fontFamily
+                font.pixelSize: Style.font.title
+                font.bold: true
+              }
+
+              Text {
+                width: parent.width
+                visible: text !== ""
+                text: root.heroPhraseText.toUpperCase()
+                textFormat: Text.PlainText
+                color: service.lastError !== "" ? root.urgent : root.dim
+                font.family: root.fontFamily
+                font.pixelSize: Style.font.bodySmall
+                elide: Text.ElideRight
+              }
+            }
+
+            PanelActionButton {
+              id: settingsButton
+              anchors.right: powerButton.left
+              anchors.rightMargin: Style.space(4)
+              anchors.verticalCenter: parent.verticalCenter
+              iconText: "󰒓"
+              tooltipText: "Settings"
               foreground: root.foreground
               fontFamily: root.fontFamily
-              iconOpacity: service.enabled ? 1.0 : 0.5
-              iconComponent: Component {
-                OmavoiceIcon {
-                  iconSize: Style.font.display
-                  color: root.iconColor
-                }
-              }
-              trailingControl: Component {
-                Row {
-                  spacing: Style.space(6)
-                  PanelActionButton {
-                    iconText: "󰒓"
-                    tooltipText: "Settings"
-                    foreground: hero.foreground
-                    fontFamily: hero.fontFamily
-                    onClicked: root.showSettings(true)
-                  }
-                  ToggleSwitch {
-                    id: powerSwitch
-                    checked: service.enabled
-                    busy: service.busy && !service.running
-                    hasCursor: header.ringVisible
-                    foreground: hero.foreground
-                    onHovered: function(on) { if (on) header.focusHero() }
-                    onToggled: root.toggleEnabled()
-                    PanelToolTip {
-                      visible: powerSwitch.containsMouse
-                      text: root.toggleHint
-                      fontFamily: hero.fontFamily
-                    }
-                  }
-                }
-              }
+              onClicked: root.showSettings(true)
+            }
+
+            PanelActionButton {
+              id: powerButton
+              anchors.right: parent.right
+              anchors.verticalCenter: parent.verticalCenter
+              iconText: "󰐥"
+              tooltipText: root.toggleHint
+              foreground: service.enabled ? root.foreground : root.dim
+              hasCursor: header.ringVisible
+              fontFamily: root.fontFamily
+              onHovered: function(on) { if (on) header.focusHero() }
+              onClicked: root.toggleEnabled()
             }
           }
 

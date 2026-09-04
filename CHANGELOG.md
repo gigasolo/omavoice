@@ -5,6 +5,13 @@ All notable changes to Omavoice are documented here.
 The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.1.9] — 2026-09-04
+
+### Changed
+
+- Header matches HEY: a larger microphone, with settings and power as the
+  same icon buttons, vertically centered.
+
 ## [0.1.8] — 2026-09-04
 
 ### Changed
@@ -121,6 +128,7 @@ and this project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html)
   guidance.
 - MIT license (GigaSolo LLC).
 
+[0.1.9]: https://github.com/gigasolo/omavoice/compare/v0.1.8...v0.1.9
 [0.1.8]: https://github.com/gigasolo/omavoice/compare/v0.1.7...v0.1.8
 [0.1.7]: https://github.com/gigasolo/omavoice/compare/v0.1.6...v0.1.7
 [0.1.6]: https://github.com/gigasolo/omavoice/compare/v0.1.5...v0.1.6
