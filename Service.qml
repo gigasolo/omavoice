@@ -281,6 +281,14 @@ Item {
   onPinnedSourceChanged: refreshSources()
   onTargetNameChanged: syncHost()
   onAfterNodeChanged: syncMeterHold()
+  onSetDefaultSourceChanged: {
+    if (setDefaultSource) {
+      promoted = false
+      return
+    }
+    restoreDefault()
+    promoted = true
+  }
   onActiveChanged: {
     if (!active) stopHost()
     else {

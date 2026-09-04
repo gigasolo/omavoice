@@ -291,7 +291,7 @@ EOF
                 outputs = [ "denoise:Output" ]'
       fi
     else
-      rnnoise_node 85.0 200
+      rnnoise_node 80.0 400
       dynamics_nodes
       if [[ $have_lsp -eq 1 ]]; then
         links='                links = [

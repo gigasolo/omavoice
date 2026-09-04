@@ -19,6 +19,8 @@ Panel {
   property int presetIndex: 0
   property bool cursorActive: false
   property int phraseIndex: 0
+  property bool settingsOpen: false
+  property bool pendingSettingsOpen: false
 
   readonly property var sharedService: bar && bar.shell && typeof bar.shell.serviceFor === "function"
     ? bar.shell.serviceFor(moduleName) : null
@@ -95,6 +97,17 @@ Panel {
     if (service && typeof service.pinSource === "function") service.pinSource(name)
   }
 
+  function showSettings(open) {
+    var next = open === true
+    if (settingsOpen === next || pageFlip.running) return
+    pendingSettingsOpen = next
+    pageFlip.restart()
+  }
+
+  function toggleDefaultSource() {
+    persistSettings({ setDefaultSource: !service.setDefaultSource })
+  }
+
   function launchSetup() {
     if (!bar || !setup.command) return
     bar.run("omarchy-launch-floating-terminal-with-presentation " + Util.shellQuote(setup.command))
@@ -123,6 +136,7 @@ Panel {
   }
 
   function moveCursor(dx, dy) {
+    if (settingsOpen) return
     cursorActive = true
     ensureCursor()
     if (dy === 0) return
@@ -147,6 +161,7 @@ Panel {
   }
 
   function activateCursor() {
+    if (settingsOpen) return
     ensureCursor()
     if (focusSection === "header") toggleEnabled()
     else if (focusSection === "presets") choosePreset(presets[presetIndex].value)
@@ -159,6 +174,9 @@ Panel {
 
   onOpenedChanged: {
     if (!opened) {
+      settingsOpen = false
+      pendingSettingsOpen = false
+      if (cardRotation) cardRotation.angle = 0
       if (typeof service.setMeterHold === "function") service.setMeterHold(false)
       return
     }
@@ -243,28 +261,46 @@ Panel {
     open: root.opened
     focusTarget: keyCatcher
     contentWidth: panel.fittedContentWidth(Style.space(380))
-    contentHeight: panel.fittedContentHeight(column.implicitHeight, Style.space(560))
+    contentHeight: panel.fittedContentHeight(
+      root.settingsOpen ? settingsInner.implicitHeight + Style.space(24) : column.implicitHeight,
+      Style.space(560)
+    )
 
     PanelKeyCatcher {
       id: keyCatcher
       anchors.fill: parent
       onMoveRequested: function(dx, dy) {
+        if (root.settingsOpen) return
         if (!root.cursorActive) { root.cursorActive = true; return }
         root.moveCursor(dx, dy)
       }
-      onActivateRequested: if (root.cursorActive) root.activateCursor()
-      onCloseRequested: root.close()
+      onActivateRequested: if (!root.settingsOpen && root.cursorActive) root.activateCursor()
+      onCloseRequested: {
+        if (root.settingsOpen) root.showSettings(false)
+        else root.close()
+      }
       onTabRequested: function(direction) { root.switchPanel(direction) }
       onTextKey: function(t) {
+        if (root.settingsOpen) return
         if (t === "m" || t === "M") root.choosePreset("meeting")
         else if (t === "p" || t === "P") root.choosePreset("podcast")
         else if (t === "c" || t === "C") root.choosePreset("clean")
         else if (t === "o" || t === "O") root.toggleEnabled()
       }
 
+      transform: Rotation {
+        id: cardRotation
+        origin.x: keyCatcher.width / 2
+        origin.y: keyCatcher.height / 2
+        axis.x: 0
+        axis.y: 1
+        axis.z: 0
+      }
+
       Flickable {
         id: panelFlick
         anchors.fill: parent
+        visible: !root.settingsOpen
         contentWidth: width
         contentHeight: column.implicitHeight
         clip: true
@@ -300,18 +336,28 @@ Panel {
                 }
               }
               trailingControl: Component {
-                ToggleSwitch {
-                  id: powerSwitch
-                  checked: service.enabled
-                  busy: service.busy && !service.running
-                  hasCursor: header.ringVisible
-                  foreground: hero.foreground
-                  onHovered: function(on) { if (on) header.focusHero() }
-                  onToggled: root.toggleEnabled()
-                  PanelToolTip {
-                    visible: powerSwitch.containsMouse
-                    text: root.toggleHint
+                Row {
+                  spacing: Style.space(6)
+                  PanelActionButton {
+                    iconText: "󰒓"
+                    tooltipText: "Settings"
+                    foreground: hero.foreground
                     fontFamily: hero.fontFamily
+                    onClicked: root.showSettings(true)
+                  }
+                  ToggleSwitch {
+                    id: powerSwitch
+                    checked: service.enabled
+                    busy: service.busy && !service.running
+                    hasCursor: header.ringVisible
+                    foreground: hero.foreground
+                    onHovered: function(on) { if (on) header.focusHero() }
+                    onToggled: root.toggleEnabled()
+                    PanelToolTip {
+                      visible: powerSwitch.containsMouse
+                      text: root.toggleHint
+                      fontFamily: hero.fontFamily
+                    }
                   }
                 }
               }
@@ -576,12 +622,94 @@ Panel {
           }
         }
       }
+
+      Column {
+        id: settingsPage
+        anchors.fill: parent
+        visible: root.settingsOpen
+        spacing: Style.space(12)
+
+        Column {
+          id: settingsInner
+          width: parent.width
+          spacing: Style.space(12)
+
+          Item {
+            width: parent.width
+            implicitHeight: Math.max(settingsBackButton.implicitHeight, settingsLabels.implicitHeight)
+
+            PanelActionButton {
+              id: settingsBackButton
+              anchors.left: parent.left
+              anchors.verticalCenter: parent.verticalCenter
+              iconText: "󰁍"
+              tooltipText: "Back"
+              foreground: root.foreground
+              fontFamily: root.fontFamily
+              onClicked: root.showSettings(false)
+            }
+
+            Column {
+              id: settingsLabels
+              anchors.left: settingsBackButton.right
+              anchors.leftMargin: Style.space(10)
+              anchors.right: parent.right
+              anchors.verticalCenter: parent.verticalCenter
+              spacing: Style.space(3)
+              Text {
+                text: "SETTINGS"
+                color: root.foreground
+                font.family: root.fontFamily
+                font.pixelSize: Style.font.title
+                font.bold: true
+              }
+            }
+          }
+
+          PanelSeparator { foreground: root.foreground }
+
+          Toggle {
+            width: parent.width
+            label: "Default microphone"
+            description: "Apps pick Omavoice automatically."
+            checked: service.setDefaultSource
+            foreground: root.foreground
+            onClicked: root.toggleDefaultSource()
+          }
+        }
+      }
+    }
+  }
+
+  SequentialAnimation {
+    id: pageFlip
+    NumberAnimation {
+      target: cardRotation
+      property: "angle"
+      from: 0
+      to: 90
+      duration: 130
+      easing.type: Easing.InQuad
+    }
+    ScriptAction {
+      script: {
+        root.settingsOpen = root.pendingSettingsOpen
+        cardRotation.angle = -90
+      }
+    }
+    NumberAnimation {
+      target: cardRotation
+      property: "angle"
+      from: -90
+      to: 0
+      duration: 170
+      easing.type: Easing.OutQuad
     }
   }
 
   Timer {
     interval: 2800
-    running: root.opened && service.running
+    running: root.opened && service.running && !root.settingsOpen
     repeat: true
     onTriggered: root.phraseIndex = (root.phraseIndex + 1) % root.activePhrases.length
   }

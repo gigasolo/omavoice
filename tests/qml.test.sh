@@ -20,7 +20,12 @@ grep -q '"--target", Model.NODE_NAME' "$root/Service.qml" || fail "pw-cat must t
 grep -q '/dev/null' "$root/Service.qml" || fail "meter hold must discard audio"
 grep -q 'afterNode' "$root/Service.qml" || fail "Service must expose afterNode"
 grep -q 'nodeNamed' "$root/Service.qml" || fail "Service must look up capture nodes by name"
-grep -q '"version": "0.1.7"' "$root/manifest.json" || fail "manifest must be 0.1.7"
+grep -q '"version": "0.1.8"' "$root/manifest.json" || fail "manifest must be 0.1.8"
+grep -q 'function showSettings' "$root/Panel.qml" || fail "Panel needs a settings flip"
+grep -q 'id: pageFlip' "$root/Panel.qml" || fail "settings must animate like HEY"
+grep -q 'label: "Default microphone"' "$root/Panel.qml" || fail "settings must expose default microphone"
+grep -q 'Your voice, better heard' "$root/docs/omavoice.svg" || fail "banner must use the new tagline"
+grep -q 'the record button' "$root/README.md" && fail "README must not talk about a record button"
 
 grep -q 'setListen' "$root/Service.qml" && fail "Listen must be gone from Service"
 grep -q 'listenProcess' "$root/Service.qml" && fail "Listen process must be gone"
