@@ -5,6 +5,15 @@ All notable changes to Omavoice are documented here.
 The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.1.14] — 2026-09-04
+
+### Changed
+
+- Preset tuning lives on PRESET: a wrench flips to Softer / Balanced /
+  Stronger for Meeting and Podcast.
+- Auto-select sits on the MICROPHONE header, next to the device list.
+- The hero is on/off only. Each control sits in the section it belongs to.
+
 ## [0.1.13] — 2026-09-04
 
 ### Changed
@@ -161,6 +170,7 @@ and this project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html)
   guidance.
 - MIT license (GigaSolo LLC).
 
+[0.1.14]: https://github.com/gigasolo/omavoice/compare/v0.1.13...v0.1.14
 [0.1.13]: https://github.com/gigasolo/omavoice/compare/v0.1.12...v0.1.13
 [0.1.12]: https://github.com/gigasolo/omavoice/compare/v0.1.11...v0.1.12
 [0.1.11]: https://github.com/gigasolo/omavoice/compare/v0.1.10...v0.1.11

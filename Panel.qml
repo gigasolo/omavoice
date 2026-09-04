@@ -19,8 +19,8 @@ Panel {
   property int presetIndex: 0
   property bool cursorActive: false
   property int phraseIndex: 0
-  property bool settingsOpen: false
-  property bool pendingSettingsOpen: false
+  property bool tuneOpen: false
+  property bool pendingTuneOpen: false
 
   readonly property var sharedService: bar && bar.shell && typeof bar.shell.serviceFor === "function"
     ? bar.shell.serviceFor(moduleName) : null
@@ -97,10 +97,10 @@ Panel {
     if (service && typeof service.pinSource === "function") service.pinSource(name)
   }
 
-  function showSettings(open) {
+  function showTune(open) {
     var next = open === true
-    if (settingsOpen === next || pageFlip.running) return
-    pendingSettingsOpen = next
+    if (tuneOpen === next || pageFlip.running) return
+    pendingTuneOpen = next
     pageFlip.restart()
   }
 
@@ -202,7 +202,7 @@ Panel {
   }
 
   function moveCursor(dx, dy) {
-    if (settingsOpen) return
+    if (tuneOpen) return
     cursorActive = true
     ensureCursor()
     if (dy === 0) return
@@ -227,7 +227,7 @@ Panel {
   }
 
   function activateCursor() {
-    if (settingsOpen) return
+    if (tuneOpen) return
     ensureCursor()
     if (focusSection === "header") toggleEnabled()
     else if (focusSection === "presets") choosePreset(presets[presetIndex].value)
@@ -240,8 +240,8 @@ Panel {
 
   onOpenedChanged: {
     if (!opened) {
-      settingsOpen = false
-      pendingSettingsOpen = false
+      tuneOpen = false
+      pendingTuneOpen = false
       if (cardRotation) cardRotation.angle = 0
       if (typeof service.setMeterHold === "function") service.setMeterHold(false)
       return
@@ -328,7 +328,7 @@ Panel {
     focusTarget: keyCatcher
     contentWidth: panel.fittedContentWidth(Style.space(380))
     contentHeight: panel.fittedContentHeight(
-      root.settingsOpen ? settingsInner.implicitHeight + Style.space(24) : column.implicitHeight,
+      root.tuneOpen ? tuneInner.implicitHeight + Style.space(24) : column.implicitHeight,
       Style.space(560)
     )
 
@@ -336,18 +336,18 @@ Panel {
       id: keyCatcher
       anchors.fill: parent
       onMoveRequested: function(dx, dy) {
-        if (root.settingsOpen) return
+        if (root.tuneOpen) return
         if (!root.cursorActive) { root.cursorActive = true; return }
         root.moveCursor(dx, dy)
       }
-      onActivateRequested: if (!root.settingsOpen && root.cursorActive) root.activateCursor()
+      onActivateRequested: if (!root.tuneOpen && root.cursorActive) root.activateCursor()
       onCloseRequested: {
-        if (root.settingsOpen) root.showSettings(false)
+        if (root.tuneOpen) root.showTune(false)
         else root.close()
       }
       onTabRequested: function(direction) { root.switchPanel(direction) }
       onTextKey: function(t) {
-        if (root.settingsOpen) return
+        if (root.tuneOpen) return
         if (t === "m" || t === "M") root.choosePreset("meeting")
         else if (t === "p" || t === "P") root.choosePreset("podcast")
         else if (t === "c" || t === "C") root.choosePreset("clean")
@@ -366,7 +366,7 @@ Panel {
       Flickable {
         id: panelFlick
         anchors.fill: parent
-        visible: !root.settingsOpen
+        visible: !root.tuneOpen
         contentWidth: width
         contentHeight: column.implicitHeight
         clip: true
@@ -383,7 +383,7 @@ Panel {
           Item {
             id: header
             width: parent.width
-            implicitHeight: Math.max(heroIcon.implicitHeight, heroLabels.implicitHeight, headerActions.implicitHeight)
+            implicitHeight: Math.max(heroIcon.implicitHeight, heroLabels.implicitHeight, powerSwitch.implicitHeight)
             readonly property bool ringVisible: root.headerHasCursor
             function focusHero() { root.setHeaderCursor() }
 
@@ -400,7 +400,7 @@ Panel {
               id: heroLabels
               anchors.left: heroIcon.right
               anchors.leftMargin: Style.space(14)
-              anchors.right: headerActions.left
+              anchors.right: powerSwitch.left
               anchors.rightMargin: Style.space(12)
               anchors.verticalCenter: parent.verticalCenter
               spacing: Style.space(3)
@@ -425,38 +425,20 @@ Panel {
               }
             }
 
-            Row {
-              id: headerActions
+            ToggleSwitch {
+              id: powerSwitch
               anchors.right: parent.right
               anchors.verticalCenter: parent.verticalCenter
-              spacing: Style.space(8)
-
-              PanelActionButton {
-                id: settingsButton
-                size: powerSwitch.trackHeight
-                bordered: true
-                iconText: "󰒓"
-                tooltipText: "Settings"
-                foreground: root.foreground
+              checked: service.enabled
+              busy: service.busy && !service.running
+              hasCursor: header.ringVisible
+              foreground: root.foreground
+              onHovered: function(on) { if (on) header.focusHero() }
+              onToggled: root.toggleEnabled()
+              PanelToolTip {
+                visible: powerSwitch.containsMouse
+                text: root.toggleHint
                 fontFamily: root.fontFamily
-                anchors.verticalCenter: parent.verticalCenter
-                onClicked: root.showSettings(true)
-              }
-
-              ToggleSwitch {
-                id: powerSwitch
-                checked: service.enabled
-                busy: service.busy && !service.running
-                hasCursor: header.ringVisible
-                foreground: root.foreground
-                anchors.verticalCenter: parent.verticalCenter
-                onHovered: function(on) { if (on) header.focusHero() }
-                onToggled: root.toggleEnabled()
-                PanelToolTip {
-                  visible: powerSwitch.containsMouse
-                  text: root.toggleHint
-                  fontFamily: root.fontFamily
-                }
               }
             }
           }
@@ -520,10 +502,31 @@ Panel {
             width: parent.width
             spacing: Style.space(8)
 
-            PanelSectionHeader {
-              text: "PRESET"
-              foreground: root.foreground
-              fontFamily: root.fontFamily
+            Item {
+              width: parent.width
+              implicitHeight: Math.max(presetHeader.implicitHeight, presetWrench.implicitHeight)
+
+              PanelSectionHeader {
+                id: presetHeader
+                anchors.left: parent.left
+                anchors.right: presetWrench.left
+                anchors.rightMargin: Style.space(8)
+                anchors.verticalCenter: parent.verticalCenter
+                text: "PRESET"
+                foreground: root.foreground
+                fontFamily: root.fontFamily
+              }
+
+              PanelActionButton {
+                id: presetWrench
+                anchors.right: parent.right
+                anchors.verticalCenter: parent.verticalCenter
+                iconText: "󰚩"
+                tooltipText: "Tune Meeting and Podcast"
+                foreground: root.foreground
+                fontFamily: root.fontFamily
+                onClicked: root.showTune(true)
+              }
             }
 
             Row {
@@ -587,10 +590,46 @@ Panel {
             width: parent.width
             spacing: Style.space(8)
 
-            PanelSectionHeader {
-              text: "MICROPHONE"
-              foreground: root.foreground
-              fontFamily: root.fontFamily
+            Item {
+              width: parent.width
+              implicitHeight: Math.max(micHeader.implicitHeight, defaultMicSwitch.implicitHeight)
+
+              PanelSectionHeader {
+                id: micHeader
+                anchors.left: parent.left
+                anchors.right: defaultMicLabel.left
+                anchors.rightMargin: Style.space(8)
+                anchors.verticalCenter: parent.verticalCenter
+                text: "MICROPHONE"
+                foreground: root.foreground
+                fontFamily: root.fontFamily
+              }
+
+              Text {
+                id: defaultMicLabel
+                anchors.right: defaultMicSwitch.left
+                anchors.rightMargin: Style.space(8)
+                anchors.verticalCenter: parent.verticalCenter
+                text: "Auto"
+                color: root.dim
+                font.family: root.fontFamily
+                font.pixelSize: Style.font.caption
+                font.bold: true
+              }
+
+              ToggleSwitch {
+                id: defaultMicSwitch
+                anchors.right: parent.right
+                anchors.verticalCenter: parent.verticalCenter
+                checked: service.setDefaultSource
+                foreground: root.foreground
+                onToggled: root.toggleDefaultSource()
+                PanelToolTip {
+                  visible: defaultMicSwitch.containsMouse
+                  text: "Apps pick Omavoice automatically"
+                  fontFamily: root.fontFamily
+                }
+              }
             }
 
             Text {
@@ -721,57 +760,46 @@ Panel {
       }
 
       Column {
-        id: settingsPage
+        id: tunePage
         anchors.fill: parent
-        visible: root.settingsOpen
+        visible: root.tuneOpen
         spacing: Style.space(12)
 
         Column {
-          id: settingsInner
+          id: tuneInner
           width: parent.width
-          spacing: Style.space(12)
+          spacing: Style.space(16)
 
           Item {
             width: parent.width
-            implicitHeight: Math.max(settingsBackButton.implicitHeight, settingsLabels.implicitHeight)
+            implicitHeight: Math.max(tuneBackButton.implicitHeight, tuneLabels.implicitHeight)
 
             PanelActionButton {
-              id: settingsBackButton
+              id: tuneBackButton
               anchors.left: parent.left
               anchors.verticalCenter: parent.verticalCenter
               iconText: "󰁍"
               tooltipText: "Back"
               foreground: root.foreground
               fontFamily: root.fontFamily
-              onClicked: root.showSettings(false)
+              onClicked: root.showTune(false)
             }
 
             Column {
-              id: settingsLabels
-              anchors.left: settingsBackButton.right
+              id: tuneLabels
+              anchors.left: tuneBackButton.right
               anchors.leftMargin: Style.space(10)
               anchors.right: parent.right
               anchors.verticalCenter: parent.verticalCenter
               spacing: Style.space(3)
               Text {
-                text: "SETTINGS"
+                text: "PRESET"
                 color: root.foreground
                 font.family: root.fontFamily
                 font.pixelSize: Style.font.title
                 font.bold: true
               }
             }
-          }
-
-          PanelSeparator { foreground: root.foreground }
-
-          Toggle {
-            width: parent.width
-            label: "Default microphone"
-            description: "Apps pick Omavoice automatically."
-            checked: service.setDefaultSource
-            foreground: root.foreground
-            onClicked: root.toggleDefaultSource()
           }
 
           PanelSeparator { foreground: root.foreground }
@@ -806,7 +834,7 @@ Panel {
     }
     ScriptAction {
       script: {
-        root.settingsOpen = root.pendingSettingsOpen
+        root.tuneOpen = root.pendingTuneOpen
         cardRotation.angle = -90
       }
     }
@@ -822,7 +850,7 @@ Panel {
 
   Timer {
     interval: 2800
-    running: root.opened && service.running && !root.settingsOpen
+    running: root.opened && service.running && !root.tuneOpen
     repeat: true
     onTriggered: root.phraseIndex = (root.phraseIndex + 1) % root.activePhrases.length
   }
