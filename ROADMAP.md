@@ -20,11 +20,11 @@ Ship in this order. Each row is one PR.
 
 | Bite | Issue | Why this size |
 | --- | --- | --- |
-| Live filter-chain controls | poke graph ports / node volume without tearing down `pipewire -c` | Unlock for every slider. Today `hostKey` restarts on preset + quality + target. |
-| Output gain | schema `outputGainDb` (−12…+12), panel slider next to After | What people mean by volume. After the limiter, never WebRTC AGC. |
-| Capture preamp | schema `captureGainDb`, trim before the denoiser | Quiet USB vs hot condensers. Separate from output so NS sees a sane level. |
-| Engine picker | schema `engine = auto \| rnnoise \| deepfilter` | Meeting can already run DFN; only policy blocks it. Never stack engines. |
-| Engine setup rows | probe + reload copy when a chosen engine is missing | Same pattern as RNNoise install. |
+| Live filter-chain controls | #2 | Unlock for every slider. Today `hostKey` restarts on preset + quality + target. |
+| Output gain | #3 | What people mean by volume. After the limiter, never WebRTC AGC. |
+| Capture preamp | #4 | Quiet USB vs hot condensers. Separate from output so NS sees a sane level. |
+| Engine picker | #5 | Meeting can already run DFN; only policy blocks it. Never stack engines. |
+| Engine setup rows | #6 | probe + reload copy when a chosen engine is missing. |
 | Notes source | #1 | Second job: sink monitor + mic. AEC off. Not a Meeting variant. |
 
 `auto` keeps today's behavior: Meeting = RNNoise, Podcast = DFN if present else RNNoise, Clean = none.
@@ -33,10 +33,10 @@ Ship in this order. Each row is one PR.
 
 | Bite | Issue | Why this size |
 | --- | --- | --- |
-| Voice EQ curves | Neutral / Warm / Presence / Air via builtin biquads | No new package. Off on Clean. |
-| Three-band trim | Body / Presence / Air on the existing tune page | Optional; only after named curves exist. |
-| NVIDIA engine | probe Tensor GPU + AFX or linux-broadcast, then `engine = nvidia` | Optional. Target their source or load their LADSPA if present. Do not vendor NGC blobs. Hidden when no GPU. |
-| Speex light engine | only if a filter-chain wrapper is cheap on Omarchy | After RNNoise/DFN picker. Not a 0.2 blocker. |
+| Voice EQ curves | #7 | Neutral / Warm / Presence / Air via builtin biquads. No new package. Off on Clean. |
+| Three-band trim | #8 | Body / Presence / Air on the existing tune page. Only after named curves. |
+| NVIDIA engine | #9 | probe Tensor GPU + AFX or linux-broadcast, then `engine = nvidia`. Do not vendor NGC blobs. |
+| Speex light engine | #10 | only if a filter-chain wrapper is cheap on Omarchy. After RNNoise/DFN picker. |
 
 ## Constraints that stay true
 
