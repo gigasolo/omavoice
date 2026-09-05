@@ -57,6 +57,18 @@ grep -q 'label: "Default microphone"' "$root/Panel.qml" && fail "default mic mus
 grep -q 'viewBox="0 0 24 24"' "$root/microphone.svg" || fail "microphone.svg must be the square mic mark"
 grep -q 'the record button' "$root/README.md" && fail "README must not talk about a record button"
 
+grep -q 'function setFilterControl' "$root/Service.qml" || fail "Service must set filter controls live"
+grep -q 'pw-cli' "$root/Service.qml" || fail "live controls use pw-cli"
+grep -q 'filter.graph:' "$root/Service.qml" || fail "pw-cli param is filter.graph:node:control"
+grep -q 'preset + "\\0" + quality + "\\0" + targetName + "\\0" + pluginDir' "$root/Service.qml" \
+  || fail "hostKey must stay shape-only"
+if grep -A8 'var key = preset' "$root/Service.qml" | grep -qi 'gain'; then
+  fail "hostKey must not include gain"
+fi
+if awk '/function setFilterControl/{p=1; next} p && /^  function /{exit} p' "$root/Service.qml" | grep -qE 'hostProcess\.(running|command)\s*='; then
+  fail "control writes must not kill or reconfigure hostProcess"
+fi
+
 grep -q 'setListen' "$root/Service.qml" && fail "Listen must be gone from Service"
 grep -q 'listenProcess' "$root/Service.qml" && fail "Listen process must be gone"
 grep -q 'pw-loopback' "$root/Service.qml" && fail "pw-loopback must be gone"

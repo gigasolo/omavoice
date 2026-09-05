@@ -251,6 +251,36 @@ hpf_node() {
 EOF
 }
 
+copy_gain_node() {
+  local name=$1
+  cat <<EOF
+                    {
+                        type = builtin
+                        name = $name
+                        label = copy
+                        control = { "Gain" = 1.0 }
+                    }
+EOF
+}
+
+eq_band_node() {
+  local name=$1 freq=$2 q=$3
+  cat <<EOF
+                    {
+                        type = builtin
+                        name = $name
+                        label = bq_peaking
+                        control = { "Freq" = $freq "Q" = $q "Gain" = 0.0 }
+                    }
+EOF
+}
+
+eq_nodes() {
+  eq_band_node eq.body 180 0.7
+  eq_band_node eq.presence 2500 0.9
+  eq_band_node eq.air 7000 0.7
+}
+
 rnnoise_node() {
   local vad=$1 grace=$2
   cat <<EOF
@@ -305,64 +335,72 @@ case $quality in
     ;;
 esac
 
+link_lines=""
+add_link() {
+  if [[ -n $link_lines ]]; then
+    link_lines+=$'\n'
+  fi
+  link_lines+="                    { output = \"$1\" input = \"$2\" }"
+}
+
+finish_links() {
+  printf '                links = [\n%s\n                ]\n                inputs = [ "preamp:In" ]\n                outputs = [ "outgain:Out" ]' "$link_lines"
+}
+
 {
   graph_head
-  links=""
-  if [[ $engine == rnnoise ]]; then
-    if [[ $preset == podcast ]]; then
-      hpf_node
-      rnnoise_node $podcast_vad $podcast_grace
-      dynamics_nodes
-      if [[ $have_lsp -eq 1 ]]; then
-        links='                links = [
-                    { output = "hp:Out" input = "denoise:Input" }
-                    { output = "denoise:Output" input = "comp:in" }
-                    { output = "comp:out" input = "lim:in" }
-                ]
-                inputs = [ "hp:In" ]
-                outputs = [ "lim:out" ]'
-      else
-        links='                links = [
-                    { output = "hp:Out" input = "denoise:Input" }
-                ]
-                inputs = [ "hp:In" ]
-                outputs = [ "denoise:Output" ]'
-      fi
-    else
-      rnnoise_node $meeting_vad $meeting_grace
-      dynamics_nodes
-      if [[ $have_lsp -eq 1 ]]; then
-        links='                links = [
-                    { output = "denoise:Output" input = "comp:in" }
-                    { output = "comp:out" input = "lim:in" }
-                ]
-                inputs = [ "denoise:Input" ]
-                outputs = [ "lim:out" ]'
-      fi
-    fi
-  elif [[ $engine == deepfilter ]]; then
+  copy_gain_node preamp
+  prev="preamp:Out"
+
+  if [[ $preset == clean ]]; then
     hpf_node
-    dfn_node $podcast_dfn
-    dynamics_nodes
-    if [[ $have_lsp -eq 1 ]]; then
-      links='                links = [
-                    { output = "hp:Out" input = "denoise:Input" }
-                    { output = "denoise:Output" input = "comp:in" }
-                    { output = "comp:out" input = "lim:in" }
-                ]
-                inputs = [ "hp:In" ]
-                outputs = [ "lim:out" ]'
-    else
-      links='                links = [
-                    { output = "hp:Out" input = "denoise:Input" }
-                ]
-                inputs = [ "hp:In" ]
-                outputs = [ "denoise:Output" ]'
-    fi
+    add_link "$prev" "hp:In"
+    prev="hp:Out"
+    copy_gain_node outgain
+    add_link "$prev" "outgain:In"
   else
-    hpf_node
+    if [[ $preset == podcast || $engine == deepfilter ]]; then
+      hpf_node
+      add_link "$prev" "hp:In"
+      prev="hp:Out"
+    fi
+
+    if [[ $engine == rnnoise ]]; then
+      if [[ $preset == podcast ]]; then
+        rnnoise_node $podcast_vad $podcast_grace
+      else
+        rnnoise_node $meeting_vad $meeting_grace
+      fi
+      add_link "$prev" "denoise:Input"
+      prev="denoise:Output"
+    elif [[ $engine == deepfilter ]]; then
+      dfn_node $podcast_dfn
+      add_link "$prev" "denoise:Input"
+      prev="denoise:Output"
+    elif [[ $preset == meeting ]]; then
+      hpf_node
+      add_link "$prev" "hp:In"
+      prev="hp:Out"
+    fi
+
+    eq_nodes
+    add_link "$prev" "eq.body:In"
+    add_link "eq.body:Out" "eq.presence:In"
+    add_link "eq.presence:Out" "eq.air:In"
+    prev="eq.air:Out"
+
+    dynamics_nodes
+    copy_gain_node outgain
+    if [[ $have_lsp -eq 1 ]]; then
+      add_link "$prev" "comp:in"
+      add_link "comp:out" "lim:in"
+      add_link "lim:out" "outgain:In"
+    else
+      add_link "$prev" "outgain:In"
+    fi
   fi
-  graph_tail "$links"
+
+  graph_tail "$(finish_links)"
 } >>"$conf"
 
 cat >>"$conf" <<EOF

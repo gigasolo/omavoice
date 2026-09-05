@@ -166,6 +166,23 @@ Item {
     startDebounce.restart()
   }
 
+  function setFilterControl(graphNode, control, value) {
+    var id = afterNodeId
+    if (!id || !hostProcess.running) return
+    var name = String(graphNode || "")
+    var ctl = String(control || "")
+    if (!name || !ctl) return
+    var n = Number(value)
+    if (!isFinite(n)) return
+    Quickshell.execDetached([
+      "pw-cli",
+      "set-param",
+      id,
+      "Props",
+      '{ params = [ "filter.graph:' + name + ':' + ctl + '" ' + n + ' ] }'
+    ])
+  }
+
   function startHostNow() {
     if (!root.active || !enabled || !targetName) return
     var key = preset + "\0" + quality + "\0" + targetName + "\0" + pluginDir
