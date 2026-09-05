@@ -91,4 +91,17 @@ echo "$clean" | grep -q 'node.latency = 256/48000' || fail "clean must pin 256/4
 echo "$clean" | grep -q 'noise_suppressor' && fail "clean must not denoise"
 echo "$clean" | grep -q 'monitor.mode' && fail "clean must not enable AEC"
 
+for kind in meeting podcast clean; do
+  conf=""
+  case $kind in
+    meeting) conf=$meeting ;;
+    podcast) conf=$podcast ;;
+    clean) conf=$clean ;;
+  esac
+  echo "$conf" | grep -q 'name = preamp' || fail "$kind must emit a named preamp node"
+  echo "$conf" | grep -q 'name = outgain' || fail "$kind must emit a named outgain node"
+  echo "$conf" | grep -q 'inputs = \[ "preamp:In 1" \]' || fail "$kind must enter at preamp"
+  echo "$conf" | grep -q 'outputs = \[ "outgain:Out" \]' || fail "$kind must exit at outgain"
+done
+
 echo "dump.test: ok"

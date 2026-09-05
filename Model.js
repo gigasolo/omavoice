@@ -168,6 +168,19 @@ function engineForPreset(preset, haveRnnoise, haveDeepfilter) {
   return "clean"
 }
 
+function qualityParams(preset, quality) {
+  var kind = normalizePreset(preset)
+  var level = normalizeQuality(quality)
+  if (kind === "podcast") {
+    if (level === "good") return { vad: 75.0, grace: 400, dfn: 50 }
+    if (level === "best") return { vad: 90.0, grace: 150, dfn: 85 }
+    return { vad: 85.0, grace: 200, dfn: 70 }
+  }
+  if (level === "good") return { vad: 70.0, grace: 500, dfn: 50 }
+  if (level === "best") return { vad: 85.0, grace: 250, dfn: 85 }
+  return { vad: 80.0, grace: 400, dfn: 70 }
+}
+
 function setupGuide(haveRnnoise) {
   if (haveRnnoise) {
     return { needed: false, hero: "", command: "", body: "" }
@@ -216,6 +229,7 @@ if (typeof module !== "undefined") {
     presetLabel: presetLabel,
     presetHint: presetHint,
     engineForPreset: engineForPreset,
+    qualityParams: qualityParams,
     setupGuide: setupGuide,
     statusText: statusText
   }

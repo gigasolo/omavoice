@@ -168,7 +168,8 @@ Item {
 
   function startHostNow() {
     if (!root.active || !enabled || !targetName) return
-    var key = preset + "\0" + quality + "\0" + targetName + "\0" + pluginDir
+    if (!probed) return
+    var key = preset + "\0" + engine + "\0" + targetName + "\0" + pluginDir
     if (hostProcess.running && hostKey === key) return
     if (meterHoldProcess.running) meterHoldProcess.running = false
     meterHoldTarget = ""
@@ -176,8 +177,27 @@ Item {
     lastError = ""
     promoted = false
     hostProcess.running = false
-    hostProcess.command = [scriptPath("omavoice-run"), "--preset", preset, "--quality", quality, "--target", targetName, "--dir", pluginDir]
+    hostProcess.command = [scriptPath("omavoice-run"), "--preset", preset, "--quality", quality, "--engine", engine, "--target", targetName, "--dir", pluginDir]
     hostProcess.running = true
+  }
+
+  function applyLiveControls() {
+    if (!root.active || !enabled || !hostProcess.running) return
+    liveDebounce.restart()
+  }
+
+  function writeLiveControls() {
+    if (!root.active || !enabled || !hostProcess.running) return
+    var args = [scriptPath("omavoice-ctl"), "set"]
+    var qp = Model.qualityParams(preset, quality)
+    if (engine === "rnnoise") {
+      args.push("denoise:VAD Threshold (%)", String(qp.vad))
+      args.push("denoise:VAD Grace Period (ms)", String(qp.grace))
+    } else if (engine === "deepfilter") {
+      args.push("denoise:Attenuation Limit (dB)", String(qp.dfn))
+    }
+    if (args.length <= 2) return
+    Quickshell.execDetached(args)
   }
 
   function stopHost() {
@@ -300,24 +320,26 @@ Item {
   // RNNoise or DeepFilterNet without restarting the shell.
   function reload() {
     reloading = true
-    probe()
-    if (!root.active || !enabled || !targetName) {
-      reloading = false
-      return
-    }
+    probed = false
     hostKey = ""
-    startHostNow()
+    probe()
+    if (!root.active || !enabled || !targetName) reloading = false
   }
 
   onEnabledChanged: syncHost()
   onPresetChanged: syncHost()
-  onQualityChanged: syncHost()
+  onEngineChanged: syncHost()
+  onQualityChanged: applyLiveControls()
+  onProbedChanged: if (probed) syncHost()
   onPinnedSourceChanged: refreshSources()
   onNodesChanged: refreshSources()
   onTargetNameChanged: syncHost()
   onAfterNodeChanged: syncMeterHold()
   onAfterNodeNameChanged: syncMeterHold()
-  onAfterNodeIdChanged: syncMeterHold()
+  onAfterNodeIdChanged: {
+    syncMeterHold()
+    applyLiveControls()
+  }
   onSetDefaultSourceChanged: {
     if (setDefaultSource) {
       promoted = false
@@ -350,6 +372,13 @@ Item {
     interval: 150
     repeat: false
     onTriggered: root.startHostNow()
+  }
+
+  Timer {
+    id: liveDebounce
+    interval: 80
+    repeat: false
+    onTriggered: root.writeLiveControls()
   }
 
   Timer {
