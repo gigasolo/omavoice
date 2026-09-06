@@ -20,7 +20,7 @@ Item {
   property string actionStatus: ""
   property string targetName: ""
   property string targetLabel: ""
-  property string previousDefaultName: ""
+
   property string hostKey: ""
   property var sources: []
   property bool promoted: false
@@ -70,6 +70,7 @@ Item {
   readonly property string podcastQuality: Model.normalizeQuality(setting("podcastQuality", "better"))
   readonly property string quality: preset === "podcast" ? podcastQuality : meetingQuality
   readonly property string pinnedSource: String(setting("pinnedSource", "") || "")
+  readonly property string previousAudioSource: String(setting("previousAudioSource", "") || "")
   readonly property bool setDefaultSource: setting("setDefaultSource", true) !== false
   readonly property string engineSetting: Model.normalizeEngine(setting("engine", "auto"))
   readonly property string engine: Model.resolveEngine(preset, engineSetting, haveRnnoise, haveDeepfilter)
@@ -156,13 +157,16 @@ Item {
       return
     }
     if (!Model.sourcesUnchanged(sources, next)) sources = next
-    var picked = Model.pickSource(sources, pinnedSource, defaultSourceName)
+    var fallback = Model.pickFallbackName(defaultSourceName, previousAudioSource)
+    var picked = Model.pickSource(sources, pinnedSource, fallback)
     var nextName = picked ? String(picked.name) : ""
     var nextLabel = picked ? String(picked.description || picked.name) : ""
     if (nextName !== targetName || nextLabel !== targetLabel) {
       targetName = nextName
       targetLabel = nextLabel
     }
+    if (nextName && Model.isCaptureSourceName(nextName) && nextName !== previousAudioSource)
+      persist({ previousAudioSource: nextName })
     syncHost()
   }
 
@@ -324,9 +328,8 @@ Item {
     }
     var node = omavoiceNode()
     if (!node || node.id === undefined) return
-    if (defaultSourceName && previousDefaultName === "") {
-      previousDefaultName = defaultSourceName
-    }
+    if (defaultSourceName && Model.isCaptureSourceName(defaultSourceName) && defaultSourceName !== previousAudioSource)
+      persist({ previousAudioSource: defaultSourceName })
     Quickshell.execDetached([
       "omarchy-audio-input-set-default",
       String(node.id),
@@ -335,20 +338,20 @@ Item {
   }
 
   function restoreDefault() {
-    if (!previousDefaultName) return
+    var want = previousAudioSource
+    if (!want || Model.isOmavoiceName(want)) return
     var nodes = Pipewire.nodes && Pipewire.nodes.values ? Pipewire.nodes.values : []
     for (var i = 0; i < nodes.length; i++) {
       var node = nodes[i]
-      if (node && String(node.name || "") === previousDefaultName && node.id !== undefined) {
+      if (node && String(node.name || "") === want && node.id !== undefined) {
         Quickshell.execDetached([
           "omarchy-audio-input-set-default",
           String(node.id),
-          previousDefaultName
+          want
         ])
         break
       }
     }
-    previousDefaultName = ""
   }
 
   function probe() {

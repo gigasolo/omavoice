@@ -39,6 +39,10 @@ echo "$meeting" | grep -A2 'name = libpipewire-module-filter-chain' | grep -q no
   && fail "filter-chain must not nofail or an empty host stays up without omavoice"
 echo "$meeting" | grep -q 'audio.aec' || fail "meeting must map audio.aec spa lib"
 echo "$meeting" | grep -q 'monitor.mode = true' || fail "meeting AEC must use monitor.mode"
+echo "$meeting" | grep -q 'node.name = "omavoice.aec.sink"' || fail "meeting AEC sink must be named so it can suspend"
+echo "$meeting" | grep -A4 'node.name = "omavoice.aec.sink"' | grep -q 'node.passive = true' \
+  || fail "meeting AEC sink must be node.passive"
+echo "$meeting" | grep -q 'node.suspend-on-idle = true' || fail "meeting AEC playback must suspend on idle"
 echo "$meeting" | grep -q 'webrtc.gain_control = false' || fail "meeting must disable webrtc AGC"
 echo "$meeting" | grep -q 'webrtc.noise_suppression = false' || fail "meeting must not stack WebRTC NS"
 echo "$meeting" | grep -q 'media.class = Audio/Sink' && fail "meeting must not invent an AEC sink"
@@ -146,5 +150,11 @@ echo "$meeting_clean" | grep -q 'bq_highpass' || fail "meeting --engine clean st
 meeting_dfn_good="$(dump meeting --engine deepfilter --quality good)"
 echo "$meeting_dfn_good" | grep -q '"Attenuation Limit (dB)" = 50' \
   || fail "meeting DFN good cap must be 50 dB"
+
+set +e
+"$run" --dump --preset meeting --target 'foo"bar' --dir "$root" >/dev/null 2>&1
+evil=$?
+set -e
+[[ $evil -eq 2 ]] || fail "quoted --target must be rejected, got $evil"
 
 echo "dump.test: ok"

@@ -117,6 +117,12 @@ function shouldDeferSourcePick(currentName, hasUnboundNodes) {
   return !!String(currentName || "") && hasUnboundNodes === true
 }
 
+function pickFallbackName(defaultName, rememberedName) {
+  if (isCaptureSourceName(defaultName)) return String(defaultName)
+  if (isCaptureSourceName(rememberedName)) return String(rememberedName)
+  return ""
+}
+
 function pickSource(sources, pinnedName, defaultName) {
   var list = Array.isArray(sources) ? sources : []
   function findName(name) {
@@ -141,6 +147,11 @@ function pickSource(sources, pinnedName, defaultName) {
   if (usb.length > 1 && fallback && isUsbSourceName(fallback.name)) return fallback
   if (usb.length > 0) return usb[0]
   if (fallback && isCaptureSourceName(fallback.name)) return fallback
+  var bluetooth = []
+  for (var b = 0; b < list.length; b++) {
+    if (String(list[b].name || "").indexOf("bluez_input.") === 0) bluetooth.push(list[b])
+  }
+  if (bluetooth.length > 0) return bluetooth[0]
   for (var k = 0; k < list.length; k++) {
     if (isCaptureSourceName(list[k].name)) return list[k]
   }
@@ -303,6 +314,7 @@ if (typeof module !== "undefined") {
     sourceSignature: sourceSignature,
     sourcesUnchanged: sourcesUnchanged,
     shouldDeferSourcePick: shouldDeferSourcePick,
+    pickFallbackName: pickFallbackName,
     pickSource: pickSource,
     presetLabel: presetLabel,
     presetHint: presetHint,

@@ -31,6 +31,7 @@
       "enabled": true,
       "preset": "meeting",
       "pinnedSource": "",
+      "previousAudioSource": "",
       "setDefaultSource": true,
       "engine": "auto",
       "meetingQuality": "better",
@@ -76,6 +77,13 @@
         "type": "string",
         "label": "Pinned source node name",
         "description": "Empty means auto: prefer a USB capture, otherwise the default mic.",
+        "defaultValue": ""
+      },
+      {
+        "key": "previousAudioSource",
+        "type": "string",
+        "label": "Last real capture before Omavoice",
+        "description": "Used by Auto when the default source is already omavoice. Not a pin.",
         "defaultValue": ""
       },
       {

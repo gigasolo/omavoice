@@ -35,6 +35,7 @@ while [[ $# -gt 0 ]]; do
 done
 
 [[ -n $target && -n $plugin_dir ]] || usage
+[[ $target =~ ^[A-Za-z0-9._:-]+$ ]] || usage
 [[ $preset == meeting || $preset == podcast || $preset == clean ]] || usage
 [[ $quality == good || $quality == better || $quality == best ]] || quality=better
 
@@ -107,6 +108,7 @@ if [[ $dump -eq 1 ]]; then
   trap 'rm -f -- "$conf"' EXIT
 else
   mkdir -p "$runtime_dir"
+  umask 077
   conf="$runtime_dir/host.$$.conf"
 fi
 capture_target=$target
@@ -204,6 +206,7 @@ if [[ $use_aec -eq 1 ]]; then
                 node.virtual = true
                 node.dont-fallback = true
                 priority.session = 0
+                session.suspend-timeout-seconds = 3
             }
             capture.props = {
                 node.name = "omavoice.aec.capture"
@@ -211,10 +214,18 @@ if [[ $use_aec -eq 1 ]]; then
                 node.dont-fallback = true
                 stream.dont-remix = true
                 target.object = "$target"
+                session.suspend-timeout-seconds = 3
             }
             playback.props = {
                 node.name = "omavoice.aec.playback"
                 node.passive = true
+                node.suspend-on-idle = true
+                session.suspend-timeout-seconds = 3
+            }
+            sink.props = {
+                node.name = "omavoice.aec.sink"
+                node.passive = true
+                session.suspend-timeout-seconds = 3
             }
         }
     }
@@ -460,6 +471,11 @@ drop_leftover_host
 for i in $(seq 1 20); do
   omavoice_in_graph || break
   sleep 0.1
+done
+for stale in "$runtime_dir"/host.conf "$runtime_dir"/host.*.conf; do
+  [[ -f $stale ]] || continue
+  [[ $stale == "$conf" ]] && continue
+  rm -f -- "$stale"
 done
 
 exec /usr/bin/pipewire -c "$conf"

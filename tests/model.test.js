@@ -71,6 +71,30 @@ test("pickSource falls back to the default builtin when no USB is present", () =
   assert.equal(picked.name, builtin.name)
 })
 
+const bluez = {
+  name: "bluez_input.A0:0C:E2:D0:C3:81",
+  description: "OpenFit Pro by Shokz"
+}
+
+test("pickFallbackName ignores omavoice and keeps a remembered capture", () => {
+  assert.equal(Model.pickFallbackName(builtin.name, bluez.name), builtin.name)
+  assert.equal(Model.pickFallbackName("omavoice", bluez.name), bluez.name)
+  assert.equal(Model.pickFallbackName("omavoice", "omavoice"), "")
+  assert.equal(Model.pickFallbackName("", ""), "")
+})
+
+test("pickSource uses a remembered BT headset when default is already omavoice", () => {
+  const fallback = Model.pickFallbackName("omavoice", bluez.name)
+  const picked = Model.pickSource([builtin, bluez], "", fallback)
+  assert.equal(picked.name, bluez.name)
+})
+
+test("pickSource prefers bluetooth over builtin when nothing is remembered", () => {
+  const fallback = Model.pickFallbackName("omavoice", "")
+  const picked = Model.pickSource([builtin, bluez], "", fallback)
+  assert.equal(picked.name, bluez.name)
+})
+
 test("normalizeQuality defaults to better", () => {
   assert.equal(Model.normalizeQuality("good"), "good")
   assert.equal(Model.normalizeQuality("BEST"), "best")

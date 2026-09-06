@@ -108,7 +108,7 @@ The host is a dedicated PipeWire client, the same isolation Omarchy uses for spe
 
 ## While it's running
 
-Meeting echo cancel can use CPU while speakers play, even with no call. After meters and `pw-cat` run only while the panel is open. Disable the plugin to stop the host.
+Meeting echo cancel can use CPU while speakers play, even with no call. AEC nodes are passive and suspend after a few idle seconds; if the session sink is playing, the monitor may still run. After meters and `pw-cat` run only while the panel is open. Disable the plugin to stop the host. Restore goes back to the microphone Omavoice replaced, not to Omavoice itself.
 
 ## Update and remove
 

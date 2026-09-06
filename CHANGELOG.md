@@ -9,6 +9,11 @@ and this project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html)
 
 ### Fixed
 
+- Auto remembers the real microphone after Omavoice becomes the default
+  source, and prefers a Bluetooth headset over the laptop mic when nothing
+  is pinned. Disable restores that capture, not `omavoice`.
+- Host configs are `0600` and leftover `host.*.conf` files are removed on
+  start. `--target` must be a safe PipeWire node name.
 - After meters come back after a plugin update without clicking Reload.
   A remount used to truncate `host.conf` while `pipewire -c` parsed it,
   leaving an empty process on D-Bus with no `omavoice` node. Each host
