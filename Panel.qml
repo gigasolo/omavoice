@@ -126,6 +126,10 @@ Panel {
     persistSettings(patch)
   }
 
+  function setEngine(value) {
+    persistSettings({ engine: Model.normalizeEngine(value) })
+  }
+
   function setCaptureGainDb(value) {
     var db = Math.round(Model.clampGainDb(value) * 2) / 2
     var key = "meetingCaptureGainDb"
@@ -932,6 +936,61 @@ Panel {
           }
 
           PanelSeparator { foreground: root.foreground }
+
+          Column {
+            width: parent.width
+            spacing: Style.space(8)
+
+            Text {
+              text: "Engine"
+              color: root.foreground
+              font.family: root.fontFamily
+              font.pixelSize: Style.font.subtitle
+              font.bold: true
+            }
+
+            Row {
+              width: parent.width
+              spacing: Style.space(6)
+
+              Repeater {
+                model: [
+                  { value: "auto", label: "Auto" },
+                  { value: "rnnoise", label: "RNNoise" },
+                  { value: "deepfilter", label: "DeepFilterNet" }
+                ]
+                CursorSurface {
+                  required property var modelData
+                  width: Math.floor((parent.width - Style.space(6) * 2) / 3)
+                  implicitHeight: Style.space(32)
+                  foreground: root.foreground
+                  MouseArea {
+                    anchors.fill: parent
+                    hoverEnabled: true
+                    cursorShape: Qt.PointingHandCursor
+                    onClicked: root.setEngine(modelData.value)
+                  }
+                  Rectangle {
+                    anchors.fill: parent
+                    radius: Style.cornerRadius
+                    color: service.engineSetting === modelData.value
+                      ? (bar ? Style.selectedFillFor(bar.foreground, Color.accent) : Color.accent)
+                      : "transparent"
+                    border.width: 1
+                    border.color: Qt.rgba(root.foreground.r, root.foreground.g, root.foreground.b, 0.18)
+                  }
+                  Text {
+                    anchors.centerIn: parent
+                    text: modelData.label
+                    color: root.foreground
+                    font.family: root.fontFamily
+                    font.pixelSize: Style.font.caption
+                    font.bold: service.engineSetting === modelData.value
+                  }
+                }
+              }
+            }
+          }
 
           QualitySlider {
             title: "Meeting"

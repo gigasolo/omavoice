@@ -2,6 +2,7 @@ var NODE_NAME = "omavoice"
 var NODE_DESCRIPTION = "Omavoice"
 var PRESETS = ["meeting", "podcast", "clean"]
 var QUALITIES = ["good", "better", "best"]
+var ENGINES = ["auto", "rnnoise", "deepfilter"]
 
 function normalizePreset(value) {
   var preset = String(value || "").toLowerCase()
@@ -160,12 +161,26 @@ function presetHint(preset) {
   return "Echo cancel and RNNoise for calls"
 }
 
+function normalizeEngine(value) {
+  var engine = String(value || "").toLowerCase()
+  if (ENGINES.indexOf(engine) >= 0) return engine
+  return "auto"
+}
+
 function engineForPreset(preset, haveRnnoise, haveDeepfilter) {
   var value = normalizePreset(preset)
   if (value === "clean") return "clean"
   if (value === "podcast" && haveDeepfilter) return "deepfilter"
   if (haveRnnoise) return "rnnoise"
   return "clean"
+}
+
+function resolveEngine(preset, engineSetting, haveRnnoise, haveDeepfilter) {
+  var kind = normalizePreset(preset)
+  if (kind === "clean") return "clean"
+  var want = normalizeEngine(engineSetting)
+  if (want === "rnnoise" || want === "deepfilter") return want
+  return engineForPreset(kind, haveRnnoise, haveDeepfilter)
 }
 
 function clampGainDb(value) {
@@ -238,6 +253,7 @@ if (typeof module !== "undefined") {
     NODE_DESCRIPTION: NODE_DESCRIPTION,
     PRESETS: PRESETS,
     QUALITIES: QUALITIES,
+    ENGINES: ENGINES,
     normalizePreset: normalizePreset,
     normalizeQuality: normalizeQuality,
     qualityIndex: qualityIndex,
@@ -256,7 +272,9 @@ if (typeof module !== "undefined") {
     pickSource: pickSource,
     presetLabel: presetLabel,
     presetHint: presetHint,
+    normalizeEngine: normalizeEngine,
     engineForPreset: engineForPreset,
+    resolveEngine: resolveEngine,
     clampGainDb: clampGainDb,
     gainDbToLinear: gainDbToLinear,
     outputGainDbForPreset: outputGainDbForPreset,

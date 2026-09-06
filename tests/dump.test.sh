@@ -91,6 +91,26 @@ echo "$clean" | grep -q 'node.latency = 256/48000' || fail "clean must pin 256/4
 echo "$clean" | grep -q 'noise_suppressor' && fail "clean must not denoise"
 echo "$clean" | grep -q 'monitor.mode' && fail "clean must not enable AEC"
 
+meeting_dfn="$(dump meeting --engine deepfilter)"
+echo "$meeting_dfn" | grep -q 'monitor.mode = true' || fail "meeting DFN must keep AEC"
+echo "$meeting_dfn" | grep -q 'webrtc.noise_suppression = false' || fail "meeting DFN must not stack WebRTC NS"
+echo "$meeting_dfn" | grep -q 'bq_highpass' || fail "meeting DFN must high-pass before NS"
+echo "$meeting_dfn" | grep -q 'deep_filter_mono' || fail "meeting --engine deepfilter must use DFN"
+echo "$meeting_dfn" | grep -q 'noise_suppressor' && fail "meeting DFN must not stack RNNoise"
+
+podcast_rn="$(dump podcast --engine rnnoise)"
+echo "$podcast_rn" | grep -q 'noise_suppressor_mono' || fail "podcast --engine rnnoise must use RNNoise"
+echo "$podcast_rn" | grep -q 'bq_highpass' || fail "podcast RNNoise must high-pass"
+echo "$podcast_rn" | grep -q 'monitor.mode' && fail "podcast RNNoise must not enable AEC"
+echo "$podcast_rn" | grep -q 'deep_filter' && fail "podcast RNNoise must not stack DFN"
+
+echo "$meeting" | grep -q 'noise_suppressor_mono' || fail "auto meeting must still use RNNoise"
+
+clean_forced="$(dump clean --engine deepfilter)"
+echo "$clean_forced" | grep -q 'bq_highpass' || fail "clean stays high-pass when engine is forced"
+echo "$clean_forced" | grep -q 'noise_suppressor' && fail "clean must not denoise when engine is forced"
+echo "$clean_forced" | grep -q 'deep_filter' && fail "clean must not run DFN when engine is forced"
+
 for kind in meeting podcast clean; do
   conf=""
   case $kind in

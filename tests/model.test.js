@@ -103,6 +103,18 @@ test("engineForPreset uses DeepFilterNet only for podcast when present", () => {
   assert.equal(Model.engineForPreset("meeting", false, false), "clean")
 })
 
+test("resolveEngine honors an explicit picker and keeps Clean HPF-only", () => {
+  assert.equal(Model.normalizeEngine(""), "auto")
+  assert.equal(Model.normalizeEngine("DEEPFILTER"), "deepfilter")
+  assert.equal(Model.resolveEngine("meeting", "auto", true, true), "rnnoise")
+  assert.equal(Model.resolveEngine("podcast", "auto", true, true), "deepfilter")
+  assert.equal(Model.resolveEngine("meeting", "deepfilter", true, true), "deepfilter")
+  assert.equal(Model.resolveEngine("podcast", "rnnoise", true, true), "rnnoise")
+  assert.equal(Model.resolveEngine("meeting", "deepfilter", true, false), "deepfilter")
+  assert.equal(Model.resolveEngine("clean", "deepfilter", true, true), "clean")
+  assert.equal(Model.resolveEngine("clean", "auto", true, true), "clean")
+})
+
 test("clampGainDb and gainDbToLinear convert output trim", () => {
   assert.equal(Model.clampGainDb(0), 0)
   assert.equal(Model.clampGainDb(-20), -12)

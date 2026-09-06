@@ -78,18 +78,20 @@ preamp_gain=$(db_to_linear "$capture_gain_db")
 out_gain=$(db_to_linear "$output_gain_db")
 
 engine="clean"
-case $engine_opt in
-  rnnoise|deepfilter|clean)
-    engine=$engine_opt
-    ;;
-  *)
-    if [[ $preset == podcast && -n $deepfilter ]]; then
-      engine="deepfilter"
-    elif [[ $preset != clean && -n $rnnoise ]]; then
-      engine="rnnoise"
-    fi
-    ;;
-esac
+if [[ $preset != clean ]]; then
+  case $engine_opt in
+    rnnoise|deepfilter)
+      engine=$engine_opt
+      ;;
+    *)
+      if [[ $preset == podcast && -n $deepfilter ]]; then
+        engine="deepfilter"
+      elif [[ -n $rnnoise ]]; then
+        engine="rnnoise"
+      fi
+      ;;
+  esac
+fi
 
 use_aec=0
 if [[ $preset == meeting && -n $webrtc ]]; then

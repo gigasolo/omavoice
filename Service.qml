@@ -73,7 +73,8 @@ Item {
   readonly property bool setDefaultSource: setting("setDefaultSource", true) !== false
   readonly property var setup: Model.setupGuide(haveRnnoise)
   readonly property bool setupNeeded: setup.needed && preset !== "clean"
-  readonly property string engine: Model.engineForPreset(preset, haveRnnoise, haveDeepfilter)
+  readonly property string engineSetting: Model.normalizeEngine(setting("engine", "auto"))
+  readonly property string engine: Model.resolveEngine(preset, engineSetting, haveRnnoise, haveDeepfilter)
   readonly property real outputGainDb: Model.outputGainDbForPreset(preset, settings)
   readonly property real captureGainDb: Model.captureGainDbForPreset(preset, settings)
   readonly property string statusText: Model.statusText({
