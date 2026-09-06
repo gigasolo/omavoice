@@ -879,7 +879,7 @@ Panel {
                           color: root.dim
                           font.family: root.fontFamily
                           font.pixelSize: Style.font.body
-                          rotation: root.levelOpen ? 90 : 0
+                          rotation: root.levelOpen ? 90 : 180
                           Behavior on rotation { NumberAnimation { duration: 140; easing.type: Easing.OutCubic } }
                         }
 
@@ -1052,7 +1052,7 @@ Panel {
                     font.bold: service.engineSetting === modelData.value
                   }
                   Rectangle {
-                    visible: service.engine === modelData.value
+                    visible: service.engineSetting === "auto" && service.engine === modelData.value
                     width: Style.space(6)
                     height: Style.space(6)
                     radius: width / 2
