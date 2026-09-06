@@ -21,6 +21,7 @@ Panel {
   property int phraseIndex: 0
   property bool tuneOpen: false
   property bool pendingTuneOpen: false
+  property bool levelOpen: false
 
   readonly property var sharedService: bar && bar.shell && typeof bar.shell.serviceFor === "function"
     ? bar.shell.serviceFor(moduleName) : null
@@ -116,6 +117,11 @@ Panel {
     persistSettings({ podcastQuality: Model.normalizeQuality(value) })
   }
 
+  function formatGainDb(db) {
+    var n = Math.round(Model.clampGainDb(db) * 2) / 2
+    return (n > 0 ? "+" : "") + n.toFixed(1)
+  }
+
   function setOutputGainDb(value) {
     var db = Math.round(Model.clampGainDb(value) * 2) / 2
     var key = "meetingOutputGainDb"
@@ -124,6 +130,7 @@ Panel {
     var patch = {}
     patch[key] = db
     persistSettings(patch)
+    if (service && typeof service.clearGainPreview === "function") service.clearGainPreview()
   }
 
   function setEngine(value) {
@@ -138,6 +145,7 @@ Panel {
     var patch = {}
     patch[key] = db
     persistSettings(patch)
+    if (service && typeof service.clearGainPreview === "function") service.clearGainPreview()
   }
 
   component QualitySlider: Column {
@@ -195,6 +203,56 @@ Panel {
           horizontalAlignment: index === 0 ? Text.AlignLeft : (index === 2 ? Text.AlignRight : Text.AlignHCenter)
         }
       }
+    }
+  }
+
+  component GainRow: RowLayout {
+    required property string title
+    required property real persisted
+    property string hint: ""
+    signal moved(real value)
+    signal released(real value)
+
+    width: parent.width
+    spacing: Style.space(8)
+
+    HoverHandler { id: gainHover }
+    PanelToolTip {
+      visible: hint !== "" && gainHover.hovered
+      text: hint
+      fontFamily: root.fontFamily
+    }
+
+    Text {
+      text: title
+      color: root.dim
+      font.family: root.fontFamily
+      font.pixelSize: Style.font.caption
+      Layout.preferredWidth: Style.space(56)
+      Layout.alignment: Qt.AlignVCenter
+    }
+
+    PanelSlider {
+      id: gainSlider
+      Layout.fillWidth: true
+      Layout.alignment: Qt.AlignVCenter
+      bar: root.bar
+      minimum: -12
+      maximum: 12
+      step: 0.5
+      value: persisted
+      onMoved: function(v) { moved(v) }
+      onReleased: function(v) { released(v) }
+    }
+
+    Text {
+      Layout.preferredWidth: Style.space(44)
+      Layout.alignment: Qt.AlignVCenter
+      horizontalAlignment: Text.AlignRight
+      text: root.formatGainDb(gainSlider.dragging ? gainSlider.liveValue : persisted)
+      color: root.dim
+      font.family: root.fontFamily
+      font.pixelSize: Style.font.caption
     }
   }
 
@@ -266,6 +324,7 @@ Panel {
     if (!opened) {
       tuneOpen = false
       pendingTuneOpen = false
+      levelOpen = false
       if (cardRotation) cardRotation.angle = 0
       if (typeof service.setMeterHold === "function") service.setMeterHold(false)
       return
@@ -792,88 +851,80 @@ Panel {
                           }
                         }
                       }
+
+                      MouseArea {
+                        id: levelHit
+                        visible: sourceRow.isActive
+                        Layout.alignment: Qt.AlignVCenter
+                        implicitWidth: levelHitRow.implicitWidth
+                        implicitHeight: Math.max(levelHitRow.implicitHeight, Style.space(22))
+                        hoverEnabled: true
+                        cursorShape: Qt.PointingHandCursor
+                        onClicked: root.levelOpen = !root.levelOpen
+
+                        Row {
+                          id: levelHitRow
+                          anchors.centerIn: parent
+                          spacing: Style.space(4)
+                          Text {
+                            text: "Level"
+                            color: root.foreground
+                            font.family: root.fontFamily
+                            font.pixelSize: Style.font.caption
+                            font.bold: true
+                          }
+                          Text {
+                            text: "󰅀"
+                            color: root.dim
+                            font.family: root.fontFamily
+                            font.pixelSize: Style.font.caption
+                            rotation: root.levelOpen ? 90 : 0
+                            Behavior on rotation { NumberAnimation { duration: 140; easing.type: Easing.OutCubic } }
+                          }
+                        }
+                      }
                     }
 
-                    Column {
-                      visible: sourceRow.isActive
+                    Item {
+                      id: levelDrawer
                       width: parent.width
-                      spacing: Style.space(4)
+                      visible: sourceRow.isActive
+                      height: sourceRow.isActive && root.levelOpen ? levelInner.implicitHeight : 0
+                      clip: true
+                      Behavior on height { NumberAnimation { duration: 160; easing.type: Easing.OutCubic } }
 
-                      RowLayout {
+                      Column {
+                        id: levelInner
                         width: parent.width
                         spacing: Style.space(8)
 
-                        Text {
-                          text: "Out"
-                          color: root.dim
-                          font.family: root.fontFamily
-                          font.pixelSize: Style.font.caption
-                        }
-
-                        PanelSlider {
-                          Layout.fillWidth: true
-                          bar: root.bar
-                          minimum: -12
-                          maximum: 12
-                          step: 0.5
-                          value: service.outputGainDb
-                          onMoved: function(v) { root.setOutputGainDb(v) }
+                        GainRow {
+                          title: "Output"
+                          persisted: service.outputGainDb
+                          onMoved: function(v) {
+                            if (service && typeof service.previewGains === "function")
+                              service.previewGains(service.captureGainDb, v)
+                          }
                           onReleased: function(v) { root.setOutputGainDb(v) }
                         }
 
-                        Text {
-                          text: (service.outputGainDb > 0 ? "+" : "") + service.outputGainDb + " dB"
-                          color: root.dim
-                          font.family: root.fontFamily
-                          font.pixelSize: Style.font.caption
-                        }
-                      }
-
-                      RowLayout {
-                        width: parent.width
-                        spacing: Style.space(8)
-
-                        Text {
-                          text: "In"
-                          color: root.dim
-                          font.family: root.fontFamily
-                          font.pixelSize: Style.font.caption
-                        }
-
-                        PanelSlider {
-                          Layout.fillWidth: true
-                          bar: root.bar
-                          minimum: -12
-                          maximum: 12
-                          step: 0.5
-                          value: service.captureGainDb
-                          onMoved: function(v) { root.setCaptureGainDb(v) }
+                        GainRow {
+                          title: "Input"
+                          persisted: service.captureGainDb
+                          hint: "Before noise suppression."
+                          onMoved: function(v) {
+                            if (service && typeof service.previewGains === "function")
+                              service.previewGains(v, service.outputGainDb)
+                          }
                           onReleased: function(v) { root.setCaptureGainDb(v) }
                         }
-
-                        Text {
-                          text: (service.captureGainDb > 0 ? "+" : "") + service.captureGainDb + " dB"
-                          color: root.dim
-                          font.family: root.fontFamily
-                          font.pixelSize: Style.font.caption
-                        }
-                      }
-
-                      Text {
-                        visible: service.engine !== "clean"
-                        width: parent.width
-                        text: "Level into noise suppression."
-                        color: root.dim
-                        font.family: root.fontFamily
-                        font.pixelSize: Style.font.caption
-                        wrapMode: Text.WordWrap
                       }
                     }
                   }
 
                   MouseArea {
                     anchors.left: parent.left
-                    anchors.right: parent.right
+                    anchors.right: sourceRow.isActive ? levelHit.left : parent.right
                     anchors.top: parent.top
                     height: sourceMeterRow.height + Style.space(8)
                     hoverEnabled: true

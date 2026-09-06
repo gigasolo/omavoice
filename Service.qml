@@ -77,6 +77,9 @@ Item {
   readonly property bool setupNeeded: setup.needed
   readonly property real outputGainDb: Model.outputGainDbForPreset(preset, settings)
   readonly property real captureGainDb: Model.captureGainDbForPreset(preset, settings)
+  property bool gainPreview: false
+  property real previewCaptureDb: 0
+  property real previewOutputDb: 0
   readonly property string statusText: Model.statusText({
     enabled: enabled,
     running: running,
@@ -190,11 +193,24 @@ Item {
     liveDebounce.restart()
   }
 
+  function previewGains(captureDb, outputDb) {
+    previewCaptureDb = Model.clampGainDb(captureDb)
+    previewOutputDb = Model.clampGainDb(outputDb)
+    gainPreview = true
+    applyLiveControls()
+  }
+
+  function clearGainPreview() {
+    gainPreview = false
+  }
+
   function writeLiveControls() {
     if (!root.active || !enabled || !hostProcess.running) return
+    var cap = gainPreview ? previewCaptureDb : captureGainDb
+    var out = gainPreview ? previewOutputDb : outputGainDb
     var args = [scriptPath("omavoice-ctl"), "set"]
-    args.push("preamp:Gain 1", String(Model.gainDbToLinear(captureGainDb)))
-    args.push("outgain:Gain 1", String(Model.gainDbToLinear(outputGainDb)))
+    args.push("preamp:Gain 1", String(Model.gainDbToLinear(cap)))
+    args.push("outgain:Gain 1", String(Model.gainDbToLinear(out)))
     var qp = Model.qualityParams(preset, quality)
     if (engine === "rnnoise") {
       args.push("denoise:VAD Threshold (%)", String(qp.vad))
