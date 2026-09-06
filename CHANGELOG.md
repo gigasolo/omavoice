@@ -11,12 +11,11 @@ and this project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html)
 
 - Live filter-chain controls: named `preamp` / `outgain` stages and
   `pw-cli` Props writes, so Softer/Stronger no longer restarts the host.
-- Per-preset **Output** gain (−12…+12 dB) after the limiter, never WebRTC AGC.
-  Chevron on the selected mic opens it (hover: Level). Snap 0.5 dB, detent at 0.
-- Per-preset **Input** capture preamp (−12…+12 dB) before noise suppression,
-  on the PRESET tune page.
-- Engine picker on the PRESET tune page: Auto / RNNoise / DeepFilterNet.
-  Meeting can run DeepFilterNet with AEC still on. Engines never stack.
+- Per-preset **Output** and **Input** gain (−12…+12 dB). Chevron on the
+  selected mic opens both (hover: Level). Snap 0.5 dB, detent at 0.
+- Engine picker on the PRESET tune page: Auto / RNNoise / DeepFilterNet,
+  with hover tips and a line for the engine actually in use. Meeting can
+  run DeepFilterNet with AEC still on. Engines never stack.
 - Setup row for a missing chosen engine, including DeepFilterNet’s
   `libdeep_filter_ladspa-bin` install line.
 

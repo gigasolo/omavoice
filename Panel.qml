@@ -210,11 +210,14 @@ Panel {
     required property string title
     required property real persisted
     property string hint: ""
+    property real held: persisted
     signal moved(real value)
     signal released(real value)
 
     width: parent.width
     spacing: Style.space(8)
+
+    onPersistedChanged: if (!gainSlider.dragging) held = persisted
 
     HoverHandler { id: gainHover }
     PanelToolTip {
@@ -240,16 +243,24 @@ Panel {
       minimum: -12
       maximum: 12
       step: 0.5
-      value: persisted
-      onMoved: function(v) { moved(Model.snapGainDb(v)) }
-      onReleased: function(v) { released(Model.snapGainDb(v)) }
+      value: held
+      onMoved: function(v) {
+        var s = Model.snapGainDb(v)
+        held = s
+        moved(s)
+      }
+      onReleased: function(v) {
+        var s = Model.snapGainDb(v)
+        held = s
+        released(s)
+      }
     }
 
     Text {
       Layout.preferredWidth: Style.space(44)
       Layout.alignment: Qt.AlignVCenter
       horizontalAlignment: Text.AlignRight
-      text: root.formatGainDb(gainSlider.dragging ? gainSlider.liveValue : persisted)
+      text: root.formatGainDb(gainSlider.dragging ? held : persisted)
       color: root.dim
       font.family: root.fontFamily
       font.pixelSize: Style.font.caption
@@ -902,6 +913,17 @@ Panel {
                           }
                           onReleased: function(v) { root.setOutputGainDb(v) }
                         }
+
+                        GainRow {
+                          title: "Input"
+                          persisted: service.captureGainDb
+                          hint: "Before noise suppression."
+                          onMoved: function(v) {
+                            if (service && typeof service.previewGains === "function")
+                              service.previewGains(v, service.outputGainDb)
+                          }
+                          onReleased: function(v) { root.setCaptureGainDb(v) }
+                        }
                       }
                     }
                   }
@@ -1001,10 +1023,16 @@ Panel {
                   implicitHeight: Style.space(32)
                   foreground: root.foreground
                   MouseArea {
+                    id: engineHit
                     anchors.fill: parent
                     hoverEnabled: true
                     cursorShape: Qt.PointingHandCursor
                     onClicked: root.setEngine(modelData.value)
+                  }
+                  PanelToolTip {
+                    visible: engineHit.containsMouse
+                    text: Model.engineChoiceHint(modelData.value)
+                    fontFamily: root.fontFamily
                   }
                   Rectangle {
                     anchors.fill: parent
@@ -1026,17 +1054,15 @@ Panel {
                 }
               }
             }
-          }
 
-          GainRow {
-            title: "Input"
-            persisted: service.captureGainDb
-            hint: "Before noise suppression."
-            onMoved: function(v) {
-              if (service && typeof service.previewGains === "function")
-                service.previewGains(v, service.outputGainDb)
+            Text {
+              width: parent.width
+              text: Model.engineUsingLine(service.engine)
+              color: root.dim
+              font.family: root.fontFamily
+              font.pixelSize: Style.font.caption
+              wrapMode: Text.WordWrap
             }
-            onReleased: function(v) { root.setCaptureGainDb(v) }
           }
 
           QualitySlider {

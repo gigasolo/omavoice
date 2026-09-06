@@ -35,7 +35,7 @@ An independent [MIT](LICENSE)-licensed plugin by [GigaSolo](https://github.com/g
 | **Does** | Monitor-mode AEC + denoise + compressor | High-pass + denoise + compressor | High-pass only |
 | **Keeps** | Your voice on a laptop with speakers | Speech that sounds finished | Applause, keys, and music |
 
-Right-click the mark to toggle. Open the panel to switch presets and pick a microphone. Each mic row shows a live level; the selected row adds a hairline of what Omavoice is sending. The chevron on that row opens **Output** (what the call hears). **Input** (this mic into Omavoice) is on PRESET tune. Both are −12…+12 dB and do not restart the host.
+Right-click the mark to toggle. Open the panel to switch presets and pick a microphone. Each mic row shows a live level; the selected row adds a hairline of what Omavoice is sending. The chevron on that row opens **Output** (what the call hears) and **Input** (this mic into Omavoice), −12…+12 dB, without restarting the host. PRESET tune picks the denoise engine and shows which one is running.
 
 In the app itself, choose **Omavoice** as the microphone and turn *its* noise cancellation off. Two denoisers stacked sound hollow.
 
