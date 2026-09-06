@@ -165,8 +165,6 @@ Item {
       targetName = nextName
       targetLabel = nextLabel
     }
-    if (nextName && Model.isCaptureSourceName(nextName) && nextName !== previousAudioSource)
-      persist({ previousAudioSource: nextName })
     syncHost()
   }
 
