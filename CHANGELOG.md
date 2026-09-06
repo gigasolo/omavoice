@@ -10,10 +10,10 @@ and this project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html)
 ### Fixed
 
 - After meters come back after a plugin update without clicking Reload.
-  A remount can leave `pipewire -c` running with no session client, so
-  `omavoice` never appears. The host now waits for the session, drops
-  leftovers, fails if filter-chain does not export, and restarts until
-  the bound node shows up.
+  A remount used to truncate `host.conf` while `pipewire -c` parsed it,
+  leaving an empty process on D-Bus with no `omavoice` node. Each host
+  now writes a pid-unique conf, only kills leftover `pipewire` binaries,
+  and restarts until the bound node shows up.
 
 ### Added
 

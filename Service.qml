@@ -494,13 +494,15 @@ Item {
 
   Timer {
     id: hostBindWatch
-    interval: 800
-    running: root.active && root.enabled && root.probed && hostProcess.running && !root.afterNodeName && root.hostAttempts < 8
+    interval: 1000
+    running: root.active && root.enabled && !root.afterNodeName && root.hostAttempts < 8
     repeat: true
     onTriggered: {
       if (root.afterNodeName) return
-      if (Date.now() - root.hostStartedAt < 2500) return
+      if (!root.probed || !root.targetName) return
+      if (hostProcess.running && Date.now() - root.hostStartedAt < 2500) return
       root.hostKey = ""
+      if (hostProcess.running) hostProcess.running = false
       root.startHostNow()
     }
   }

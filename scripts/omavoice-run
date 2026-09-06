@@ -100,13 +100,14 @@ if [[ $preset == meeting && -n $webrtc ]]; then
   use_aec=1
 fi
 
-# --dump is for tests. Do not replace the live runtime host.conf.
+# --dump is for tests. Live hosts get a pid-unique conf so a remount cannot
+# truncate the file another pipewire -c is about to parse.
 if [[ $dump -eq 1 ]]; then
   conf=$(mktemp)
   trap 'rm -f -- "$conf"' EXIT
 else
   mkdir -p "$runtime_dir"
-  conf="$runtime_dir/host.conf"
+  conf="$runtime_dir/host.$$.conf"
 fi
 capture_target=$target
 if [[ $use_aec -eq 1 ]]; then
@@ -428,19 +429,30 @@ omavoice_in_graph() {
   pw-cli ls Node 2>/dev/null | grep -Eq 'node\.name = "omavoice(|\.aec|\.capture)"'
 }
 
+# Only the pipewire binary. pkill -f on the conf path also matches shells
+# whose argv text contains that path.
 drop_leftover_host() {
-  if pgrep -f "/pipewire -c $conf" >/dev/null 2>&1; then
-    pkill -f "/pipewire -c $conf" >/dev/null 2>&1 || true
-  fi
+  local pid cmd
+  for pid in $(pgrep -x pipewire || true); do
+    cmd=$(tr '\0' ' ' < "/proc/$pid/cmdline" 2>/dev/null || true)
+    case $cmd in
+      *"/omavoice/host"*)
+        kill "$pid" 2>/dev/null || true
+        ;;
+    esac
+  done
   local i
   for i in $(seq 1 20); do
-    pgrep -f "/pipewire -c $conf" >/dev/null 2>&1 || break
+    local leftover=0
+    for pid in $(pgrep -x pipewire || true); do
+      cmd=$(tr '\0' ' ' < "/proc/$pid/cmdline" 2>/dev/null || true)
+      case $cmd in
+        *"/omavoice/host"*) leftover=1; kill -9 "$pid" 2>/dev/null || true ;;
+      esac
+    done
+    [[ $leftover -eq 0 ]] && break
     sleep 0.1
   done
-  if pgrep -f "/pipewire -c $conf" >/dev/null 2>&1; then
-    pkill -9 -f "/pipewire -c $conf" >/dev/null 2>&1 || true
-    sleep 0.1
-  fi
 }
 
 wait_session || exit 1
