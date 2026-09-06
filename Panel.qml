@@ -875,7 +875,8 @@ Panel {
 
                         Text {
                           anchors.centerIn: parent
-                          text: root.levelOpen ? "󰅂" : "󰅁"
+                          // 󰅂 is right in this font (clock "next month"). Dropdown uses 󰅀 for down.
+                          text: root.levelOpen ? "󰅀" : "󰅁"
                           color: root.dim
                           font.family: root.fontFamily
                           font.pixelSize: Style.font.body
