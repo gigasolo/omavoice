@@ -35,6 +35,8 @@ podcast_good="$(dump podcast --quality good)"
 podcast_best="$(dump podcast --quality best)"
 clean="$(dump clean)"
 
+echo "$meeting" | grep -A2 'name = libpipewire-module-filter-chain' | grep -q nofail \
+  && fail "filter-chain must not nofail or an empty host stays up without omavoice"
 echo "$meeting" | grep -q 'audio.aec' || fail "meeting must map audio.aec spa lib"
 echo "$meeting" | grep -q 'monitor.mode = true' || fail "meeting AEC must use monitor.mode"
 echo "$meeting" | grep -q 'webrtc.gain_control = false' || fail "meeting must disable webrtc AGC"

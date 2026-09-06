@@ -80,6 +80,8 @@ Item {
   property bool gainPreview: false
   property real previewCaptureDb: 0
   property real previewOutputDb: 0
+  property int hostAttempts: 0
+  property double hostStartedAt: 0
   readonly property string statusText: Model.statusText({
     enabled: enabled,
     running: running,
@@ -185,13 +187,19 @@ Item {
   function startHostNow() {
     if (!root.active || !enabled || !targetName) return
     if (!probed) return
+    if (hostAttempts >= 8) {
+      if (!lastError) lastError = "Omavoice did not appear in PipeWire"
+      return
+    }
     var key = preset + "\0" + engine + "\0" + targetName + "\0" + pluginDir
     if (hostProcess.running && hostKey === key) return
     if (meterHoldProcess.running) meterHoldProcess.running = false
     meterHoldTarget = ""
+    hostAttempts += 1
     hostKey = key
     lastError = ""
     promoted = false
+    hostStartedAt = Date.now()
     hostProcess.running = false
     hostProcess.command = [scriptPath("omavoice-run"), "--preset", preset, "--quality", quality, "--engine", engine, "--capture-gain-db", String(captureGainDb), "--output-gain-db", String(outputGainDb), "--target", targetName, "--dir", pluginDir]
     hostProcess.running = true
@@ -354,25 +362,27 @@ Item {
     reloading = true
     probed = false
     hostKey = ""
+    hostAttempts = 0
     probe()
     if (!root.active || !enabled || !targetName) reloading = false
   }
 
-  onEnabledChanged: syncHost()
-  onPresetChanged: syncHost()
-  onEngineChanged: syncHost()
+  onEnabledChanged: { hostAttempts = 0; syncHost() }
+  onPresetChanged: { hostAttempts = 0; syncHost() }
+  onEngineChanged: { hostAttempts = 0; syncHost() }
   onQualityChanged: applyLiveControls()
   onOutputGainDbChanged: applyLiveControls()
   onCaptureGainDbChanged: applyLiveControls()
   onProbedChanged: if (probed) syncHost()
   onPinnedSourceChanged: refreshSources()
   onNodesChanged: refreshSources()
-  onTargetNameChanged: syncHost()
+  onTargetNameChanged: { hostAttempts = 0; syncHost() }
   onAfterNodeChanged: syncMeterHold()
   onAfterNodeNameChanged: syncMeterHold()
   onAfterNodeIdChanged: {
     syncMeterHold()
     applyLiveControls()
+    if (afterNodeName) hostAttempts = 0
     if (afterNodeName && !hostProcess.running && enabled && targetName && probed)
       startHostNow()
   }
@@ -387,6 +397,7 @@ Item {
   onActiveChanged: {
     if (!active) stopHost()
     else {
+      hostAttempts = 0
       probe()
       refreshSources()
     }
@@ -474,6 +485,23 @@ Item {
       }
       root.promoted = false
       root.syncMeterHold()
+      if (!root.active || !root.enabled || !root.targetName || !root.probed) return
+      if (root.afterNodeName) return
+      if (root.hostAttempts >= 8) return
+      startDebounce.restart()
+    }
+  }
+
+  Timer {
+    id: hostBindWatch
+    interval: 800
+    running: root.active && root.enabled && root.probed && hostProcess.running && !root.afterNodeName && root.hostAttempts < 8
+    repeat: true
+    onTriggered: {
+      if (root.afterNodeName) return
+      if (Date.now() - root.hostStartedAt < 2500) return
+      root.hostKey = ""
+      root.startHostNow()
     }
   }
 

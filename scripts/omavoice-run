@@ -222,10 +222,10 @@ fi
 
 # Build the voice graph as an explicit series so PipeWire does not duplicate
 # it per channel. Mono RNNoise/DFN ports are Input/Output; LSP uses in/out.
+# nofail here keeps an empty pipewire process up with no omavoice node.
 graph_head() {
   cat <<EOF
     { name = libpipewire-module-filter-chain
-        flags = [ nofail ]
         args = {
             node.description = "Omavoice"
             media.name = "Omavoice"
@@ -411,12 +411,43 @@ if [[ $dump -eq 1 ]]; then
   exit 0
 fi
 
-# A plugin update reloads QML before the previous pipewire -c has left the
-# registry. The leftover still owns node.name omavoice, so After meters bind
-# to a dead source until Reload. Drop that host first.
-if pgrep -f "/pipewire -c $conf" >/dev/null 2>&1; then
-  pkill -f "/pipewire -c $conf" >/dev/null 2>&1 || true
-  sleep 0.15
-fi
+# Filter-chain must not use nofail. If it fails to export, pipewire still
+# sits on D-Bus with no session client, QML thinks the host is up, and the
+# After hairline never appears until Reload.
+wait_session() {
+  local i
+  for i in $(seq 1 20); do
+    pw-cli info 0 >/dev/null 2>&1 && return 0
+    sleep 0.1
+  done
+  echo "omavoice-run: session PipeWire did not answer" >&2
+  return 1
+}
+
+omavoice_in_graph() {
+  pw-cli ls Node 2>/dev/null | grep -Eq 'node\.name = "omavoice(|\.aec|\.capture)"'
+}
+
+drop_leftover_host() {
+  if pgrep -f "/pipewire -c $conf" >/dev/null 2>&1; then
+    pkill -f "/pipewire -c $conf" >/dev/null 2>&1 || true
+  fi
+  local i
+  for i in $(seq 1 20); do
+    pgrep -f "/pipewire -c $conf" >/dev/null 2>&1 || break
+    sleep 0.1
+  done
+  if pgrep -f "/pipewire -c $conf" >/dev/null 2>&1; then
+    pkill -9 -f "/pipewire -c $conf" >/dev/null 2>&1 || true
+    sleep 0.1
+  fi
+}
+
+wait_session || exit 1
+drop_leftover_host
+for i in $(seq 1 20); do
+  omavoice_in_graph || break
+  sleep 0.1
+done
 
 exec /usr/bin/pipewire -c "$conf"

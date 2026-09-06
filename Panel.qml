@@ -939,7 +939,8 @@ Panel {
 
                   MouseArea {
                     anchors.left: parent.left
-                    anchors.right: sourceRow.isActive ? levelHit.left : parent.right
+                    anchors.right: parent.right
+                    anchors.rightMargin: sourceRow.isActive ? Style.space(8) + Style.space(10) + Style.space(22) : 0
                     anchors.top: parent.top
                     height: sourceMeterRow.height + Style.space(8)
                     hoverEnabled: true
