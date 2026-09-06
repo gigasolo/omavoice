@@ -118,12 +118,12 @@ Panel {
   }
 
   function formatGainDb(db) {
-    var n = Math.round(Model.clampGainDb(db) * 2) / 2
+    var n = Model.snapGainDb(db)
     return (n > 0 ? "+" : "") + n.toFixed(1)
   }
 
   function setOutputGainDb(value) {
-    var db = Math.round(Model.clampGainDb(value) * 2) / 2
+    var db = Model.snapGainDb(value)
     var key = "meetingOutputGainDb"
     if (service.preset === "podcast") key = "podcastOutputGainDb"
     else if (service.preset === "clean") key = "cleanOutputGainDb"
@@ -138,7 +138,7 @@ Panel {
   }
 
   function setCaptureGainDb(value) {
-    var db = Math.round(Model.clampGainDb(value) * 2) / 2
+    var db = Model.snapGainDb(value)
     var key = "meetingCaptureGainDb"
     if (service.preset === "podcast") key = "podcastCaptureGainDb"
     else if (service.preset === "clean") key = "cleanCaptureGainDb"
@@ -241,8 +241,8 @@ Panel {
       maximum: 12
       step: 0.5
       value: persisted
-      onMoved: function(v) { moved(v) }
-      onReleased: function(v) { released(v) }
+      onMoved: function(v) { moved(Model.snapGainDb(v)) }
+      onReleased: function(v) { released(Model.snapGainDb(v)) }
     }
 
     Text {
@@ -856,31 +856,26 @@ Panel {
                         id: levelHit
                         visible: sourceRow.isActive
                         Layout.alignment: Qt.AlignVCenter
-                        implicitWidth: levelHitRow.implicitWidth
-                        implicitHeight: Math.max(levelHitRow.implicitHeight, Style.space(22))
+                        implicitWidth: Style.space(22)
+                        implicitHeight: Style.space(22)
                         hoverEnabled: true
                         cursorShape: Qt.PointingHandCursor
                         onClicked: root.levelOpen = !root.levelOpen
 
-                        Row {
-                          id: levelHitRow
+                        Text {
                           anchors.centerIn: parent
-                          spacing: Style.space(4)
-                          Text {
-                            text: "Level"
-                            color: root.foreground
-                            font.family: root.fontFamily
-                            font.pixelSize: Style.font.caption
-                            font.bold: true
-                          }
-                          Text {
-                            text: "󰅀"
-                            color: root.dim
-                            font.family: root.fontFamily
-                            font.pixelSize: Style.font.caption
-                            rotation: root.levelOpen ? 90 : 0
-                            Behavior on rotation { NumberAnimation { duration: 140; easing.type: Easing.OutCubic } }
-                          }
+                          text: "󰅀"
+                          color: root.dim
+                          font.family: root.fontFamily
+                          font.pixelSize: Style.font.body
+                          rotation: root.levelOpen ? -90 : 90
+                          Behavior on rotation { NumberAnimation { duration: 140; easing.type: Easing.OutCubic } }
+                        }
+
+                        PanelToolTip {
+                          visible: levelHit.containsMouse
+                          text: "Level"
+                          fontFamily: root.fontFamily
                         }
                       }
                     }
@@ -906,17 +901,6 @@ Panel {
                               service.previewGains(service.captureGainDb, v)
                           }
                           onReleased: function(v) { root.setOutputGainDb(v) }
-                        }
-
-                        GainRow {
-                          title: "Input"
-                          persisted: service.captureGainDb
-                          hint: "Before noise suppression."
-                          onMoved: function(v) {
-                            if (service && typeof service.previewGains === "function")
-                              service.previewGains(v, service.outputGainDb)
-                          }
-                          onReleased: function(v) { root.setCaptureGainDb(v) }
                         }
                       }
                     }
@@ -1042,6 +1026,17 @@ Panel {
                 }
               }
             }
+          }
+
+          GainRow {
+            title: "Input"
+            persisted: service.captureGainDb
+            hint: "Before noise suppression."
+            onMoved: function(v) {
+              if (service && typeof service.previewGains === "function")
+                service.previewGains(v, service.outputGainDb)
+            }
+            onReleased: function(v) { root.setCaptureGainDb(v) }
           }
 
           QualitySlider {

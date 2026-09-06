@@ -191,6 +191,12 @@ function clampGainDb(value) {
   return n
 }
 
+function snapGainDb(value) {
+  var n = clampGainDb(value)
+  if (Math.abs(n) <= 0.4) return 0
+  return Math.round(n * 2) / 2
+}
+
 function gainDbToLinear(db) {
   return Math.pow(10, clampGainDb(db) / 20)
 }
@@ -297,6 +303,7 @@ if (typeof module !== "undefined") {
     engineForPreset: engineForPreset,
     resolveEngine: resolveEngine,
     clampGainDb: clampGainDb,
+    snapGainDb: snapGainDb,
     gainDbToLinear: gainDbToLinear,
     outputGainDbForPreset: outputGainDbForPreset,
     captureGainDbForPreset: captureGainDbForPreset,

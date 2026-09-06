@@ -124,6 +124,12 @@ test("clampGainDb and gainDbToLinear convert output trim", () => {
   assert.equal(Model.gainDbToLinear(0), 1)
   assert.ok(Math.abs(Model.gainDbToLinear(6) - 2) < 0.01)
   assert.ok(Math.abs(Model.gainDbToLinear(-6) - 0.5) < 0.01)
+  assert.equal(Model.snapGainDb(0.2), 0)
+  assert.equal(Model.snapGainDb(-0.4), 0)
+  assert.equal(Model.snapGainDb(0.5), 0.5)
+  assert.equal(Model.snapGainDb(0.76), 1)
+  assert.equal(Model.snapGainDb(-1.24), -1)
+  assert.equal(Model.snapGainDb(20), 12)
   const all = {
     meetingOutputGainDb: 1,
     podcastOutputGainDb: 2,
