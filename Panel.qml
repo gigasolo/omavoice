@@ -875,12 +875,10 @@ Panel {
 
                         Text {
                           anchors.centerIn: parent
-                          text: "󰅀"
+                          text: root.levelOpen ? "󰅂" : "󰅁"
                           color: root.dim
                           font.family: root.fontFamily
                           font.pixelSize: Style.font.body
-                          rotation: root.levelOpen ? 90 : 180
-                          Behavior on rotation { NumberAnimation { duration: 140; easing.type: Easing.OutCubic } }
                         }
 
                         PanelToolTip {

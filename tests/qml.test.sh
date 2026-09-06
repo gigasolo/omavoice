@@ -61,7 +61,7 @@ grep -q 'property real held' "$root/Panel.qml" || fail "GainRow must hold the sn
 grep -q 'engineChoiceHint' "$root/Panel.qml" || fail "engine chips need hover tips"
 grep -q 'engineSetting === "auto" && service.engine === modelData.value' "$root/Panel.qml" || fail "live-engine dot only when Auto is picked"
 grep -q 'engineUsingLine' "$root/Panel.qml" && fail "do not print Using … under the engine chips"
-grep -q 'levelOpen ? 90 : 180' "$root/Panel.qml" || fail "Level chevron must point left closed, down open"
+grep -q 'levelOpen ? "󰅂" : "󰅁"' "$root/Panel.qml" || fail "Level chevron must be left when closed, down when open"
 grep -q 'snapGainDb' "$root/Panel.qml" || fail "faders must snap to 0.5 dB"
 grep -q 'function snapGainDb' "$root/Model.js" || fail "snapGainDb lives in Model"
 grep -q 'function previewGains' "$root/Service.qml" || fail "drag must preview gains without persist"
