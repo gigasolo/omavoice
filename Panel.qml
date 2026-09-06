@@ -35,6 +35,7 @@ Panel {
   onSettingsChanged: pushSettings()
   onServiceChanged: {
     pushSettings()
+    if (opened) displaySources = captureSources.slice()
     armMeterHold()
   }
   readonly property string afterHoldName: service.afterNodeName || ""
@@ -376,7 +377,7 @@ Panel {
   PwNodePeakMonitor {
     id: afterPeakMonitor
     node: service.afterNode
-    enabled: root.opened && root.metersArmed && service.running && !!service.afterNode
+    enabled: root.opened && root.metersArmed && !!service.afterNode
   }
 
   onCaptureSourcesChanged: if (opened) sourceRefreshTimer.restart()
@@ -862,7 +863,7 @@ Panel {
                           }
 
                           Rectangle {
-                            visible: sourceRow.isActive && service.running
+                            visible: sourceRow.isActive && !!service.afterNode
                             height: Math.max(2, Math.ceil(parent.height * 0.4))
                             width: parent.width * Math.max(0, Math.min(1, afterPeakMonitor.peak))
                             anchors.verticalCenter: parent.verticalCenter

@@ -16,6 +16,8 @@ grep -q 'shouldDeferSourcePick' "$root/Service.qml" || fail "source pick must ig
 grep -q 'Util.alpha' "$root/Panel.qml" || fail "meters must use Omarchy audio chrome"
 grep -q 'setMeterHold' "$root/Service.qml" || fail "Service must expose setMeterHold"
 grep -q 'function armMeterHold' "$root/Panel.qml" || fail "panel must re-arm After hold after a plugin reload"
+grep -q 'visible: sourceRow.isActive && !!service.afterNode' "$root/Panel.qml" || fail "After hairline must follow the omavoice node, not hostProcess.running"
+grep -q 'meterHoldWanted && enabled && !!name' "$root/Service.qml" || fail "meter hold must not wait on hostProcess.running"
 grep -q 'onServiceChanged' "$root/Panel.qml" || fail "panel must rebind the service after a plugin reload"
 grep -q 'pkill -f "/pipewire -c $conf"' "$root/scripts/omavoice-run" || fail "host start must drop a leftover omavoice pipewire"
 grep -q 'pw-cat' "$root/Service.qml" || fail "Service must hold the graph with pw-cat"

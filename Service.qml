@@ -165,7 +165,16 @@ Item {
   }
 
   function syncHost() {
-    if (!root.active || !enabled || !targetName) {
+    if (!root.active || !enabled) {
+      startDebounce.stop()
+      stopHost()
+      return
+    }
+    if (!targetName) {
+      // After a plugin reload the registry is still binding; do not kill a
+      // host we are about to start, and do not clear a pick that has not
+      // landed yet.
+      if (hasUnboundNodes || hostProcess.running) return
       startDebounce.stop()
       stopHost()
       return
@@ -269,7 +278,9 @@ Item {
 
   function syncMeterHold() {
     var name = afterNodeName
-    var want = meterHoldWanted && running && enabled && !!name
+    // Do not require hostProcess.running: after a plugin reload the leftover
+    // omavoice node is in the registry before the new Process has started.
+    var want = meterHoldWanted && enabled && !!name
     if (!want) {
       meterHoldRetry.stop()
       if (meterHoldProcess.running) meterHoldProcess.running = false
@@ -362,6 +373,8 @@ Item {
   onAfterNodeIdChanged: {
     syncMeterHold()
     applyLiveControls()
+    if (afterNodeName && !hostProcess.running && enabled && targetName && probed)
+      startHostNow()
   }
   onSetDefaultSourceChanged: {
     if (setDefaultSource) {
@@ -468,7 +481,7 @@ Item {
     id: meterHoldProcess
     onRunningChanged: {
       if (running) return
-      if (root.meterHoldWanted && root.running && root.afterNodeName) meterHoldRetry.restart()
+      if (root.meterHoldWanted && root.afterNodeName) meterHoldRetry.restart()
     }
   }
 
@@ -482,7 +495,7 @@ Item {
   Timer {
     id: meterHoldWatch
     interval: 800
-    running: root.meterHoldWanted && root.running && root.enabled && !!root.afterNodeName && !meterHoldProcess.running
+    running: root.meterHoldWanted && root.enabled && !!root.afterNodeName && !meterHoldProcess.running
     repeat: true
     onTriggered: root.syncMeterHold()
   }

@@ -10,8 +10,10 @@ and this project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html)
 ### Fixed
 
 - After meters come back after a plugin update without clicking Reload.
-  The new host drops a leftover `pipewire -c` that still owned `omavoice`,
-  and the panel re-arms the meter hold when the service is replaced.
+  The new host drops a leftover `pipewire -c` that still owned `omavoice`.
+  The hairline and meter hold follow the bound `omavoice` node even while
+  the replacement Process has not started yet, and the panel re-arms the
+  hold when the service is replaced.
 
 ### Added
 
