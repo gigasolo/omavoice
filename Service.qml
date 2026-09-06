@@ -75,6 +75,7 @@ Item {
   readonly property bool setupNeeded: setup.needed && preset !== "clean"
   readonly property string engine: Model.engineForPreset(preset, haveRnnoise, haveDeepfilter)
   readonly property real outputGainDb: Model.outputGainDbForPreset(preset, settings)
+  readonly property real captureGainDb: Model.captureGainDbForPreset(preset, settings)
   readonly property string statusText: Model.statusText({
     enabled: enabled,
     running: running,
@@ -178,7 +179,7 @@ Item {
     lastError = ""
     promoted = false
     hostProcess.running = false
-    hostProcess.command = [scriptPath("omavoice-run"), "--preset", preset, "--quality", quality, "--engine", engine, "--output-gain-db", String(outputGainDb), "--target", targetName, "--dir", pluginDir]
+    hostProcess.command = [scriptPath("omavoice-run"), "--preset", preset, "--quality", quality, "--engine", engine, "--capture-gain-db", String(captureGainDb), "--output-gain-db", String(outputGainDb), "--target", targetName, "--dir", pluginDir]
     hostProcess.running = true
   }
 
@@ -190,6 +191,7 @@ Item {
   function writeLiveControls() {
     if (!root.active || !enabled || !hostProcess.running) return
     var args = [scriptPath("omavoice-ctl"), "set"]
+    args.push("preamp:Gain 1", String(Model.gainDbToLinear(captureGainDb)))
     args.push("outgain:Gain 1", String(Model.gainDbToLinear(outputGainDb)))
     var qp = Model.qualityParams(preset, quality)
     if (engine === "rnnoise") {
@@ -332,6 +334,7 @@ Item {
   onEngineChanged: syncHost()
   onQualityChanged: applyLiveControls()
   onOutputGainDbChanged: applyLiveControls()
+  onCaptureGainDbChanged: applyLiveControls()
   onProbedChanged: if (probed) syncHost()
   onPinnedSourceChanged: refreshSources()
   onNodesChanged: refreshSources()

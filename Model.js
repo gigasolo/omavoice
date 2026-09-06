@@ -188,6 +188,14 @@ function outputGainDbForPreset(preset, values) {
   return clampGainDb(src.meetingOutputGainDb)
 }
 
+function captureGainDbForPreset(preset, values) {
+  var kind = normalizePreset(preset)
+  var src = values || {}
+  if (kind === "podcast") return clampGainDb(src.podcastCaptureGainDb)
+  if (kind === "clean") return clampGainDb(src.cleanCaptureGainDb)
+  return clampGainDb(src.meetingCaptureGainDb)
+}
+
 function qualityParams(preset, quality) {
   var kind = normalizePreset(preset)
   var level = normalizeQuality(quality)
@@ -252,6 +260,7 @@ if (typeof module !== "undefined") {
     clampGainDb: clampGainDb,
     gainDbToLinear: gainDbToLinear,
     outputGainDbForPreset: outputGainDbForPreset,
+    captureGainDbForPreset: captureGainDbForPreset,
     qualityParams: qualityParams,
     setupGuide: setupGuide,
     statusText: statusText

@@ -117,10 +117,20 @@ Panel {
   }
 
   function setOutputGainDb(value) {
-    var db = Model.clampGainDb(value)
+    var db = Math.round(Model.clampGainDb(value) * 2) / 2
     var key = "meetingOutputGainDb"
     if (service.preset === "podcast") key = "podcastOutputGainDb"
     else if (service.preset === "clean") key = "cleanOutputGainDb"
+    var patch = {}
+    patch[key] = db
+    persistSettings(patch)
+  }
+
+  function setCaptureGainDb(value) {
+    var db = Math.round(Model.clampGainDb(value) * 2) / 2
+    var key = "meetingCaptureGainDb"
+    if (service.preset === "podcast") key = "podcastCaptureGainDb"
+    else if (service.preset === "clean") key = "cleanCaptureGainDb"
     var patch = {}
     patch[key] = db
     persistSettings(patch)
@@ -780,34 +790,78 @@ Panel {
                       }
                     }
 
-                    RowLayout {
+                    Column {
                       visible: sourceRow.isActive
                       width: parent.width
-                      spacing: Style.space(8)
+                      spacing: Style.space(4)
+
+                      RowLayout {
+                        width: parent.width
+                        spacing: Style.space(8)
+
+                        Text {
+                          text: "Out"
+                          color: root.dim
+                          font.family: root.fontFamily
+                          font.pixelSize: Style.font.caption
+                        }
+
+                        PanelSlider {
+                          Layout.fillWidth: true
+                          bar: root.bar
+                          minimum: -12
+                          maximum: 12
+                          step: 0.5
+                          value: service.outputGainDb
+                          onMoved: function(v) { root.setOutputGainDb(v) }
+                          onReleased: function(v) { root.setOutputGainDb(v) }
+                        }
+
+                        Text {
+                          text: (service.outputGainDb > 0 ? "+" : "") + service.outputGainDb + " dB"
+                          color: root.dim
+                          font.family: root.fontFamily
+                          font.pixelSize: Style.font.caption
+                        }
+                      }
+
+                      RowLayout {
+                        width: parent.width
+                        spacing: Style.space(8)
+
+                        Text {
+                          text: "In"
+                          color: root.dim
+                          font.family: root.fontFamily
+                          font.pixelSize: Style.font.caption
+                        }
+
+                        PanelSlider {
+                          Layout.fillWidth: true
+                          bar: root.bar
+                          minimum: -12
+                          maximum: 12
+                          step: 0.5
+                          value: service.captureGainDb
+                          onMoved: function(v) { root.setCaptureGainDb(v) }
+                          onReleased: function(v) { root.setCaptureGainDb(v) }
+                        }
+
+                        Text {
+                          text: (service.captureGainDb > 0 ? "+" : "") + service.captureGainDb + " dB"
+                          color: root.dim
+                          font.family: root.fontFamily
+                          font.pixelSize: Style.font.caption
+                        }
+                      }
 
                       Text {
-                        text: "Out"
+                        width: parent.width
+                        text: "Level into noise suppression."
                         color: root.dim
                         font.family: root.fontFamily
                         font.pixelSize: Style.font.caption
-                      }
-
-                      PanelSlider {
-                        Layout.fillWidth: true
-                        bar: root.bar
-                        minimum: -12
-                        maximum: 12
-                        step: 0.5
-                        value: service.outputGainDb
-                        onMoved: function(v) { root.setOutputGainDb(v) }
-                        onReleased: function(v) { root.setOutputGainDb(v) }
-                      }
-
-                      Text {
-                        text: (service.outputGainDb > 0 ? "+" : "") + service.outputGainDb + " dB"
-                        color: root.dim
-                        font.family: root.fontFamily
-                        font.pixelSize: Style.font.caption
+                        wrapMode: Text.WordWrap
                       }
                     }
                   }

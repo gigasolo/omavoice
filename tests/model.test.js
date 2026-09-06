@@ -115,6 +115,9 @@ test("clampGainDb and gainDbToLinear convert output trim", () => {
   assert.equal(Model.outputGainDbForPreset("meeting", { meetingOutputGainDb: 3 }), 3)
   assert.equal(Model.outputGainDbForPreset("podcast", { podcastOutputGainDb: -4 }), -4)
   assert.equal(Model.outputGainDbForPreset("clean", {}), 0)
+  assert.equal(Model.captureGainDbForPreset("meeting", { meetingCaptureGainDb: 2 }), 2)
+  assert.equal(Model.captureGainDbForPreset("podcast", { podcastCaptureGainDb: -3 }), -3)
+  assert.equal(Model.captureGainDbForPreset("clean", { cleanCaptureGainDb: 99 }), 12)
 })
 
 test("setupGuide asks for RNNoise when the LADSPA plugin is missing", () => {

@@ -36,7 +36,10 @@
       "podcastQuality": "better",
       "meetingOutputGainDb": 0,
       "podcastOutputGainDb": 0,
-      "cleanOutputGainDb": 0
+      "cleanOutputGainDb": 0,
+      "meetingCaptureGainDb": 0,
+      "podcastCaptureGainDb": 0,
+      "cleanCaptureGainDb": 0
     },
     "schema": [
       {
@@ -113,6 +116,33 @@
         "key": "cleanOutputGainDb",
         "type": "number",
         "label": "Clean output gain (dB)",
+        "min": -12,
+        "max": 12,
+        "step": 0.5,
+        "defaultValue": 0
+      },
+      {
+        "key": "meetingCaptureGainDb",
+        "type": "number",
+        "label": "Meeting capture gain (dB)",
+        "min": -12,
+        "max": 12,
+        "step": 0.5,
+        "defaultValue": 0
+      },
+      {
+        "key": "podcastCaptureGainDb",
+        "type": "number",
+        "label": "Podcast capture gain (dB)",
+        "min": -12,
+        "max": 12,
+        "step": 0.5,
+        "defaultValue": 0
+      },
+      {
+        "key": "cleanCaptureGainDb",
+        "type": "number",
+        "label": "Clean capture gain (dB)",
         "min": -12,
         "max": 12,
         "step": 0.5,
