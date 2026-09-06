@@ -71,10 +71,10 @@ Item {
   readonly property string quality: preset === "podcast" ? podcastQuality : meetingQuality
   readonly property string pinnedSource: String(setting("pinnedSource", "") || "")
   readonly property bool setDefaultSource: setting("setDefaultSource", true) !== false
-  readonly property var setup: Model.setupGuide(haveRnnoise)
-  readonly property bool setupNeeded: setup.needed && preset !== "clean"
   readonly property string engineSetting: Model.normalizeEngine(setting("engine", "auto"))
   readonly property string engine: Model.resolveEngine(preset, engineSetting, haveRnnoise, haveDeepfilter)
+  readonly property var setup: Model.setupGuide(engineSetting, haveRnnoise, haveDeepfilter, preset)
+  readonly property bool setupNeeded: setup.needed
   readonly property real outputGainDb: Model.outputGainDbForPreset(preset, settings)
   readonly property real captureGainDb: Model.captureGainDbForPreset(preset, settings)
   readonly property string statusText: Model.statusText({
@@ -82,6 +82,7 @@ Item {
     running: running,
     busy: busy,
     setupNeeded: setupNeeded,
+    setupHero: setup.hero,
     preset: preset,
     targetName: targetName,
     targetLabel: targetLabel,

@@ -132,11 +132,19 @@ test("clampGainDb and gainDbToLinear convert output trim", () => {
   assert.equal(Model.captureGainDbForPreset("clean", { cleanCaptureGainDb: 99 }), 12)
 })
 
-test("setupGuide asks for RNNoise when the LADSPA plugin is missing", () => {
-  const missing = Model.setupGuide(false)
-  assert.equal(missing.needed, true)
-  assert.match(missing.command, /noise-suppression-for-voice/)
-  assert.equal(Model.setupGuide(true).needed, false)
+test("setupGuide asks for the chosen engine when the plugin is missing", () => {
+  const missingRn = Model.setupGuide("auto", false, false, "meeting")
+  assert.equal(missingRn.needed, true)
+  assert.match(missingRn.command, /noise-suppression-for-voice/)
+  assert.equal(Model.setupGuide("auto", true, false, "meeting").needed, false)
+  assert.equal(Model.setupGuide("auto", false, false, "clean").needed, false)
+  assert.equal(Model.setupGuide("auto", false, true, "podcast").needed, false)
+  const missingDfn = Model.setupGuide("deepfilter", true, false, "meeting")
+  assert.equal(missingDfn.needed, true)
+  assert.match(missingDfn.command, /libdeep_filter_ladspa-bin/)
+  const missingForcedRn = Model.setupGuide("rnnoise", false, true, "podcast")
+  assert.equal(missingForcedRn.needed, true)
+  assert.match(missingForcedRn.command, /noise-suppression-for-voice/)
 })
 
 test("statusText reports the live preset and device", () => {

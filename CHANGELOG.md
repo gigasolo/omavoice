@@ -5,6 +5,19 @@ All notable changes to Omavoice are documented here.
 The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased] — 0.2.0-dev
+
+### Added
+
+- Live filter-chain controls: named `preamp` / `outgain` stages and
+  `pw-cli` Props writes, so Softer/Stronger no longer restarts the host.
+- Per-preset **Out** gain (−12…+12 dB) after the limiter, never WebRTC AGC.
+- Per-preset **In** capture preamp (−12…+12 dB) before noise suppression.
+- Engine picker on the PRESET tune page: Auto / RNNoise / DeepFilterNet.
+  Meeting can run DeepFilterNet with AEC still on. Engines never stack.
+- Setup row for a missing chosen engine, including DeepFilterNet’s
+  `libdeep_filter_ladspa-bin` install line.
+
 ## [0.1.24] — 2026-09-04
 
 ### Changed
@@ -255,6 +268,7 @@ and this project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html)
   guidance.
 - MIT license (GigaSolo LLC).
 
+[Unreleased]: https://github.com/gigasolo/omavoice/compare/v0.1.24...HEAD
 [0.1.24]: https://github.com/gigasolo/omavoice/compare/v0.1.23...v0.1.24
 [0.1.23]: https://github.com/gigasolo/omavoice/compare/v0.1.22...v0.1.23
 [0.1.22]: https://github.com/gigasolo/omavoice/compare/v0.1.21...v0.1.22

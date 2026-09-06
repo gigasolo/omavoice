@@ -224,23 +224,43 @@ function qualityParams(preset, quality) {
   return { vad: 80.0, grace: 400, dfn: 70 }
 }
 
-function setupGuide(haveRnnoise) {
-  if (haveRnnoise) {
-    return { needed: false, hero: "", command: "", body: "" }
+function setupGuide(engine, haveRnnoise, haveDeepfilter, preset) {
+  var kind = normalizePreset(preset)
+  var want = normalizeEngine(engine)
+  var none = { needed: false, hero: "", command: "", body: "" }
+
+  function rnnoiseRow() {
+    return {
+      needed: true,
+      hero: "Install RNNoise",
+      command: "omarchy pkg add noise-suppression-for-voice",
+      body: "This engine needs the RNNoise LADSPA plugin. Clean still works without it."
+    }
   }
-  return {
-    needed: true,
-    hero: "Install RNNoise",
-    command: "omarchy pkg add noise-suppression-for-voice",
-    body: "Meeting and Podcast presets need the RNNoise LADSPA plugin. Clean still works without it."
+
+  function dfnRow() {
+    return {
+      needed: true,
+      hero: "Install DeepFilterNet",
+      command: "omarchy pkg aur add libdeep_filter_ladspa-bin",
+      body: "DeepFilterNet is not installed. Reload after installing it."
+    }
   }
+
+  if (kind === "clean" && want === "auto") return none
+  if (want === "rnnoise") return haveRnnoise ? none : rnnoiseRow()
+  if (want === "deepfilter") return haveDeepfilter ? none : dfnRow()
+  if (kind === "clean") return none
+  if (kind === "podcast" && haveDeepfilter) return none
+  if (haveRnnoise) return none
+  return rnnoiseRow()
 }
 
 function statusText(state) {
   state = state || {}
   if (state.lastError) return String(state.lastError)
   if (!state.enabled) return "Off"
-  if (state.setupNeeded) return "RNNoise not installed"
+  if (state.setupNeeded) return String(state.setupHero || "Plugin not installed")
   if (!state.targetName) return "No microphone"
   if (state.running) return presetLabel(state.preset) + " · " + friendlyDeviceLabel(state.targetLabel || state.targetName)
   if (state.busy) return "Starting…"
