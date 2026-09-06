@@ -416,11 +416,15 @@ Item {
           haveRnnoise = data.rnnoise === true
           haveDeepfilter = data.deepfilter === true
           haveWebrtc = data.webrtc === true
-          probed = true
           lastError = ""
         } catch (e) {
+          haveRnnoise = false
+          haveDeepfilter = false
+          haveWebrtc = false
           lastError = "Could not probe audio plugins"
+          root.reloading = false
         }
+        probed = true
       }
     }
   }

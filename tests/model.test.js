@@ -124,12 +124,30 @@ test("clampGainDb and gainDbToLinear convert output trim", () => {
   assert.equal(Model.gainDbToLinear(0), 1)
   assert.ok(Math.abs(Model.gainDbToLinear(6) - 2) < 0.01)
   assert.ok(Math.abs(Model.gainDbToLinear(-6) - 0.5) < 0.01)
-  assert.equal(Model.outputGainDbForPreset("meeting", { meetingOutputGainDb: 3 }), 3)
-  assert.equal(Model.outputGainDbForPreset("podcast", { podcastOutputGainDb: -4 }), -4)
+  const all = {
+    meetingOutputGainDb: 1,
+    podcastOutputGainDb: 2,
+    cleanOutputGainDb: 3,
+    meetingCaptureGainDb: 4,
+    podcastCaptureGainDb: 5,
+    cleanCaptureGainDb: 6
+  }
+  assert.equal(Model.outputGainDbForPreset("meeting", all), 1)
+  assert.equal(Model.outputGainDbForPreset("podcast", all), 2)
+  assert.equal(Model.outputGainDbForPreset("clean", all), 3)
+  assert.equal(Model.captureGainDbForPreset("meeting", all), 4)
+  assert.equal(Model.captureGainDbForPreset("podcast", all), 5)
+  assert.equal(Model.captureGainDbForPreset("clean", all), 6)
   assert.equal(Model.outputGainDbForPreset("clean", {}), 0)
-  assert.equal(Model.captureGainDbForPreset("meeting", { meetingCaptureGainDb: 2 }), 2)
-  assert.equal(Model.captureGainDbForPreset("podcast", { podcastCaptureGainDb: -3 }), -3)
-  assert.equal(Model.captureGainDbForPreset("clean", { cleanCaptureGainDb: 99 }), 12)
+})
+
+test("qualityParams matches the dump VAD / DFN tables", () => {
+  assert.deepEqual(Model.qualityParams("meeting", "better"), { vad: 80.0, grace: 400, dfn: 70 })
+  assert.deepEqual(Model.qualityParams("meeting", "good"), { vad: 70.0, grace: 500, dfn: 50 })
+  assert.deepEqual(Model.qualityParams("meeting", "best"), { vad: 85.0, grace: 250, dfn: 85 })
+  assert.deepEqual(Model.qualityParams("podcast", "better"), { vad: 85.0, grace: 200, dfn: 70 })
+  assert.deepEqual(Model.qualityParams("podcast", "good"), { vad: 75.0, grace: 400, dfn: 50 })
+  assert.deepEqual(Model.qualityParams("podcast", "best"), { vad: 90.0, grace: 150, dfn: 85 })
 })
 
 test("setupGuide asks for the chosen engine when the plugin is missing", () => {
@@ -145,6 +163,22 @@ test("setupGuide asks for the chosen engine when the plugin is missing", () => {
   const missingForcedRn = Model.setupGuide("rnnoise", false, true, "podcast")
   assert.equal(missingForcedRn.needed, true)
   assert.match(missingForcedRn.command, /noise-suppression-for-voice/)
+  assert.equal(Model.setupGuide("rnnoise", false, false, "clean").needed, false)
+  assert.equal(Model.setupGuide("deepfilter", false, false, "clean").needed, false)
+})
+
+test("statusText does not report a missing engine on Clean", () => {
+  const text = Model.statusText({
+    enabled: true,
+    running: true,
+    setupNeeded: true,
+    setupHero: "Install RNNoise",
+    preset: "clean",
+    targetName: usb.name,
+    targetLabel: usb.description
+  })
+  assert.match(text, /Clean/)
+  assert.equal(text.includes("Install RNNoise"), false)
 })
 
 test("statusText reports the live preset and device", () => {

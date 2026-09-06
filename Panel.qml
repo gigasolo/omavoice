@@ -860,6 +860,7 @@ Panel {
                       }
 
                       Text {
+                        visible: service.engine !== "clean"
                         width: parent.width
                         text: "Level into noise suppression."
                         color: root.dim

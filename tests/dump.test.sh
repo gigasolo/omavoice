@@ -66,6 +66,7 @@ echo "$meeting" | grep -q 'node.latency = 256/48000' || fail "meeting must pin 2
 echo "$meeting" | grep -q 'lsp-plug.in/plugins/lv2/compressor_mono' || fail "meeting needs compressor_mono"
 echo "$meeting" | grep -q 'lsp-plug.in/plugins/lv2/limiter_mono' || fail "meeting needs limiter_mono"
 echo "$meeting" | grep -q 'noise_suppressor_stereo' && fail "meeting must not use stereo RNNoise"
+echo "$meeting" | grep -q 'deep_filter' && fail "auto meeting must not stack DFN"
 
 echo "$podcast" | grep -q 'bq_highpass' || fail "podcast must high-pass before NS"
 echo "$podcast" | grep -q 'monitor.mode' && fail "podcast must not enable AEC this release"
@@ -77,6 +78,7 @@ if grep -q libdeep_filter_ladspa.so <<<"$podcast"; then
   echo "$podcast_good" | grep -q '"Attenuation Limit (dB)" = 50' || fail "podcast good DFN cap must be 50 dB"
   echo "$podcast_best" | grep -q '"Attenuation Limit (dB)" = 85' || fail "podcast best DFN cap must be 85 dB"
   echo "$podcast" | grep -q 'deep_filter_stereo' && fail "podcast must not use stereo DFN"
+  echo "$podcast" | grep -q 'noise_suppressor' && fail "podcast DFN must not stack RNNoise"
 else
   echo "$podcast" | grep -q 'noise_suppressor_mono' || fail "podcast RNNoise fallback must be mono"
   echo "$podcast" | grep -q '"VAD Threshold (%)" = 85.0' || fail "podcast better VAD must be 85"
@@ -120,8 +122,27 @@ for kind in meeting podcast clean; do
   esac
   echo "$conf" | grep -q 'name = preamp' || fail "$kind must emit a named preamp node"
   echo "$conf" | grep -q 'name = outgain' || fail "$kind must emit a named outgain node"
+  echo "$conf" | grep -A2 'name = preamp' | grep -q 'label = mixer' || fail "$kind preamp must be mixer"
+  echo "$conf" | grep -A2 'name = outgain' | grep -q 'label = mixer' || fail "$kind outgain must be mixer"
+  echo "$conf" | grep -A3 'name = preamp' | grep -q '"Gain 1"' || fail "$kind preamp must expose Gain 1"
+  echo "$conf" | grep -A3 'name = outgain' | grep -q '"Gain 1"' || fail "$kind outgain must expose Gain 1"
   echo "$conf" | grep -q 'inputs = \[ "preamp:In 1" \]' || fail "$kind must enter at preamp"
   echo "$conf" | grep -q 'outputs = \[ "outgain:Out" \]' || fail "$kind must exit at outgain"
 done
+
+gained="$(dump meeting --capture-gain-db 6 --output-gain-db -6)"
+echo "$gained" | grep -A3 'name = preamp' | grep -q '"Gain 1" = 1.99526231' \
+  || fail "capture +6 dB must bake linear ~2 on preamp"
+echo "$gained" | grep -A3 'name = outgain' | grep -q '"Gain 1" = 0.50118723' \
+  || fail "output -6 dB must bake linear ~0.5 on outgain"
+
+meeting_clean="$(dump meeting --engine clean)"
+echo "$meeting_clean" | grep -q 'noise_suppressor' && fail "meeting --engine clean must not denoise"
+echo "$meeting_clean" | grep -q 'deep_filter' && fail "meeting --engine clean must not run DFN"
+echo "$meeting_clean" | grep -q 'bq_highpass' || fail "meeting --engine clean still high-passes"
+
+meeting_dfn_good="$(dump meeting --engine deepfilter --quality good)"
+echo "$meeting_dfn_good" | grep -q '"Attenuation Limit (dB)" = 50' \
+  || fail "meeting DFN good cap must be 50 dB"
 
 echo "dump.test: ok"

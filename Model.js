@@ -247,10 +247,9 @@ function setupGuide(engine, haveRnnoise, haveDeepfilter, preset) {
     }
   }
 
-  if (kind === "clean" && want === "auto") return none
+  if (kind === "clean") return none
   if (want === "rnnoise") return haveRnnoise ? none : rnnoiseRow()
   if (want === "deepfilter") return haveDeepfilter ? none : dfnRow()
-  if (kind === "clean") return none
   if (kind === "podcast" && haveDeepfilter) return none
   if (haveRnnoise) return none
   return rnnoiseRow()
@@ -260,7 +259,9 @@ function statusText(state) {
   state = state || {}
   if (state.lastError) return String(state.lastError)
   if (!state.enabled) return "Off"
-  if (state.setupNeeded) return String(state.setupHero || "Plugin not installed")
+  if (state.setupNeeded && normalizePreset(state.preset) !== "clean") {
+    return String(state.setupHero || "Plugin not installed")
+  }
   if (!state.targetName) return "No microphone"
   if (state.running) return presetLabel(state.preset) + " · " + friendlyDeviceLabel(state.targetLabel || state.targetName)
   if (state.busy) return "Starting…"

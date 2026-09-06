@@ -15,7 +15,7 @@ dump=0
 runtime_dir="${XDG_RUNTIME_DIR:-/tmp}/omavoice"
 
 usage() {
-  echo "Usage: omavoice-run [--dump] --preset meeting|podcast|clean [--quality good|better|best] [--engine auto|rnnoise|deepfilter] [--capture-gain-db N] [--output-gain-db N] --target <node.name> --dir <plugin-dir>" >&2
+  echo "Usage: omavoice-run [--dump] --preset meeting|podcast|clean [--quality good|better|best] [--engine auto|rnnoise|deepfilter|clean] [--capture-gain-db N] [--output-gain-db N] --target <node.name> --dir <plugin-dir>" >&2
   exit 2
 }
 
@@ -78,9 +78,11 @@ preamp_gain=$(db_to_linear "$capture_gain_db")
 out_gain=$(db_to_linear "$output_gain_db")
 
 engine="clean"
-if [[ $preset != clean ]]; then
+if [[ $preset == clean ]]; then
+  engine="clean"
+else
   case $engine_opt in
-    rnnoise|deepfilter)
+    rnnoise|deepfilter|clean)
       engine=$engine_opt
       ;;
     *)

@@ -1,6 +1,5 @@
 #!/usr/bin/env bash
-# Write live filter-chain controls without restarting the isolated host.
-# Graph PropInfo is on omavoice.capture, not the published omavoice source.
+# Props live on omavoice.capture.
 set -euo pipefail
 
 usage() {
