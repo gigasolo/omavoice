@@ -7,6 +7,12 @@ and this project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html)
 
 ## [Unreleased] — 0.2.0-dev
 
+### Fixed
+
+- After meters come back after a plugin update without clicking Reload.
+  The new host drops a leftover `pipewire -c` that still owned `omavoice`,
+  and the panel re-arms the meter hold when the service is replaced.
+
 ### Added
 
 - Live filter-chain controls: named `preamp` / `outgain` stages and

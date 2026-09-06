@@ -411,4 +411,12 @@ if [[ $dump -eq 1 ]]; then
   exit 0
 fi
 
+# A plugin update reloads QML before the previous pipewire -c has left the
+# registry. The leftover still owns node.name omavoice, so After meters bind
+# to a dead source until Reload. Drop that host first.
+if pgrep -f "/pipewire -c $conf" >/dev/null 2>&1; then
+  pkill -f "/pipewire -c $conf" >/dev/null 2>&1 || true
+  sleep 0.15
+fi
+
 exec /usr/bin/pipewire -c "$conf"

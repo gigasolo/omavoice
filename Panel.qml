@@ -28,8 +28,17 @@ Panel {
   readonly property var service: sharedService || localService
 
   function pushSettings() { if (service) service.settings = settings }
+  function armMeterHold() {
+    if (!opened || !service || typeof service.setMeterHold !== "function") return
+    service.setMeterHold(true)
+  }
   onSettingsChanged: pushSettings()
-  onServiceChanged: pushSettings()
+  onServiceChanged: {
+    pushSettings()
+    armMeterHold()
+  }
+  readonly property string afterHoldName: service.afterNodeName || ""
+  onAfterHoldNameChanged: armMeterHold()
   Component.onCompleted: pushSettings()
 
   readonly property var presets: [
