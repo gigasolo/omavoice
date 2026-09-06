@@ -168,6 +168,26 @@ function engineForPreset(preset, haveRnnoise, haveDeepfilter) {
   return "clean"
 }
 
+function clampGainDb(value) {
+  var n = Number(value)
+  if (!isFinite(n)) return 0
+  if (n < -12) return -12
+  if (n > 12) return 12
+  return n
+}
+
+function gainDbToLinear(db) {
+  return Math.pow(10, clampGainDb(db) / 20)
+}
+
+function outputGainDbForPreset(preset, values) {
+  var kind = normalizePreset(preset)
+  var src = values || {}
+  if (kind === "podcast") return clampGainDb(src.podcastOutputGainDb)
+  if (kind === "clean") return clampGainDb(src.cleanOutputGainDb)
+  return clampGainDb(src.meetingOutputGainDb)
+}
+
 function qualityParams(preset, quality) {
   var kind = normalizePreset(preset)
   var level = normalizeQuality(quality)
@@ -229,6 +249,9 @@ if (typeof module !== "undefined") {
     presetLabel: presetLabel,
     presetHint: presetHint,
     engineForPreset: engineForPreset,
+    clampGainDb: clampGainDb,
+    gainDbToLinear: gainDbToLinear,
+    outputGainDbForPreset: outputGainDbForPreset,
     qualityParams: qualityParams,
     setupGuide: setupGuide,
     statusText: statusText

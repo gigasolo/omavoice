@@ -103,6 +103,20 @@ test("engineForPreset uses DeepFilterNet only for podcast when present", () => {
   assert.equal(Model.engineForPreset("meeting", false, false), "clean")
 })
 
+test("clampGainDb and gainDbToLinear convert output trim", () => {
+  assert.equal(Model.clampGainDb(0), 0)
+  assert.equal(Model.clampGainDb(-20), -12)
+  assert.equal(Model.clampGainDb(20), 12)
+  assert.equal(Model.clampGainDb("nope"), 0)
+  assert.equal(Model.clampGainDb(undefined), 0)
+  assert.equal(Model.gainDbToLinear(0), 1)
+  assert.ok(Math.abs(Model.gainDbToLinear(6) - 2) < 0.01)
+  assert.ok(Math.abs(Model.gainDbToLinear(-6) - 0.5) < 0.01)
+  assert.equal(Model.outputGainDbForPreset("meeting", { meetingOutputGainDb: 3 }), 3)
+  assert.equal(Model.outputGainDbForPreset("podcast", { podcastOutputGainDb: -4 }), -4)
+  assert.equal(Model.outputGainDbForPreset("clean", {}), 0)
+})
+
 test("setupGuide asks for RNNoise when the LADSPA plugin is missing", () => {
   const missing = Model.setupGuide(false)
   assert.equal(missing.needed, true)

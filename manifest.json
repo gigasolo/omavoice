@@ -33,7 +33,10 @@
       "pinnedSource": "",
       "setDefaultSource": true,
       "meetingQuality": "better",
-      "podcastQuality": "better"
+      "podcastQuality": "better",
+      "meetingOutputGainDb": 0,
+      "podcastOutputGainDb": 0,
+      "cleanOutputGainDb": 0
     },
     "schema": [
       {
@@ -87,6 +90,33 @@
           "best"
         ],
         "defaultValue": "better"
+      },
+      {
+        "key": "meetingOutputGainDb",
+        "type": "number",
+        "label": "Meeting output gain (dB)",
+        "min": -12,
+        "max": 12,
+        "step": 0.5,
+        "defaultValue": 0
+      },
+      {
+        "key": "podcastOutputGainDb",
+        "type": "number",
+        "label": "Podcast output gain (dB)",
+        "min": -12,
+        "max": 12,
+        "step": 0.5,
+        "defaultValue": 0
+      },
+      {
+        "key": "cleanOutputGainDb",
+        "type": "number",
+        "label": "Clean output gain (dB)",
+        "min": -12,
+        "max": 12,
+        "step": 0.5,
+        "defaultValue": 0
       }
     ]
   }

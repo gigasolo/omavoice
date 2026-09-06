@@ -116,6 +116,16 @@ Panel {
     persistSettings({ podcastQuality: Model.normalizeQuality(value) })
   }
 
+  function setOutputGainDb(value) {
+    var db = Model.clampGainDb(value)
+    var key = "meetingOutputGainDb"
+    if (service.preset === "podcast") key = "podcastOutputGainDb"
+    else if (service.preset === "clean") key = "cleanOutputGainDb"
+    var patch = {}
+    patch[key] = db
+    persistSettings(patch)
+  }
+
   component QualitySlider: Column {
     required property string title
     required property string preset
@@ -704,69 +714,109 @@ Panel {
                     enabled: root.opened && root.metersArmed && !!node
                   }
 
-                  RowLayout {
+                  Column {
                     id: sourceInner
                     anchors.left: parent.left
                     anchors.right: parent.right
                     anchors.verticalCenter: parent.verticalCenter
                     anchors.leftMargin: Style.space(8)
                     anchors.rightMargin: Style.space(8)
-                    spacing: Style.space(10)
+                    spacing: Style.space(6)
 
-                    Column {
-                      Layout.fillWidth: true
-                      Layout.alignment: Qt.AlignVCenter
-                      spacing: 1
-                      Text {
-                        width: parent.width
-                        text: Model.friendlyDeviceLabel(modelData.description || modelData.name)
-                        color: root.foreground
-                        font.family: root.fontFamily
-                        font.pixelSize: Style.font.body
-                        font.bold: sourceRow.isActive
-                        elide: Text.ElideRight
+                    RowLayout {
+                      id: sourceMeterRow
+                      width: parent.width
+                      spacing: Style.space(10)
+
+                      Column {
+                        Layout.fillWidth: true
+                        Layout.alignment: Qt.AlignVCenter
+                        spacing: 1
+                        Text {
+                          width: parent.width
+                          text: Model.friendlyDeviceLabel(modelData.description || modelData.name)
+                          color: root.foreground
+                          font.family: root.fontFamily
+                          font.pixelSize: Style.font.body
+                          font.bold: sourceRow.isActive
+                          elide: Text.ElideRight
+                        }
+                        Text {
+                          width: parent.width
+                          text: Model.sourceKind(modelData.name) === "usb" ? "USB" : Model.sourceKind(modelData.name)
+                          color: root.dim
+                          font.family: root.fontFamily
+                          font.pixelSize: Style.font.caption
+                        }
                       }
+
+                      Item {
+                        Layout.preferredWidth: Style.space(72)
+                        Layout.preferredHeight: Style.space(8)
+                        Layout.alignment: Qt.AlignVCenter
+
+                        Rectangle {
+                          anchors.fill: parent
+                          color: Util.alpha(root.foreground, 0.18)
+
+                          Rectangle {
+                            height: parent.height
+                            width: parent.width * Math.max(0, Math.min(1, rowPeak.peak))
+                            color: sourceRow.isActive
+                              ? Util.alpha(root.foreground, 0.40)
+                              : Util.alpha(root.foreground, 0.55)
+                            Behavior on width { NumberAnimation { duration: 70 } }
+                          }
+
+                          Rectangle {
+                            visible: sourceRow.isActive && service.running
+                            height: Math.max(2, Math.ceil(parent.height * 0.4))
+                            width: parent.width * Math.max(0, Math.min(1, afterPeakMonitor.peak))
+                            anchors.verticalCenter: parent.verticalCenter
+                            color: root.foreground
+                            Behavior on width { NumberAnimation { duration: 70 } }
+                          }
+                        }
+                      }
+                    }
+
+                    RowLayout {
+                      visible: sourceRow.isActive
+                      width: parent.width
+                      spacing: Style.space(8)
+
                       Text {
-                        width: parent.width
-                        text: Model.sourceKind(modelData.name) === "usb" ? "USB" : Model.sourceKind(modelData.name)
+                        text: "Out"
+                        color: root.dim
+                        font.family: root.fontFamily
+                        font.pixelSize: Style.font.caption
+                      }
+
+                      PanelSlider {
+                        Layout.fillWidth: true
+                        bar: root.bar
+                        minimum: -12
+                        maximum: 12
+                        step: 0.5
+                        value: service.outputGainDb
+                        onMoved: function(v) { root.setOutputGainDb(v) }
+                        onReleased: function(v) { root.setOutputGainDb(v) }
+                      }
+
+                      Text {
+                        text: (service.outputGainDb > 0 ? "+" : "") + service.outputGainDb + " dB"
                         color: root.dim
                         font.family: root.fontFamily
                         font.pixelSize: Style.font.caption
                       }
                     }
-
-                    Item {
-                      Layout.preferredWidth: Style.space(72)
-                      Layout.preferredHeight: Style.space(8)
-                      Layout.alignment: Qt.AlignVCenter
-
-                      Rectangle {
-                        anchors.fill: parent
-                        color: Util.alpha(root.foreground, 0.18)
-
-                        Rectangle {
-                          height: parent.height
-                          width: parent.width * Math.max(0, Math.min(1, rowPeak.peak))
-                          color: sourceRow.isActive
-                            ? Util.alpha(root.foreground, 0.40)
-                            : Util.alpha(root.foreground, 0.55)
-                          Behavior on width { NumberAnimation { duration: 70 } }
-                        }
-
-                        Rectangle {
-                          visible: sourceRow.isActive && service.running
-                          height: Math.max(2, Math.ceil(parent.height * 0.4))
-                          width: parent.width * Math.max(0, Math.min(1, afterPeakMonitor.peak))
-                          anchors.verticalCenter: parent.verticalCenter
-                          color: root.foreground
-                          Behavior on width { NumberAnimation { duration: 70 } }
-                        }
-                      }
-                    }
                   }
 
                   MouseArea {
-                    anchors.fill: parent
+                    anchors.left: parent.left
+                    anchors.right: parent.right
+                    anchors.top: parent.top
+                    height: sourceMeterRow.height + Style.space(8)
                     hoverEnabled: true
                     preventStealing: true
                     cursorShape: Qt.PointingHandCursor
