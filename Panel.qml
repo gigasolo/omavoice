@@ -879,7 +879,7 @@ Panel {
                           color: root.dim
                           font.family: root.fontFamily
                           font.pixelSize: Style.font.body
-                          rotation: root.levelOpen ? -90 : 90
+                          rotation: root.levelOpen ? 90 : 0
                           Behavior on rotation { NumberAnimation { duration: 140; easing.type: Easing.OutCubic } }
                         }
 
@@ -1051,17 +1051,19 @@ Panel {
                     font.pixelSize: Style.font.caption
                     font.bold: service.engineSetting === modelData.value
                   }
+                  Rectangle {
+                    visible: service.engine === modelData.value
+                    width: Style.space(6)
+                    height: Style.space(6)
+                    radius: width / 2
+                    color: root.foreground
+                    anchors.top: parent.top
+                    anchors.right: parent.right
+                    anchors.topMargin: Style.space(6)
+                    anchors.rightMargin: Style.space(6)
+                  }
                 }
               }
-            }
-
-            Text {
-              width: parent.width
-              text: Model.engineUsingLine(service.engine)
-              color: root.dim
-              font.family: root.fontFamily
-              font.pixelSize: Style.font.caption
-              wrapMode: Text.WordWrap
             }
           }
 

@@ -14,7 +14,7 @@ and this project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html)
 - Per-preset **Output** and **Input** gain (−12…+12 dB). Chevron on the
   selected mic opens both (hover: Level). Snap 0.5 dB, detent at 0.
 - Engine picker on the PRESET tune page: Auto / RNNoise / DeepFilterNet,
-  with hover tips and a line for the engine actually in use. Meeting can
+  with hover tips and a dot on the engine that is running. Meeting can
   run DeepFilterNet with AEC still on. Engines never stack.
 - Setup row for a missing chosen engine, including DeepFilterNet’s
   `libdeep_filter_ladspa-bin` install line.

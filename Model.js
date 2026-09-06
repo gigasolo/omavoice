@@ -183,23 +183,11 @@ function resolveEngine(preset, engineSetting, haveRnnoise, haveDeepfilter) {
   return engineForPreset(kind, haveRnnoise, haveDeepfilter)
 }
 
-function engineLabel(engine) {
-  var value = String(engine || "")
-  if (value === "deepfilter") return "DeepFilterNet"
-  if (value === "rnnoise") return "RNNoise"
-  if (value === "clean") return "none"
-  return "Auto"
-}
-
 function engineChoiceHint(value) {
   var want = normalizeEngine(value)
   if (want === "rnnoise") return "Neural denoise. Never stacked with DeepFilterNet."
   if (want === "deepfilter") return "Heavier denoise. Never stacked with RNNoise."
   return "Meeting: RNNoise. Podcast: DeepFilterNet if installed, else RNNoise. Clean: none."
-}
-
-function engineUsingLine(resolved) {
-  return "Using " + engineLabel(resolved)
 }
 
 function clampGainDb(value) {
@@ -321,9 +309,7 @@ if (typeof module !== "undefined") {
     normalizeEngine: normalizeEngine,
     engineForPreset: engineForPreset,
     resolveEngine: resolveEngine,
-    engineLabel: engineLabel,
     engineChoiceHint: engineChoiceHint,
-    engineUsingLine: engineUsingLine,
     clampGainDb: clampGainDb,
     snapGainDb: snapGainDb,
     gainDbToLinear: gainDbToLinear,

@@ -115,12 +115,7 @@ test("resolveEngine honors an explicit picker and keeps Clean HPF-only", () => {
   assert.equal(Model.resolveEngine("clean", "auto", true, true), "clean")
 })
 
-test("engine copy names the live engine and the picker tips", () => {
-  assert.equal(Model.engineLabel("rnnoise"), "RNNoise")
-  assert.equal(Model.engineLabel("deepfilter"), "DeepFilterNet")
-  assert.equal(Model.engineLabel("clean"), "none")
-  assert.equal(Model.engineUsingLine("rnnoise"), "Using RNNoise")
-  assert.equal(Model.engineUsingLine("clean"), "Using none")
+test("engine copy names the picker tips", () => {
   assert.match(Model.engineChoiceHint("auto"), /Meeting/)
   assert.match(Model.engineChoiceHint("rnnoise"), /Never stacked/)
   assert.match(Model.engineChoiceHint("deepfilter"), /Heavier/)
