@@ -54,6 +54,7 @@ grep -q 'hostKey.*eqCurve' "$root/Service.qml" && fail "hostKey must not restart
 grep -q 'visible: service.preset !== "clean"' "$root/Panel.qml" || fail "Voice must hide on Clean"
 grep -q 'Clean has no voice EQ' "$root/Panel.qml" || fail "Clean must say it has no voice EQ"
 grep -q 'eqCurveHint' "$root/Panel.qml" || fail "Voice chips need hover tips"
+grep -q 'service.eqBands ? service.eqBands.body' "$root/Panel.qml" || fail "Body slider must show the curve, not only trim"
 grep -q '"--eq"' "$root/Service.qml" || fail "host must pass --eq"
 grep -q 'meetingEq' "$root/manifest.json" || fail "schema needs meetingEq"
 grep -q 'podcastEq' "$root/manifest.json" || fail "schema needs podcastEq"

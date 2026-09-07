@@ -154,14 +154,21 @@ Panel {
     persistSettings(patch)
   }
 
+  function eqCurveBase(band) {
+    var c = Model.eqCurveParams(service.eqCurve || "neutral")
+    if (band === "pres") return c.pres
+    if (band === "air") return c.air
+    return c.body
+  }
+
   function setEqTrimDb(band, value) {
-    var db = Model.snapEqTrimDb(value)
+    var trim = Model.snapEqTrimDb(Model.snapGainDb(value) - eqCurveBase(band))
     var prefix = service.preset === "podcast" ? "podcastEq" : "meetingEq"
     var key = prefix + "BodyDb"
     if (band === "pres") key = prefix + "PresenceDb"
     else if (band === "air") key = prefix + "AirDb"
     var patch = {}
-    patch[key] = db
+    patch[key] = trim
     persistSettings(patch)
     if (service && typeof service.clearEqPreview === "function") service.clearEqPreview()
     if (service && typeof service.applyLiveControls === "function") service.applyLiveControls()
@@ -171,7 +178,7 @@ Panel {
     if (!service || typeof service.previewEqGains !== "function") return
     var t = service.eqTrim || { body: 0, pres: 0, air: 0 }
     var next = { body: t.body, pres: t.pres, air: t.air }
-    next[band] = Model.snapEqTrimDb(value)
+    next[band] = Model.snapEqTrimDb(Model.snapGainDb(value) - eqCurveBase(band))
     service.previewEqGains(next.body, next.pres, next.air)
   }
 
@@ -1176,27 +1183,24 @@ Panel {
 
             GainRow {
               title: "Body"
-              eqTrim: true
-              persisted: service.eqTrim ? service.eqTrim.body : 0
-              hint: "On top of the named curve."
+              persisted: service.eqBands ? service.eqBands.body : 0
+              hint: "Named curve plus your trim."
               onMoved: function(v) { root.previewEqBand("body", v) }
               onReleased: function(v) { root.setEqTrimDb("body", v) }
             }
 
             GainRow {
               title: "Presence"
-              eqTrim: true
-              persisted: service.eqTrim ? service.eqTrim.pres : 0
-              hint: "On top of the named curve."
+              persisted: service.eqBands ? service.eqBands.pres : 0
+              hint: "Named curve plus your trim."
               onMoved: function(v) { root.previewEqBand("pres", v) }
               onReleased: function(v) { root.setEqTrimDb("pres", v) }
             }
 
             GainRow {
               title: "Air"
-              eqTrim: true
-              persisted: service.eqTrim ? service.eqTrim.air : 0
-              hint: "On top of the named curve."
+              persisted: service.eqBands ? service.eqBands.air : 0
+              hint: "Named curve plus your trim."
               onMoved: function(v) { root.previewEqBand("air", v) }
               onReleased: function(v) { root.setEqTrimDb("air", v) }
             }
