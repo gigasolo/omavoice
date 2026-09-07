@@ -5,6 +5,8 @@ root="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 fail() { echo "qml.test: $*" >&2; exit 1; }
 
 grep -q 'id: afterPeakMonitor' "$root/Panel.qml" || fail "Panel needs afterPeakMonitor"
+grep -q 'PwNode.name is constant' "$root/Service.qml" || fail "tracker must not bind omavoice while name is empty"
+grep -q 'node.always-process = true' "$root/scripts/omavoice-run" || fail "host must keep omavoice processing for After"
 grep -q 'id: rowPeak' "$root/Panel.qml" || fail "each mic row needs a peak monitor"
 grep -q 'PwNodePeakMonitor' "$root/Panel.qml" || fail "Panel must use PwNodePeakMonitor"
 grep -q 'afterPeakMonitor.peak' "$root/Panel.qml" || fail "selected row must show After"
@@ -95,7 +97,7 @@ grep -q 'function reload' "$root/Service.qml" || fail "Service must expose reloa
 grep -q 'libdeep_filter_ladspa-bin' "$root/README.md" || fail "Podcast AUR package must be libdeep_filter_ladspa-bin"
 grep -q 'deepfilternet-ladspa' "$root/README.md" && fail "deepfilternet-ladspa is not an AUR package"
 grep -q 'mktemp' "$root/scripts/omavoice-run" || fail "--dump must write a temp conf, not the live host"
-grep -q '!n.isSink && !n.isStream' "$root/Service.qml" || fail "tracker must bind sources only"
+grep -q 'n.isStream && name !== Model.NODE_NAME' "$root/Service.qml" || fail "tracker must bind named sources, including omavoice"
 grep -q 'onNodesChanged: refreshSources' "$root/Service.qml" || fail "sources must refresh on PipeWire node changes"
 grep -q 'plugins.omarchy.org' "$root/README.md" || fail "README must point at the official marketplace"
 grep -q 'omarchyplugins.com' "$root/README.md" && fail "README must not use omarchyplugins.com"

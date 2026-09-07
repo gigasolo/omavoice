@@ -277,8 +277,9 @@ $1
                 node.description = "Omavoice"
                 media.class = Audio/Source
                 node.virtual = true
+                node.always-process = true
                 media.role = Communication
-                session.suspend-timeout-seconds = 3
+                session.suspend-timeout-seconds = 0
                 stream.dont-remix = true
                 audio.rate = 48000
                 audio.position = [ MONO ]

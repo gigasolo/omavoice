@@ -34,7 +34,12 @@ Item {
     var list = []
     for (var i = 0; i < nodes.length; i++) {
       var n = nodes[i]
-      if (n && !n.isSink && !n.isStream) list.push(n)
+      if (!n || n.isSink) continue
+      var name = String(n.name || "")
+      // PwNode.name is constant. Tracking while empty freezes After unbound.
+      if (!name) continue
+      if (n.isStream && name !== Model.NODE_NAME) continue
+      list.push(n)
     }
     return list
   }

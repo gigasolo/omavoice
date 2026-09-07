@@ -63,8 +63,10 @@ echo "$meeting" | grep -A16 'media.class = Audio/Source' | grep -q 'node.virtual
   || fail "omavoice source must be node.virtual"
 echo "$meeting" | grep -A16 'media.class = Audio/Source' | grep -q 'media.role = Communication' \
   || fail "omavoice source must be Communication"
-echo "$meeting" | grep -A16 'media.class = Audio/Source' | grep -q 'session.suspend-timeout-seconds = 3' \
-  || fail "omavoice source must suspend after 3s idle"
+echo "$meeting" | grep -A16 'media.class = Audio/Source' | grep -q 'node.always-process = true' \
+  || fail "omavoice source must keep processing or After has no node to bind"
+echo "$meeting" | grep -A16 'media.class = Audio/Source' | grep -q 'session.suspend-timeout-seconds = 0' \
+  || fail "omavoice source must not idle-destroy after 3s"
 echo "$meeting" | grep -A16 'media.class = Audio/Source' | grep -q 'stream.dont-remix = true' \
   || fail "omavoice source must not remix"
 echo "$meeting" | grep -q 'audio.position = \[ MONO \]' || fail "meeting must be mono"
