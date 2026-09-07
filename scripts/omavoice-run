@@ -526,7 +526,26 @@ wait_session() {
 }
 
 omavoice_in_graph() {
-  pw-cli ls Node 2>/dev/null | grep -Eq 'node\.name = "omavoice(|\.aec|\.aec\.[a-z]+|\.capture)"'
+  pw-cli ls Node 2>/dev/null | grep -Eq 'node\.name = "omavoice(|\.[A-Za-z0-9._-]+)"'
+}
+
+# Isolated pipewire is gone; session copies of omavoice.aec* can linger
+# and block the next preset. Destroy by id, do not fail the start.
+destroy_leftover_nodes() {
+  pw-dump 2>/dev/null | python3 -c '
+import json, os, sys
+try:
+    data = json.load(sys.stdin)
+except Exception:
+    raise SystemExit(0)
+for obj in data:
+    if not str(obj.get("type") or "").endswith("Node"):
+        continue
+    props = (obj.get("info") or {}).get("props") or {}
+    name = str(props.get("node.name") or "")
+    if name == "omavoice" or name.startswith("omavoice.aec") or name in ("omavoice.capture", "omavoice.meter.hold"):
+        os.system("pw-cli destroy %s >/dev/null 2>&1" % obj.get("id"))
+'
 }
 
 # Only the pipewire binary. pkill -f on the conf path also matches shells
@@ -559,12 +578,9 @@ wait_session || exit 1
 drop_leftover_host
 for i in $(seq 1 50); do
   omavoice_in_graph || break
+  destroy_leftover_nodes
   sleep 0.1
 done
-if omavoice_in_graph; then
-  echo "omavoice-run: leftover omavoice nodes still in the session" >&2
-  exit 1
-fi
 for stale in "$runtime_dir"/host.conf "$runtime_dir"/host.*.conf; do
   [[ -f $stale ]] || continue
   [[ $stale == "$conf" ]] && continue
