@@ -263,7 +263,10 @@ Panel {
     width: parent.width
     spacing: Style.space(8)
 
-    onPersistedChanged: if (!gainSlider.dragging) held = persisted
+    Binding on held {
+      when: !gainSlider.dragging
+      value: persisted
+    }
 
     HoverHandler { id: gainHover }
     PanelToolTip {
@@ -1183,7 +1186,7 @@ Panel {
 
             GainRow {
               title: "Body"
-              persisted: service.eqBands ? service.eqBands.body : 0
+              persisted: service.eqBodyDb
               hint: "Named curve plus your trim."
               onMoved: function(v) { root.previewEqBand("body", v) }
               onReleased: function(v) { root.setEqTrimDb("body", v) }
@@ -1191,7 +1194,7 @@ Panel {
 
             GainRow {
               title: "Presence"
-              persisted: service.eqBands ? service.eqBands.pres : 0
+              persisted: service.eqPresDb
               hint: "Named curve plus your trim."
               onMoved: function(v) { root.previewEqBand("pres", v) }
               onReleased: function(v) { root.setEqTrimDb("pres", v) }
@@ -1199,7 +1202,7 @@ Panel {
 
             GainRow {
               title: "Air"
-              persisted: service.eqBands ? service.eqBands.air : 0
+              persisted: service.eqAirDb
               hint: "Named curve plus your trim."
               onMoved: function(v) { root.previewEqBand("air", v) }
               onReleased: function(v) { root.setEqTrimDb("air", v) }
