@@ -468,8 +468,8 @@ add_link() {
     prev_out="denoise:Output"
   elif [[ $engine == deepfilter ]]; then
     dfn_node $podcast_dfn
-    add_link "$prev_out" "denoise:Input"
-    prev_out="denoise:Output"
+    add_link "$prev_out" "denoise:Audio In"
+    prev_out="denoise:Audio Out"
   fi
 
   if [[ $preset != clean ]]; then
