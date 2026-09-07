@@ -547,7 +547,7 @@ Item {
       if (!root.probed || !root.targetName) return
       // Leftover drain plus a slow DeepFilterNet load. Killing the wrapper
       // deletes another start's conf and After never comes back.
-      if (hostProcess.running && Date.now() - root.hostStartedAt < 8000) return
+      if (hostProcess.running && Date.now() - root.hostStartedAt < 15000) return
       root.hostKey = ""
       if (hostProcess.running) hostProcess.running = false
       root.startHostNow()

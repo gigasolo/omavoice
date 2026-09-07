@@ -526,7 +526,7 @@ wait_session() {
 }
 
 omavoice_in_graph() {
-  pw-cli ls Node 2>/dev/null | grep -Eq 'node\.name = "omavoice(|\.aec|\.capture)"'
+  pw-cli ls Node 2>/dev/null | grep -Eq 'node\.name = "omavoice(|\.aec|\.aec\.[a-z]+|\.capture)"'
 }
 
 # Only the pipewire binary. pkill -f on the conf path also matches shells
@@ -557,10 +557,14 @@ drop_leftover_host() {
 
 wait_session || exit 1
 drop_leftover_host
-for i in $(seq 1 20); do
+for i in $(seq 1 50); do
   omavoice_in_graph || break
   sleep 0.1
 done
+if omavoice_in_graph; then
+  echo "omavoice-run: leftover omavoice nodes still in the session" >&2
+  exit 1
+fi
 for stale in "$runtime_dir"/host.conf "$runtime_dir"/host.*.conf; do
   [[ -f $stale ]] || continue
   [[ $stale == "$conf" ]] && continue

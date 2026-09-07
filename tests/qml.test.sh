@@ -35,9 +35,10 @@ grep -q 'umask 077' "$root/scripts/omavoice-run" || fail "host conf must not be 
 grep -qF 'target =~ ^[A-Za-z0-9._:-]+$' "$root/scripts/omavoice-run" || fail "host must reject junk --target names"
 grep -q 'wait_session' "$root/scripts/omavoice-run" || fail "host start must wait for the session core"
 grep -q 'omavoice_in_graph' "$root/scripts/omavoice-run" || fail "host start must wait for leftover omavoice nodes to leave"
+grep -q 'leftover omavoice nodes still in the session' "$root/scripts/omavoice-run" || fail "host must not exec pipewire on top of leftover omavoice names"
 grep -q 'id: hostBindWatch' "$root/Service.qml" || fail "empty host must restart until the omavoice node appears"
 grep -q 'hostProcess.running && Date.now()' "$root/Service.qml" || fail "bind watch must restart even when Process is not tracking the leftover"
-grep -q 'hostStartedAt < 8000' "$root/Service.qml" || fail "bind watch must wait 8s before killing a live wrapper"
+grep -q 'hostStartedAt < 15000' "$root/Service.qml" || fail "bind watch must wait for leftover drain before killing a live wrapper"
 grep -A20 'id: hostProcess' "$root/Service.qml" | grep -q startDebounce \
   && fail "hostProcess stop must not startDebounce; overlapping omavoice-run deletes the next conf"
 grep -q '/proc/$pid' "$root/scripts/omavoice-run" || fail "stale host conf must not delete a live pid's file"
