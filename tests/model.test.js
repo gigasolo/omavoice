@@ -129,6 +129,28 @@ test("Clean ignores voice EQ trim", () => {
   assert.deepEqual(trim, { body: 0, pres: 0, air: 0 })
 })
 
+test("eqTrimForPreset reads only the active preset schema keys", () => {
+  assert.deepEqual(
+    Model.eqTrimForPreset("meeting", { meetingEqBodyDb: 4, podcastEqBodyDb: 3, podcastEqPresenceDb: 2 }),
+    { body: 4, pres: 0, air: 0 }
+  )
+  assert.deepEqual(
+    Model.eqTrimForPreset("podcast", { meetingEqBodyDb: 4, podcastEqPresenceDb: 2, podcastEqAirDb: -1 }),
+    { body: 0, pres: 2, air: -1 }
+  )
+  assert.equal(Model.eqTrimForPreset("meeting", { meetingEqBodyDb: 9 }).body, 6)
+  assert.equal(Model.eqTrimForPreset("meeting", { meetingEqPresenceDb: "nope" }).pres, 0)
+})
+
+test("eqBandRange is the look ±6 so the thumb matches the biquad", () => {
+  assert.deepEqual(Model.eqBandRange("neutral", "body"), { min: -6, max: 6 })
+  assert.deepEqual(Model.eqBandRange("warm", "body"), { min: -4, max: 8 })
+  assert.deepEqual(Model.eqBandRange("clear", "body"), { min: -8.5, max: 3.5 })
+  assert.deepEqual(Model.eqBandRange("bright", "air"), { min: -3.5, max: 8.5 })
+  assert.equal(Model.snapEqBandDb("warm", "body", 12), 8)
+  assert.equal(Model.snapEqBandDb("warm", "body", -12), -4)
+})
+
 test("normalizeQuality defaults to better", () => {
   assert.equal(Model.normalizeQuality("good"), "good")
   assert.equal(Model.normalizeQuality("BEST"), "best")

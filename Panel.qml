@@ -160,14 +160,11 @@ Panel {
   }
 
   function eqCurveBase(band) {
-    var c = Model.eqCurveParams(service.eqCurve || "neutral")
-    if (band === "pres") return c.pres
-    if (band === "air") return c.air
-    return c.body
+    return Model.eqBandBase(service.eqCurve || "neutral", band)
   }
 
   function setEqTrimDb(band, value) {
-    var trim = Model.snapEqTrimDb(Model.snapGainDb(value) - eqCurveBase(band))
+    var trim = Model.snapEqTrimDb(Model.snapEqBandDb(service.eqCurve || "neutral", band, value) - eqCurveBase(band))
     var prefix = service.preset === "podcast" ? "podcastEq" : "meetingEq"
     var key = prefix + "BodyDb"
     if (band === "pres") key = prefix + "PresenceDb"
@@ -183,7 +180,7 @@ Panel {
     if (!service || typeof service.previewEqGains !== "function") return
     var t = service.eqTrim || { body: 0, pres: 0, air: 0 }
     var next = { body: t.body, pres: t.pres, air: t.air }
-    next[band] = Model.snapEqTrimDb(Model.snapGainDb(value) - eqCurveBase(band))
+    next[band] = Model.snapEqTrimDb(Model.snapEqBandDb(service.eqCurve || "neutral", band, value) - eqCurveBase(band))
     service.previewEqGains(next.body, next.pres, next.air)
   }
 
@@ -260,6 +257,8 @@ Panel {
     required property string title
     required property real persisted
     property string hint: ""
+    property real minimum: -12
+    property real maximum: 12
     property real held: persisted
     signal moved(real value)
     signal released(real value)
@@ -270,6 +269,13 @@ Panel {
     Binding on held {
       when: !gainSlider.dragging
       value: persisted
+    }
+
+    function snapHeld(v) {
+      var s = Model.snapGainDb(v)
+      if (s < minimum) s = minimum
+      if (s > maximum) s = maximum
+      return s
     }
 
     HoverHandler { id: gainHover }
@@ -293,17 +299,17 @@ Panel {
       Layout.fillWidth: true
       Layout.alignment: Qt.AlignVCenter
       bar: root.bar
-      minimum: -12
-      maximum: 12
+      minimum: parent.minimum
+      maximum: parent.maximum
       step: 0.5
       value: held
       onMoved: function(v) {
-        var s = Model.snapGainDb(v)
+        var s = snapHeld(v)
         held = s
         moved(s)
       }
       onReleased: function(v) {
-        var s = Model.snapGainDb(v)
+        var s = snapHeld(v)
         held = s
         released(s)
       }
@@ -318,6 +324,12 @@ Panel {
       font.family: root.fontFamily
       font.pixelSize: Style.font.caption
     }
+  }
+
+  component VoiceRow: GainRow {
+    required property string band
+    minimum: Model.eqBandRange(service.eqCurve || "neutral", band).min
+    maximum: Model.eqBandRange(service.eqCurve || "neutral", band).max
   }
 
   function launchSetup() {
@@ -1188,24 +1200,27 @@ Panel {
               }
             }
 
-            GainRow {
+            VoiceRow {
               title: "Body"
+              band: "body"
               persisted: service.eqBodyDb
               hint: "Named curve plus your trim."
               onMoved: function(v) { root.previewEqBand("body", v) }
               onReleased: function(v) { root.setEqTrimDb("body", v) }
             }
 
-            GainRow {
+            VoiceRow {
               title: "Presence"
+              band: "pres"
               persisted: service.eqPresDb
               hint: "Named curve plus your trim."
               onMoved: function(v) { root.previewEqBand("pres", v) }
               onReleased: function(v) { root.setEqTrimDb("pres", v) }
             }
 
-            GainRow {
+            VoiceRow {
               title: "Air"
+              band: "air"
               persisted: service.eqAirDb
               hint: "Named curve plus your trim."
               onMoved: function(v) { root.previewEqBand("air", v) }

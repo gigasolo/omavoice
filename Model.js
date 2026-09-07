@@ -291,6 +291,34 @@ function eqBandGains(curve, trim) {
   }
 }
 
+function eqBandBase(curve, band) {
+  var c = eqCurveParams(curve)
+  if (band === "pres") return c.pres
+  if (band === "air") return c.air
+  return c.body
+}
+
+function eqBandRange(curve, band) {
+  var base = eqBandBase(curve, band)
+  return {
+    min: clampEqBandDb(base - 6),
+    max: clampEqBandDb(base + 6)
+  }
+}
+
+function snapEqBandDb(curve, band, value) {
+  var r = eqBandRange(curve, band)
+  var n = Number(value)
+  if (!isFinite(n)) n = eqBandBase(curve, band)
+  if (n < r.min) n = r.min
+  if (n > r.max) n = r.max
+  if (Math.abs(n) <= 0.4) n = 0
+  n = Math.round(n * 2) / 2
+  if (n < r.min) n = r.min
+  if (n > r.max) n = r.max
+  return n
+}
+
 function eqCurveHint(value) {
   var c = normalizeEqCurve(value, "neutral")
   if (c === "warm") return "A little low end. Less edge."
@@ -422,6 +450,9 @@ if (typeof module !== "undefined") {
     eqCurveForPreset: eqCurveForPreset,
     eqTrimForPreset: eqTrimForPreset,
     eqBandGains: eqBandGains,
+    eqBandBase: eqBandBase,
+    eqBandRange: eqBandRange,
+    snapEqBandDb: snapEqBandDb,
     eqCurveHint: eqCurveHint,
     snapGainDb: snapGainDb,
     gainDbToLinear: gainDbToLinear,
