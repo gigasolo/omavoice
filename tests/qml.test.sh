@@ -44,6 +44,7 @@ grep -q 'pw-cli destroy' "$root/scripts/omavoice-run" || fail "leftover omavoice
 grep -q 'leftover omavoice nodes still in the session' "$root/scripts/omavoice-run" && fail "do not fail the host start because Meeting AEC names linger"
 grep -q 'id: hostBindWatch' "$root/Service.qml" || fail "empty host must restart until the omavoice node appears"
 grep -q 'hostKey === key && afterNodeName' "$root/Service.qml" || fail "a running Process is not a healthy host without the omavoice node"
+grep -q 'defaultSourceName === Model.NODE_NAME' "$root/Service.qml" || fail "After must bind the default source when it is omavoice"
 grep -q 'hostStartedAt < 8000' "$root/Service.qml" || fail "empty host must get 8s to join the session before restart"
 grep -A20 'id: hostProcess' "$root/Service.qml" | grep -q startDebounce \
   && fail "hostProcess stop must not startDebounce; overlapping omavoice-run deletes the next conf"

@@ -52,6 +52,7 @@ Item {
   // object later gets name "omavoice" with no second change — After stays
   // at Before until a preset toggle recreates the node.
   readonly property string afterNodeName: {
+    if (defaultSourceName === Model.NODE_NAME) return Model.NODE_NAME
     for (var i = 0; i < trackedNodes.length; i++) {
       var n = trackedNodes[i]
       if (n && String(n.name || "") === Model.NODE_NAME) return Model.NODE_NAME
@@ -59,6 +60,7 @@ Item {
     return ""
   }
   readonly property var afterNode: {
+    if (defaultSourceName === Model.NODE_NAME && defaultSource) return defaultSource
     var name = afterNodeName
     if (!name) return null
     return nodeNamed(name)
@@ -544,6 +546,7 @@ Item {
     repeat: true
     onTriggered: {
       if (root.afterNodeName) return
+      if (root.defaultSourceName === Model.NODE_NAME) return
       if (!root.probed || !root.targetName) return
       if (hostProcess.running && Date.now() - root.hostStartedAt < 8000) return
       root.hostKey = ""
