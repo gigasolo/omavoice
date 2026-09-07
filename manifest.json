@@ -36,6 +36,14 @@
       "engine": "auto",
       "meetingQuality": "better",
       "podcastQuality": "better",
+      "meetingEq": "warm",
+      "podcastEq": "presence",
+      "meetingEqBodyDb": 0,
+      "meetingEqPresenceDb": 0,
+      "meetingEqAirDb": 0,
+      "podcastEqBodyDb": 0,
+      "podcastEqPresenceDb": 0,
+      "podcastEqAirDb": 0,
       "meetingOutputGainDb": 0,
       "podcastOutputGainDb": 0,
       "cleanOutputGainDb": 0,
@@ -113,6 +121,84 @@
           "best"
         ],
         "defaultValue": "better"
+      },
+      {
+        "key": "meetingEq",
+        "type": "enum",
+        "label": "Meeting voice curve",
+        "options": [
+          "neutral",
+          "warm",
+          "presence",
+          "air"
+        ],
+        "defaultValue": "warm"
+      },
+      {
+        "key": "podcastEq",
+        "type": "enum",
+        "label": "Podcast voice curve",
+        "options": [
+          "neutral",
+          "warm",
+          "presence",
+          "air"
+        ],
+        "defaultValue": "presence"
+      },
+      {
+        "key": "meetingEqBodyDb",
+        "type": "number",
+        "label": "Meeting body trim (dB)",
+        "min": -6,
+        "max": 6,
+        "step": 0.5,
+        "defaultValue": 0
+      },
+      {
+        "key": "meetingEqPresenceDb",
+        "type": "number",
+        "label": "Meeting presence trim (dB)",
+        "min": -6,
+        "max": 6,
+        "step": 0.5,
+        "defaultValue": 0
+      },
+      {
+        "key": "meetingEqAirDb",
+        "type": "number",
+        "label": "Meeting air trim (dB)",
+        "min": -6,
+        "max": 6,
+        "step": 0.5,
+        "defaultValue": 0
+      },
+      {
+        "key": "podcastEqBodyDb",
+        "type": "number",
+        "label": "Podcast body trim (dB)",
+        "min": -6,
+        "max": 6,
+        "step": 0.5,
+        "defaultValue": 0
+      },
+      {
+        "key": "podcastEqPresenceDb",
+        "type": "number",
+        "label": "Podcast presence trim (dB)",
+        "min": -6,
+        "max": 6,
+        "step": 0.5,
+        "defaultValue": 0
+      },
+      {
+        "key": "podcastEqAirDb",
+        "type": "number",
+        "label": "Podcast air trim (dB)",
+        "min": -6,
+        "max": 6,
+        "step": 0.5,
+        "defaultValue": 0
       },
       {
         "key": "meetingOutputGainDb",

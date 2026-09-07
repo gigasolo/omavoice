@@ -95,6 +95,37 @@ test("pickSource prefers bluetooth over builtin when nothing is remembered", () 
   assert.equal(picked.name, bluez.name)
 })
 
+test("eqCurveParams matches the 0.3 voice table", () => {
+  assert.deepEqual(Model.eqCurveParams("neutral"), { hpHz: 80, body: 0, pres: 0, air: 0 })
+  assert.deepEqual(Model.eqCurveParams("warm"), { hpHz: 80, body: 2.0, pres: -1.5, air: 0 })
+  assert.deepEqual(Model.eqCurveParams("presence"), { hpHz: 80, body: -2.5, pres: 2.0, air: 0 })
+  assert.deepEqual(Model.eqCurveParams("air"), { hpHz: 100, body: 0, pres: 1.0, air: 2.5 })
+  assert.equal(Model.eqCurveParams("nope").hpHz, 80)
+})
+
+test("eqCurveForPreset defaults Warm on Meeting and Presence on Podcast", () => {
+  assert.equal(Model.eqCurveForPreset("meeting", {}), "warm")
+  assert.equal(Model.eqCurveForPreset("podcast", {}), "presence")
+  assert.equal(Model.eqCurveForPreset("clean", { meetingEq: "air" }), "")
+  assert.equal(Model.eqCurveForPreset("meeting", { meetingEq: "air" }), "air")
+})
+
+test("eqBandGains adds trim and clamps to 12 dB", () => {
+  const presence = Model.eqBandGains("presence", { body: 1 })
+  assert.equal(presence.body, -1.5)
+  assert.equal(presence.pres, 2.0)
+  assert.equal(Model.eqBandGains("warm", { body: 12 }).body, 8)
+  assert.equal(Model.eqBandGains("air", { air: -6 }).air, -3.5)
+  assert.equal(Model.snapEqTrimDb(0.3), 0)
+  assert.equal(Model.snapEqTrimDb(1.24), 1)
+  assert.equal(Model.clampEqTrimDb(9), 6)
+})
+
+test("Clean ignores voice EQ trim", () => {
+  const trim = Model.eqTrimForPreset("clean", { meetingEqBodyDb: 4, podcastEqBodyDb: 3 })
+  assert.deepEqual(trim, { body: 0, pres: 0, air: 0 })
+})
+
 test("normalizeQuality defaults to better", () => {
   assert.equal(Model.normalizeQuality("good"), "good")
   assert.equal(Model.normalizeQuality("BEST"), "best")

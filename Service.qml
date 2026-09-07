@@ -78,9 +78,14 @@ Item {
   readonly property bool setupNeeded: setup.needed
   readonly property real outputGainDb: Model.outputGainDbForPreset(preset, settings)
   readonly property real captureGainDb: Model.captureGainDbForPreset(preset, settings)
+  readonly property string eqCurve: Model.eqCurveForPreset(preset, settings)
+  readonly property var eqTrim: Model.eqTrimForPreset(preset, settings)
+  readonly property var eqBands: Model.eqBandGains(eqCurve, eqPreview ? previewEqTrim : eqTrim)
   property bool gainPreview: false
   property real previewCaptureDb: 0
   property real previewOutputDb: 0
+  property bool eqPreview: false
+  property var previewEqTrim: ({ body: 0, pres: 0, air: 0 })
   property int hostAttempts: 0
   property double hostStartedAt: 0
   readonly property string statusText: Model.statusText({
@@ -203,7 +208,14 @@ Item {
     promoted = false
     hostStartedAt = Date.now()
     hostProcess.running = false
-    hostProcess.command = [scriptPath("omavoice-run"), "--preset", preset, "--quality", quality, "--engine", engine, "--capture-gain-db", String(captureGainDb), "--output-gain-db", String(outputGainDb), "--target", targetName, "--dir", pluginDir]
+    var args = [scriptPath("omavoice-run"), "--preset", preset, "--quality", quality, "--engine", engine, "--capture-gain-db", String(captureGainDb), "--output-gain-db", String(outputGainDb), "--target", targetName, "--dir", pluginDir]
+    if (eqCurve) {
+      args.push("--eq", eqCurve)
+      args.push("--eq-body-db", String(eqTrim.body))
+      args.push("--eq-pres-db", String(eqTrim.pres))
+      args.push("--eq-air-db", String(eqTrim.air))
+    }
+    hostProcess.command = args
     hostProcess.running = true
   }
 
@@ -223,6 +235,20 @@ Item {
     gainPreview = false
   }
 
+  function previewEqGains(bodyDb, presDb, airDb) {
+    previewEqTrim = {
+      body: Model.clampEqTrimDb(bodyDb),
+      pres: Model.clampEqTrimDb(presDb),
+      air: Model.clampEqTrimDb(airDb)
+    }
+    eqPreview = true
+    applyLiveControls()
+  }
+
+  function clearEqPreview() {
+    eqPreview = false
+  }
+
   function writeLiveControls() {
     if (!root.active || !enabled || !hostProcess.running) return
     var cap = gainPreview ? previewCaptureDb : captureGainDb
@@ -236,6 +262,13 @@ Item {
       args.push("denoise:VAD Grace Period (ms)", String(qp.grace))
     } else if (engine === "deepfilter") {
       args.push("denoise:Attenuation Limit (dB)", String(qp.dfn))
+    }
+    if (eqCurve) {
+      var bands = eqBands
+      args.push("hp:Freq", String(bands.hpHz))
+      args.push("eq_body:Gain", String(bands.body))
+      args.push("eq_pres:Gain", String(bands.pres))
+      args.push("eq_air:Gain", String(bands.air))
     }
     Quickshell.execDetached(args)
   }
@@ -374,6 +407,7 @@ Item {
   onQualityChanged: applyLiveControls()
   onOutputGainDbChanged: applyLiveControls()
   onCaptureGainDbChanged: applyLiveControls()
+  onEqCurveChanged: applyLiveControls()
   onProbedChanged: if (probed) syncHost()
   onPinnedSourceChanged: refreshSources()
   onNodesChanged: refreshSources()

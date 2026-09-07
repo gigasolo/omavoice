@@ -3,6 +3,7 @@ var NODE_DESCRIPTION = "Omavoice"
 var PRESETS = ["meeting", "podcast", "clean"]
 var QUALITIES = ["good", "better", "best"]
 var ENGINES = ["auto", "rnnoise", "deepfilter"]
+var EQ_CURVES = ["neutral", "warm", "presence", "air"]
 
 function normalizePreset(value) {
   var preset = String(value || "").toLowerCase()
@@ -209,6 +210,88 @@ function clampGainDb(value) {
   return n
 }
 
+function clampEqTrimDb(value) {
+  var n = Number(value)
+  if (!isFinite(n)) return 0
+  if (n < -6) return -6
+  if (n > 6) return 6
+  return n
+}
+
+function snapEqTrimDb(value) {
+  var n = clampEqTrimDb(value)
+  if (Math.abs(n) <= 0.4) return 0
+  return Math.round(n * 2) / 2
+}
+
+function clampEqBandDb(value) {
+  var n = Number(value)
+  if (!isFinite(n)) return 0
+  if (n < -12) return -12
+  if (n > 12) return 12
+  return n
+}
+
+function normalizeEqCurve(value, fallback) {
+  var curve = String(value || "").toLowerCase()
+  if (EQ_CURVES.indexOf(curve) >= 0) return curve
+  var def = String(fallback || "neutral").toLowerCase()
+  if (EQ_CURVES.indexOf(def) >= 0) return def
+  return "neutral"
+}
+
+function eqCurveParams(curve) {
+  var c = normalizeEqCurve(curve, "neutral")
+  if (c === "warm") return { hpHz: 80, body: 2.0, pres: -1.5, air: 0 }
+  if (c === "presence") return { hpHz: 80, body: -2.5, pres: 2.0, air: 0 }
+  if (c === "air") return { hpHz: 100, body: 0, pres: 1.0, air: 2.5 }
+  return { hpHz: 80, body: 0, pres: 0, air: 0 }
+}
+
+function eqCurveForPreset(preset, values) {
+  if (normalizePreset(preset) === "clean") return ""
+  var src = values || {}
+  if (normalizePreset(preset) === "podcast") return normalizeEqCurve(src.podcastEq, "presence")
+  return normalizeEqCurve(src.meetingEq, "warm")
+}
+
+function eqTrimForPreset(preset, values) {
+  var src = values || {}
+  var kind = normalizePreset(preset)
+  if (kind === "clean") return { body: 0, pres: 0, air: 0 }
+  if (kind === "podcast") {
+    return {
+      body: clampEqTrimDb(src.podcastEqBodyDb),
+      pres: clampEqTrimDb(src.podcastEqPresenceDb),
+      air: clampEqTrimDb(src.podcastEqAirDb)
+    }
+  }
+  return {
+    body: clampEqTrimDb(src.meetingEqBodyDb),
+    pres: clampEqTrimDb(src.meetingEqPresenceDb),
+    air: clampEqTrimDb(src.meetingEqAirDb)
+  }
+}
+
+function eqBandGains(curve, trim) {
+  var c = eqCurveParams(curve)
+  var t = trim || {}
+  return {
+    hpHz: c.hpHz,
+    body: clampEqBandDb(c.body + clampEqTrimDb(t.body)),
+    pres: clampEqBandDb(c.pres + clampEqTrimDb(t.pres)),
+    air: clampEqBandDb(c.air + clampEqTrimDb(t.air))
+  }
+}
+
+function eqCurveHint(value) {
+  var c = normalizeEqCurve(value, "neutral")
+  if (c === "warm") return "A little low end. Less edge."
+  if (c === "presence") return "Cut the box. Speech a bit forward."
+  if (c === "air") return "Higher high-pass and a gentle top."
+  return "High-pass only. No color."
+}
+
 function snapGainDb(value) {
   var n = clampGainDb(value)
   if (Math.abs(n) <= 0.4) return 0
@@ -299,6 +382,7 @@ if (typeof module !== "undefined") {
     PRESETS: PRESETS,
     QUALITIES: QUALITIES,
     ENGINES: ENGINES,
+    EQ_CURVES: EQ_CURVES,
     normalizePreset: normalizePreset,
     normalizeQuality: normalizeQuality,
     qualityIndex: qualityIndex,
@@ -323,6 +407,15 @@ if (typeof module !== "undefined") {
     resolveEngine: resolveEngine,
     engineChoiceHint: engineChoiceHint,
     clampGainDb: clampGainDb,
+    clampEqTrimDb: clampEqTrimDb,
+    snapEqTrimDb: snapEqTrimDb,
+    clampEqBandDb: clampEqBandDb,
+    normalizeEqCurve: normalizeEqCurve,
+    eqCurveParams: eqCurveParams,
+    eqCurveForPreset: eqCurveForPreset,
+    eqTrimForPreset: eqTrimForPreset,
+    eqBandGains: eqBandGains,
+    eqCurveHint: eqCurveHint,
     snapGainDb: snapGainDb,
     gainDbToLinear: gainDbToLinear,
     outputGainDbForPreset: outputGainDbForPreset,

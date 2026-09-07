@@ -147,6 +147,34 @@ Panel {
     persistSettings({ engine: Model.normalizeEngine(value) })
   }
 
+  function setEqCurve(value) {
+    var key = service.preset === "podcast" ? "podcastEq" : "meetingEq"
+    var patch = {}
+    patch[key] = Model.normalizeEqCurve(value, "neutral")
+    persistSettings(patch)
+  }
+
+  function setEqTrimDb(band, value) {
+    var db = Model.snapEqTrimDb(value)
+    var prefix = service.preset === "podcast" ? "podcastEq" : "meetingEq"
+    var key = prefix + "BodyDb"
+    if (band === "pres") key = prefix + "PresenceDb"
+    else if (band === "air") key = prefix + "AirDb"
+    var patch = {}
+    patch[key] = db
+    persistSettings(patch)
+    if (service && typeof service.clearEqPreview === "function") service.clearEqPreview()
+    if (service && typeof service.applyLiveControls === "function") service.applyLiveControls()
+  }
+
+  function previewEqBand(band, value) {
+    if (!service || typeof service.previewEqGains !== "function") return
+    var t = service.eqTrim || { body: 0, pres: 0, air: 0 }
+    var next = { body: t.body, pres: t.pres, air: t.air }
+    next[band] = Model.snapEqTrimDb(value)
+    service.previewEqGains(next.body, next.pres, next.air)
+  }
+
   function setCaptureGainDb(value) {
     var db = Model.snapGainDb(value)
     var key = "meetingCaptureGainDb"
@@ -221,6 +249,7 @@ Panel {
     required property real persisted
     property string hint: ""
     property real held: persisted
+    property bool eqTrim: false
     signal moved(real value)
     signal released(real value)
 
@@ -250,17 +279,17 @@ Panel {
       Layout.fillWidth: true
       Layout.alignment: Qt.AlignVCenter
       bar: root.bar
-      minimum: -12
-      maximum: 12
+      minimum: eqTrim ? -6 : -12
+      maximum: eqTrim ? 6 : 12
       step: 0.5
       value: held
       onMoved: function(v) {
-        var s = Model.snapGainDb(v)
+        var s = eqTrim ? Model.snapEqTrimDb(v) : Model.snapGainDb(v)
         held = s
         moved(s)
       }
       onReleased: function(v) {
-        var s = Model.snapGainDb(v)
+        var s = eqTrim ? Model.snapEqTrimDb(v) : Model.snapGainDb(v)
         held = s
         released(s)
       }
@@ -1075,6 +1104,106 @@ Panel {
                 }
               }
             }
+          }
+
+          Column {
+            width: parent.width
+            spacing: Style.space(8)
+            visible: service.preset !== "clean"
+
+            Text {
+              text: "Voice"
+              color: root.foreground
+              font.family: root.fontFamily
+              font.pixelSize: Style.font.subtitle
+              font.bold: true
+            }
+
+            Row {
+              width: parent.width
+              spacing: Style.space(6)
+
+              Repeater {
+                model: [
+                  { value: "neutral", label: "Neutral" },
+                  { value: "warm", label: "Warm" },
+                  { value: "presence", label: "Presence" },
+                  { value: "air", label: "Air" }
+                ]
+                CursorSurface {
+                  required property var modelData
+                  width: Math.floor((parent.width - Style.space(6) * 3) / 4)
+                  implicitHeight: Style.space(32)
+                  foreground: root.foreground
+                  MouseArea {
+                    id: eqHit
+                    anchors.fill: parent
+                    hoverEnabled: true
+                    cursorShape: Qt.PointingHandCursor
+                    onClicked: root.setEqCurve(modelData.value)
+                  }
+                  PanelToolTip {
+                    visible: eqHit.containsMouse
+                    text: Model.eqCurveHint(modelData.value)
+                    fontFamily: root.fontFamily
+                  }
+                  Rectangle {
+                    anchors.fill: parent
+                    radius: Style.cornerRadius
+                    color: service.eqCurve === modelData.value
+                      ? (bar ? Style.selectedFillFor(bar.foreground, Color.accent) : Color.accent)
+                      : "transparent"
+                    border.width: 1
+                    border.color: Qt.rgba(root.foreground.r, root.foreground.g, root.foreground.b, 0.18)
+                  }
+                  Text {
+                    anchors.centerIn: parent
+                    text: modelData.label
+                    color: root.foreground
+                    font.family: root.fontFamily
+                    font.pixelSize: Style.font.caption
+                    font.bold: service.eqCurve === modelData.value
+                  }
+                }
+              }
+            }
+
+            GainRow {
+              title: "Body"
+              eqTrim: true
+              persisted: service.eqTrim ? service.eqTrim.body : 0
+              hint: "On top of the named curve."
+              onMoved: function(v) { root.previewEqBand("body", v) }
+              onReleased: function(v) { root.setEqTrimDb("body", v) }
+            }
+
+            GainRow {
+              title: "Presence"
+              eqTrim: true
+              persisted: service.eqTrim ? service.eqTrim.pres : 0
+              hint: "On top of the named curve."
+              onMoved: function(v) { root.previewEqBand("pres", v) }
+              onReleased: function(v) { root.setEqTrimDb("pres", v) }
+            }
+
+            GainRow {
+              title: "Air"
+              eqTrim: true
+              persisted: service.eqTrim ? service.eqTrim.air : 0
+              hint: "On top of the named curve."
+              onMoved: function(v) { root.previewEqBand("air", v) }
+              onReleased: function(v) { root.setEqTrimDb("air", v) }
+            }
+          }
+
+          Text {
+            width: parent.width
+            visible: service.preset === "clean"
+            text: "Clean has no voice EQ."
+            color: root.dim
+            font.family: root.fontFamily
+            font.pixelSize: Style.font.caption
+            wrapMode: Text.WordWrap
           }
 
           QualitySlider {

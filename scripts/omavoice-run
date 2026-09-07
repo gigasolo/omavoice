@@ -9,13 +9,17 @@ quality="better"
 engine_opt="auto"
 capture_gain_db=0
 output_gain_db=0
+eq_opt=""
+eq_body_db=0
+eq_pres_db=0
+eq_air_db=0
 target=""
 plugin_dir=""
 dump=0
 runtime_dir="${XDG_RUNTIME_DIR:-/tmp}/omavoice"
 
 usage() {
-  echo "Usage: omavoice-run [--dump] --preset meeting|podcast|clean [--quality good|better|best] [--engine auto|rnnoise|deepfilter|clean] [--capture-gain-db N] [--output-gain-db N] --target <node.name> --dir <plugin-dir>" >&2
+  echo "Usage: omavoice-run [--dump] --preset meeting|podcast|clean [--quality good|better|best] [--engine auto|rnnoise|deepfilter|clean] [--eq neutral|warm|presence|air] [--eq-body-db N] [--eq-pres-db N] [--eq-air-db N] [--capture-gain-db N] [--output-gain-db N] --target <node.name> --dir <plugin-dir>" >&2
   exit 2
 }
 
@@ -24,6 +28,10 @@ while [[ $# -gt 0 ]]; do
     --preset) preset="${2:-}"; shift 2 ;;
     --quality) quality="${2:-}"; shift 2 ;;
     --engine) engine_opt="${2:-auto}"; shift 2 ;;
+    --eq) eq_opt="${2:-}"; shift 2 ;;
+    --eq-body-db) eq_body_db="${2:-0}"; shift 2 ;;
+    --eq-pres-db) eq_pres_db="${2:-0}"; shift 2 ;;
+    --eq-air-db) eq_air_db="${2:-0}"; shift 2 ;;
     --capture-gain-db) capture_gain_db="${2:-0}"; shift 2 ;;
     --output-gain-db) output_gain_db="${2:-0}"; shift 2 ;;
     --target) target="${2:-}"; shift 2 ;;
@@ -295,12 +303,42 @@ EOF
 }
 
 hpf_node() {
-  cat <<'EOF'
+  local freq=${1:-80.0}
+  cat <<EOF
                     {
                         type = builtin
                         name = hp
                         label = bq_highpass
-                        control = { "Freq" = 80.0 "Q" = 0.707 }
+                        control = { "Freq" = $freq "Q" = 0.707 }
+                    }
+EOF
+}
+
+eq_peaking_node() {
+  local name=$1
+  local freq=$2
+  local q=$3
+  local gain=$4
+  cat <<EOF
+                    {
+                        type = builtin
+                        name = $name
+                        label = bq_peaking
+                        control = { "Freq" = $freq "Q" = $q "Gain" = $gain }
+                    }
+EOF
+}
+
+eq_highshelf_node() {
+  local name=$1
+  local freq=$2
+  local gain=$3
+  cat <<EOF
+                    {
+                        type = builtin
+                        name = $name
+                        label = bq_highshelf
+                        control = { "Freq" = $freq "Q" = 0.707 "Gain" = $gain }
                     }
 EOF
 }
@@ -359,12 +397,46 @@ case $quality in
     ;;
 esac
 
-use_hpf=0
-if [[ $engine == clean || $engine == deepfilter ]]; then
-  use_hpf=1
-elif [[ $engine == rnnoise && $preset == podcast ]]; then
-  use_hpf=1
+# Must match Model.eqCurveParams. Meeting/Podcast always get hp so Neutral is HPF only.
+eq_curve=""
+if [[ $preset != clean ]]; then
+  eq_curve=$eq_opt
+  if [[ $eq_curve != neutral && $eq_curve != warm && $eq_curve != presence && $eq_curve != air ]]; then
+    if [[ $preset == podcast ]]; then eq_curve=presence; else eq_curve=warm; fi
+  fi
 fi
+
+hp_freq=80.0
+eq_body_gain=0
+eq_pres_gain=0
+eq_air_gain=0
+case $eq_curve in
+  warm) eq_body_gain=2.0; eq_pres_gain=-1.5 ;;
+  presence) eq_body_gain=-2.5; eq_pres_gain=2.0 ;;
+  air) hp_freq=100.0; eq_pres_gain=1.0; eq_air_gain=2.5 ;;
+esac
+
+clamp_eq_trim() {
+  awk -v n="${1:-0}" 'BEGIN {
+    if (n + 0 != n) n = 0
+    if (n < -6) n = -6
+    if (n > 6) n = 6
+    printf "%.1f", n
+  }'
+}
+clamp_eq_band() {
+  awk -v n="${1:-0}" 'BEGIN {
+    if (n + 0 != n) n = 0
+    if (n < -12) n = -12
+    if (n > 12) n = 12
+    printf "%.1f", n
+  }'
+}
+eq_body_gain=$(clamp_eq_band "$(awk -v a="$eq_body_gain" -v b="$(clamp_eq_trim "$eq_body_db")" 'BEGIN { print a + b }')")
+eq_pres_gain=$(clamp_eq_band "$(awk -v a="$eq_pres_gain" -v b="$(clamp_eq_trim "$eq_pres_db")" 'BEGIN { print a + b }')")
+eq_air_gain=$(clamp_eq_band "$(awk -v a="$eq_air_gain" -v b="$(clamp_eq_trim "$eq_air_db")" 'BEGIN { print a + b }')")
+
+use_hpf=1
 
 link_lines=""
 add_link() {
@@ -377,7 +449,7 @@ add_link() {
   prev_out="preamp:Out"
 
   if [[ $use_hpf -eq 1 ]]; then
-    hpf_node
+    hpf_node "$hp_freq"
     add_link "$prev_out" "hp:In"
     prev_out="hp:Out"
   fi
@@ -394,6 +466,18 @@ add_link() {
     dfn_node $podcast_dfn
     add_link "$prev_out" "denoise:Input"
     prev_out="denoise:Output"
+  fi
+
+  if [[ $preset != clean ]]; then
+    eq_peaking_node eq_body 250 0.9 "$eq_body_gain"
+    add_link "$prev_out" "eq_body:In"
+    prev_out="eq_body:Out"
+    eq_peaking_node eq_pres 3000 1.0 "$eq_pres_gain"
+    add_link "$prev_out" "eq_pres:In"
+    prev_out="eq_pres:Out"
+    eq_highshelf_node eq_air 8000 "$eq_air_gain"
+    add_link "$prev_out" "eq_air:In"
+    prev_out="eq_air:Out"
   fi
 
   if [[ $engine != clean ]]; then
