@@ -43,10 +43,8 @@ grep -q 'pipewire.sec.pid' "$root/scripts/omavoice-run" || fail "host must requi
 grep -q 'pw-cli destroy' "$root/scripts/omavoice-run" || fail "leftover omavoice nodes must be destroyed by id"
 grep -q 'leftover omavoice nodes still in the session' "$root/scripts/omavoice-run" && fail "do not fail the host start because Meeting AEC names linger"
 grep -q 'id: hostBindWatch' "$root/Service.qml" || fail "empty host must restart until the omavoice node appears"
-grep -A12 'id: hostBindWatch' "$root/Service.qml" | grep -q 'if (hostProcess.running) return' \
-  || fail "bind watch must not kill a live host"
-grep -A12 'id: hostBindWatch' "$root/Service.qml" | grep -q 'hostProcess.running = false' \
-  && fail "bind watch must not kill a live host"
+grep -q 'hostKey === key && afterNodeName' "$root/Service.qml" || fail "a running Process is not a healthy host without the omavoice node"
+grep -q 'hostStartedAt < 8000' "$root/Service.qml" || fail "empty host must get 8s to join the session before restart"
 grep -A20 'id: hostProcess' "$root/Service.qml" | grep -q startDebounce \
   && fail "hostProcess stop must not startDebounce; overlapping omavoice-run deletes the next conf"
 grep -q '/proc/$pid' "$root/scripts/omavoice-run" || fail "stale host conf must not delete a live pid's file"

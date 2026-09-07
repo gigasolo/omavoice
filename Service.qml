@@ -207,7 +207,7 @@ Item {
       return
     }
     var key = preset + "\0" + engine + "\0" + targetName + "\0" + pluginDir
-    if (hostProcess.running && hostKey === key) return
+    if (hostProcess.running && hostKey === key && afterNodeName) return
     if (meterHoldProcess.running) meterHoldProcess.running = false
     meterHoldTarget = ""
     hostAttempts += 1
@@ -545,7 +545,9 @@ Item {
     onTriggered: {
       if (root.afterNodeName) return
       if (!root.probed || !root.targetName) return
-      if (hostProcess.running) return
+      if (hostProcess.running && Date.now() - root.hostStartedAt < 8000) return
+      root.hostKey = ""
+      if (hostProcess.running) hostProcess.running = false
       root.startHostNow()
     }
   }
