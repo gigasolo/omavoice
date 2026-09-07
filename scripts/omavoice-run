@@ -19,7 +19,7 @@ dump=0
 runtime_dir="${XDG_RUNTIME_DIR:-/tmp}/omavoice"
 
 usage() {
-  echo "Usage: omavoice-run [--dump] --preset meeting|podcast|clean [--quality good|better|best] [--engine auto|rnnoise|deepfilter|clean] [--eq neutral|warm|presence|air] [--eq-body-db N] [--eq-pres-db N] [--eq-air-db N] [--capture-gain-db N] [--output-gain-db N] --target <node.name> --dir <plugin-dir>" >&2
+  echo "Usage: omavoice-run [--dump] --preset meeting|podcast|clean [--quality good|better|best] [--engine auto|rnnoise|deepfilter|clean] [--eq neutral|warm|clear|bright] [--eq-body-db N] [--eq-pres-db N] [--eq-air-db N] [--capture-gain-db N] [--output-gain-db N] --target <node.name> --dir <plugin-dir>" >&2
   exit 2
 }
 
@@ -401,8 +401,12 @@ esac
 eq_curve=""
 if [[ $preset != clean ]]; then
   eq_curve=$eq_opt
-  if [[ $eq_curve != neutral && $eq_curve != warm && $eq_curve != presence && $eq_curve != air ]]; then
-    if [[ $preset == podcast ]]; then eq_curve=presence; else eq_curve=warm; fi
+  case $eq_curve in
+    presence) eq_curve=clear ;;
+    air) eq_curve=bright ;;
+  esac
+  if [[ $eq_curve != neutral && $eq_curve != warm && $eq_curve != clear && $eq_curve != bright ]]; then
+    if [[ $preset == podcast ]]; then eq_curve=clear; else eq_curve=warm; fi
   fi
 fi
 
@@ -412,8 +416,8 @@ eq_pres_gain=0
 eq_air_gain=0
 case $eq_curve in
   warm) eq_body_gain=2.0; eq_pres_gain=-1.5 ;;
-  presence) eq_body_gain=-2.5; eq_pres_gain=2.0 ;;
-  air) hp_freq=100.0; eq_pres_gain=1.0; eq_air_gain=2.5 ;;
+  clear) eq_body_gain=-2.5; eq_pres_gain=2.0 ;;
+  bright) hp_freq=100.0; eq_pres_gain=1.0; eq_air_gain=2.5 ;;
 esac
 
 clamp_eq_trim() {

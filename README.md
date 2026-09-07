@@ -35,7 +35,7 @@ An independent [MIT](LICENSE)-licensed plugin by [GigaSolo](https://github.com/g
 | **Does** | Monitor-mode AEC + denoise + compressor | High-pass + denoise + compressor | High-pass only |
 | **Keeps** | Your voice on a laptop with speakers | Speech that sounds finished | Applause, keys, and music |
 
-Right-click the mark to toggle. Open the panel to switch presets and pick a microphone. Each mic row shows a live level; the selected row adds a hairline of what Omavoice is sending. The chevron on that row opens **Output** (what the call hears) and **Input** (this mic into Omavoice), −12…+12 dB, without restarting the host. PRESET tune picks the denoise engine, a Voice curve (Neutral / Warm / Presence / Air) with Body / Presence / Air trim, and shows which engine is running. Clean has no voice EQ.
+Right-click the mark to toggle. Open the panel to switch presets and pick a microphone. Each mic row shows a live level; the selected row adds a hairline of what Omavoice is sending. The chevron on that row opens **Output** (what the call hears) and **Input** (this mic into Omavoice), −12…+12 dB, without restarting the host. PRESET tune picks the denoise engine, a Voice look (Neutral / Warm / Clear / Bright) with Body / Presence / Air knobs, and shows which engine is running. Clean has no voice EQ.
 
 In the app itself, choose **Omavoice** as the microphone and turn *its* noise cancellation off. Two denoisers stacked sound hollow.
 

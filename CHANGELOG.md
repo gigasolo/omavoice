@@ -9,8 +9,8 @@ and this project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html)
 
 ### Added
 
-- Voice curves on PRESET tune (Neutral / Warm / Presence / Air) and Body /
-  Presence / Air trim (−6…+6 dB). Meeting defaults Warm, Podcast Presence.
+- Voice looks on PRESET tune (Neutral / Warm / Clear / Bright) and Body /
+  Presence / Air knobs (−6…+6 dB). Meeting defaults Warm, Podcast Clear.
   Off on Clean. Live biquads, no host restart. NVIDIA and Speex are not in
   this cut.
 

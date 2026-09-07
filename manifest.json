@@ -37,7 +37,7 @@
       "meetingQuality": "better",
       "podcastQuality": "better",
       "meetingEq": "warm",
-      "podcastEq": "presence",
+      "podcastEq": "clear",
       "meetingEqBodyDb": 0,
       "meetingEqPresenceDb": 0,
       "meetingEqAirDb": 0,
@@ -125,26 +125,26 @@
       {
         "key": "meetingEq",
         "type": "enum",
-        "label": "Meeting voice curve",
+        "label": "Meeting voice look",
         "options": [
           "neutral",
           "warm",
-          "presence",
-          "air"
+          "clear",
+          "bright"
         ],
         "defaultValue": "warm"
       },
       {
         "key": "podcastEq",
         "type": "enum",
-        "label": "Podcast voice curve",
+        "label": "Podcast voice look",
         "options": [
           "neutral",
           "warm",
-          "presence",
-          "air"
+          "clear",
+          "bright"
         ],
-        "defaultValue": "presence"
+        "defaultValue": "clear"
       },
       {
         "key": "meetingEqBodyDb",

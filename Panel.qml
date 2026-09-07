@@ -148,10 +148,15 @@ Panel {
   }
 
   function setEqCurve(value) {
-    var key = service.preset === "podcast" ? "podcastEq" : "meetingEq"
+    var prefix = service.preset === "podcast" ? "podcastEq" : "meetingEq"
     var patch = {}
-    patch[key] = Model.normalizeEqCurve(value, "neutral")
+    patch[prefix] = Model.normalizeEqCurve(value, "neutral")
+    patch[prefix + "BodyDb"] = 0
+    patch[prefix + "PresenceDb"] = 0
+    patch[prefix + "AirDb"] = 0
     persistSettings(patch)
+    if (service && typeof service.clearEqPreview === "function") service.clearEqPreview()
+    if (service && typeof service.applyLiveControls === "function") service.applyLiveControls()
   }
 
   function eqCurveBase(band) {
@@ -1143,8 +1148,8 @@ Panel {
                 model: [
                   { value: "neutral", label: "Neutral" },
                   { value: "warm", label: "Warm" },
-                  { value: "presence", label: "Presence" },
-                  { value: "air", label: "Air" }
+                  { value: "clear", label: "Clear" },
+                  { value: "bright", label: "Bright" }
                 ]
                 CursorSurface {
                   required property var modelData

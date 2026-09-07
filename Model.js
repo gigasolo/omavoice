@@ -3,7 +3,7 @@ var NODE_DESCRIPTION = "Omavoice"
 var PRESETS = ["meeting", "podcast", "clean"]
 var QUALITIES = ["good", "better", "best"]
 var ENGINES = ["auto", "rnnoise", "deepfilter"]
-var EQ_CURVES = ["neutral", "warm", "presence", "air"]
+var EQ_CURVES = ["neutral", "warm", "clear", "bright"]
 
 function normalizePreset(value) {
   var preset = String(value || "").toLowerCase()
@@ -232,10 +232,17 @@ function clampEqBandDb(value) {
   return n
 }
 
-function normalizeEqCurve(value, fallback) {
+function aliasEqCurve(value) {
   var curve = String(value || "").toLowerCase()
+  if (curve === "presence") return "clear"
+  if (curve === "air") return "bright"
+  return curve
+}
+
+function normalizeEqCurve(value, fallback) {
+  var curve = aliasEqCurve(value)
   if (EQ_CURVES.indexOf(curve) >= 0) return curve
-  var def = String(fallback || "neutral").toLowerCase()
+  var def = aliasEqCurve(fallback || "neutral")
   if (EQ_CURVES.indexOf(def) >= 0) return def
   return "neutral"
 }
@@ -243,15 +250,15 @@ function normalizeEqCurve(value, fallback) {
 function eqCurveParams(curve) {
   var c = normalizeEqCurve(curve, "neutral")
   if (c === "warm") return { hpHz: 80, body: 2.0, pres: -1.5, air: 0 }
-  if (c === "presence") return { hpHz: 80, body: -2.5, pres: 2.0, air: 0 }
-  if (c === "air") return { hpHz: 100, body: 0, pres: 1.0, air: 2.5 }
+  if (c === "clear") return { hpHz: 80, body: -2.5, pres: 2.0, air: 0 }
+  if (c === "bright") return { hpHz: 100, body: 0, pres: 1.0, air: 2.5 }
   return { hpHz: 80, body: 0, pres: 0, air: 0 }
 }
 
 function eqCurveForPreset(preset, values) {
   if (normalizePreset(preset) === "clean") return ""
   var src = values || {}
-  if (normalizePreset(preset) === "podcast") return normalizeEqCurve(src.podcastEq, "presence")
+  if (normalizePreset(preset) === "podcast") return normalizeEqCurve(src.podcastEq, "clear")
   return normalizeEqCurve(src.meetingEq, "warm")
 }
 
@@ -287,8 +294,8 @@ function eqBandGains(curve, trim) {
 function eqCurveHint(value) {
   var c = normalizeEqCurve(value, "neutral")
   if (c === "warm") return "A little low end. Less edge."
-  if (c === "presence") return "Cut the box. Speech a bit forward."
-  if (c === "air") return "Higher high-pass and a gentle top."
+  if (c === "clear") return "Cut the box. Speech a bit forward."
+  if (c === "bright") return "Higher high-pass and a gentle top."
   return "High-pass only. No color."
 }
 
