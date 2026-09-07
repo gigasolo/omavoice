@@ -32,6 +32,13 @@ grep -q 'wait_session' "$root/scripts/omavoice-run" || fail "host start must wai
 grep -q 'omavoice_in_graph' "$root/scripts/omavoice-run" || fail "host start must wait for leftover omavoice nodes to leave"
 grep -q 'id: hostBindWatch' "$root/Service.qml" || fail "empty host must restart until the omavoice node appears"
 grep -q 'hostProcess.running && Date.now()' "$root/Service.qml" || fail "bind watch must restart even when Process is not tracking the leftover"
+grep -q 'hostStartedAt < 8000' "$root/Service.qml" || fail "bind watch must wait 8s before killing a live wrapper"
+grep -A20 'id: hostProcess' "$root/Service.qml" | grep -q startDebounce \
+  && fail "hostProcess stop must not startDebounce; overlapping omavoice-run deletes the next conf"
+grep -q '/proc/$pid' "$root/scripts/omavoice-run" || fail "stale host conf must not delete a live pid's file"
+grep -q 'Could not start the microphone.' "$root/Model.js" || fail "bind failure copy lives in Model.hostErrorText"
+grep -q "Couldn't start" "$root/Panel.qml" || fail "hero must not shout the long error"
+grep -q 'text: service.lastError' "$root/Panel.qml" || fail "error body is shown once under the header"
 grep -q 'hostAttempts' "$root/Service.qml" || fail "host restarts must cap so a broken graph cannot loop"
 grep -q 'anchors.right: sourceRow.isActive ? levelHit.left' "$root/Panel.qml" && fail "row click must not anchor to nested levelHit"
 grep -q 'pw-cat' "$root/Service.qml" || fail "Service must hold the graph with pw-cat"

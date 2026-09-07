@@ -78,9 +78,11 @@ Panel {
     "Catching the voice",
     "Cutting the echo"
   ]
-  readonly property string heroPhraseText: service.running
-    ? activePhrases[phraseIndex % activePhrases.length]
-    : service.statusText
+  readonly property string heroPhraseText: {
+    if (service.lastError !== "") return "Couldn't start"
+    if (service.running) return activePhrases[phraseIndex % activePhrases.length]
+    return service.statusText
+  }
   readonly property var setup: service.setup || { needed: false }
 
   function persistSettings(values) {

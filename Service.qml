@@ -198,7 +198,7 @@ Item {
     if (!root.active || !enabled || !targetName) return
     if (!probed) return
     if (hostAttempts >= 8) {
-      if (!lastError) lastError = "Omavoice did not appear in PipeWire"
+      if (!lastError) lastError = Model.hostErrorText("bind")
       return
     }
     var key = preset + "\0" + engine + "\0" + targetName + "\0" + pluginDir
@@ -502,7 +502,7 @@ Item {
           haveRnnoise = false
           haveDeepfilter = false
           haveWebrtc = false
-          lastError = "Could not probe audio plugins"
+          lastError = Model.hostErrorText("probe")
           root.reloading = false
         }
         probed = true
@@ -516,7 +516,7 @@ Item {
     stderr: StdioCollector {
       onStreamFinished: {
         var text = String(this.text || "").trim()
-        if (text && !hostProcess.running) lastError = text.split("\n").slice(-1)[0]
+        if (text && !hostProcess.running) lastError = Model.hostErrorText("host", text)
       }
     }
     onRunningChanged: {
@@ -526,10 +526,6 @@ Item {
       }
       root.promoted = false
       root.syncMeterHold()
-      if (!root.active || !root.enabled || !root.targetName || !root.probed) return
-      if (root.afterNodeName) return
-      if (root.hostAttempts >= 8) return
-      startDebounce.restart()
     }
   }
 
@@ -541,7 +537,9 @@ Item {
     onTriggered: {
       if (root.afterNodeName) return
       if (!root.probed || !root.targetName) return
-      if (hostProcess.running && Date.now() - root.hostStartedAt < 2500) return
+      // Leftover drain plus a slow DeepFilterNet load. Killing the wrapper
+      // deletes another start's conf and After never comes back.
+      if (hostProcess.running && Date.now() - root.hostStartedAt < 8000) return
       root.hostKey = ""
       if (hostProcess.running) hostProcess.running = false
       root.startHostNow()

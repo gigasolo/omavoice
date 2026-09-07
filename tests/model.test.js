@@ -259,6 +259,24 @@ test("setupGuide asks for the chosen engine when the plugin is missing", () => {
   assert.equal(Model.setupGuide("deepfilter", false, false, "clean").needed, false)
 })
 
+test("hostErrorText is one short sentence", () => {
+  assert.equal(Model.hostErrorText("bind"), "Could not start the microphone.")
+  assert.equal(Model.hostErrorText("probe"), "Could not check audio plugins.")
+  assert.equal(Model.hostErrorText("host", "omavoice-run: session PipeWire did not answer"), "PipeWire did not answer.")
+  assert.equal(Model.hostErrorText("host", "can't load config /run/user/1000/omavoice/host.1.conf"), "Could not start the microphone.")
+})
+
+test("statusText does not repeat lastError", () => {
+  const text = Model.statusText({
+    enabled: true,
+    running: false,
+    lastError: "Could not start the microphone.",
+    targetName: usb.name
+  })
+  assert.equal(text, "Idle")
+  assert.equal(text.includes("Could not start"), false)
+})
+
 test("statusText does not report a missing engine on Clean", () => {
   const text = Model.statusText({
     enabled: true,

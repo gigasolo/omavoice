@@ -563,6 +563,13 @@ done
 for stale in "$runtime_dir"/host.conf "$runtime_dir"/host.*.conf; do
   [[ -f $stale ]] || continue
   [[ $stale == "$conf" ]] && continue
+  base=$(basename -- "$stale")
+  if [[ $base =~ ^host\.([0-9]+)\.conf$ ]]; then
+    pid=${BASH_REMATCH[1]}
+    # A second start's wrapper is still alive; deleting this file makes
+    # pipewire -c fail and After never remounts.
+    [[ -d /proc/$pid ]] && continue
+  fi
   rm -f -- "$stale"
 done
 

@@ -397,9 +397,15 @@ function setupGuide(engine, haveRnnoise, haveDeepfilter, preset) {
   return rnnoiseRow()
 }
 
+function hostErrorText(kind, raw) {
+  var t = String(raw || "")
+  if (kind === "probe") return "Could not check audio plugins."
+  if (t.indexOf("session PipeWire did not answer") >= 0) return "PipeWire did not answer."
+  return "Could not start the microphone."
+}
+
 function statusText(state) {
   state = state || {}
-  if (state.lastError) return String(state.lastError)
   if (!state.enabled) return "Off"
   if (state.setupNeeded && normalizePreset(state.preset) !== "clean") {
     return String(state.setupHero || "Plugin not installed")
@@ -460,6 +466,7 @@ if (typeof module !== "undefined") {
     captureGainDbForPreset: captureGainDbForPreset,
     qualityParams: qualityParams,
     setupGuide: setupGuide,
+    hostErrorText: hostErrorText,
     statusText: statusText
   }
 }
