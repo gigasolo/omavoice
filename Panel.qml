@@ -38,8 +38,8 @@ Panel {
     if (opened) displaySources = captureSources.slice()
     armMeterHold()
   }
-  readonly property string afterHoldName: service.afterNodeName || ""
-  onAfterHoldNameChanged: armMeterHold()
+  readonly property string afterHoldKey: (service.afterNodeName || "") + ":" + (service.afterNodeId || "")
+  onAfterHoldKeyChanged: armMeterHold()
   Component.onCompleted: pushSettings()
 
   readonly property var presets: [

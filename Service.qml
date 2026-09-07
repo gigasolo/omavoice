@@ -324,23 +324,25 @@ Item {
 
   function syncMeterHold() {
     var name = afterNodeName
-    // Do not require hostProcess.running: after a plugin reload the leftover
-    // omavoice node is in the registry before the new Process has started.
-    var want = meterHoldWanted && enabled && !!name
+    var id = afterNodeId
+    var token = name && id ? name + ":" + id : ""
+    // Meeting AEC keeps the chain running. Podcast/Clean stay silent
+    // unless a hold is attached to this node id, not the previous omavoice.
+    var want = meterHoldWanted && enabled && !!token
     if (!want) {
       meterHoldRetry.stop()
       if (meterHoldProcess.running) meterHoldProcess.running = false
       meterHoldTarget = ""
       return
     }
-    if (meterHoldProcess.running && meterHoldTarget === name) return
+    if (meterHoldProcess.running && meterHoldTarget === token) return
     // Same-tick stop+start often does not relaunch Process. Stop, then retry.
     if (meterHoldProcess.running) {
       meterHoldProcess.running = false
       meterHoldRetry.restart()
       return
     }
-    meterHoldTarget = name
+    meterHoldTarget = token
     meterHoldProcess.command = [
       "pw-cat",
       "-r",
@@ -348,6 +350,7 @@ Item {
       "--target", name,
       "--rate", "48000",
       "--channels", "1",
+      "--media-category", "Capture",
       "-P", "{ node.name=omavoice.meter.hold }",
       "/dev/null"
     ]
@@ -564,7 +567,7 @@ Item {
   Timer {
     id: meterHoldWatch
     interval: 800
-    running: root.meterHoldWanted && root.enabled && !!root.afterNodeName && !meterHoldProcess.running
+    running: root.meterHoldWanted && root.enabled && !!root.afterNodeId && (!meterHoldProcess.running || root.meterHoldTarget !== root.afterNodeName + ":" + root.afterNodeId)
     repeat: true
     onTriggered: root.syncMeterHold()
   }
