@@ -2,11 +2,11 @@
   "schemaVersion": 1,
   "id": "gigasolo.omavoice",
   "name": "Omavoice",
-  "version": "0.2.0-dev",
+  "version": "0.2.0",
   "author": "GigaSolo",
   "license": "MIT",
   "homepage": "https://github.com/gigasolo/omavoice",
-  "description": "A virtual microphone for Zoom, Meet, and podcasts: noise cancellation, echo cancel, and a clean speech chain on USB or any PipeWire source.",
+  "description": "A virtual microphone for Zoom, Meet, and OBS. Live output and input, Meeting / Podcast / Clean presets, and an RNNoise or DeepFilterNet picker.",
   "kinds": [
     "service",
     "bar-widget"
@@ -17,7 +17,7 @@
   },
   "barWidget": {
     "displayName": "Omavoice",
-    "description": "Toggle Omavoice, pick a USB mic, and switch Meeting, Podcast, or Clean presets.",
+    "description": "Virtual mic for calls and recording. Live level, Meeting / Podcast / Clean, RNNoise or DeepFilterNet.",
     "category": "Audio",
     "aliases": [
       "omavoice",

@@ -5,7 +5,28 @@ All notable changes to Omavoice are documented here.
 The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [Unreleased] — 0.2.0-dev
+## [Unreleased]
+
+## [0.2.0] — 2026-09-06
+
+Live level and engine picker. Notes is not in this release.
+
+### Added
+
+- Live filter-chain controls: named `preamp` / `outgain` stages and
+  `pw-cli` Props writes, so Softer/Stronger no longer restarts the host.
+- Per-preset **Output** and **Input** gain (−12…+12 dB). Chevron on the
+  selected mic opens both (hover: Level). Snap 0.5 dB, detent at 0.
+- Engine picker on the PRESET tune page: Auto / RNNoise / DeepFilterNet,
+  with hover tips. Fill is the pick; a corner dot is the live engine, and
+  only when Auto is selected. Meeting can run DeepFilterNet with AEC still
+  on. Engines never stack.
+- Setup row for a missing chosen engine, including DeepFilterNet’s
+  `libdeep_filter_ladspa-bin` install line.
+
+### Changed
+
+- Level chevron points left when closed and down when open.
 
 ### Fixed
 
@@ -19,18 +40,6 @@ and this project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html)
   leaving an empty process on D-Bus with no `omavoice` node. Each host
   now writes a pid-unique conf, only kills leftover `pipewire` binaries,
   and restarts until the bound node shows up.
-
-### Added
-
-- Live filter-chain controls: named `preamp` / `outgain` stages and
-  `pw-cli` Props writes, so Softer/Stronger no longer restarts the host.
-- Per-preset **Output** and **Input** gain (−12…+12 dB). Chevron on the
-  selected mic opens both (hover: Level). Snap 0.5 dB, detent at 0.
-- Engine picker on the PRESET tune page: Auto / RNNoise / DeepFilterNet,
-  with hover tips and a dot on the engine that is running. Meeting can
-  run DeepFilterNet with AEC still on. Engines never stack.
-- Setup row for a missing chosen engine, including DeepFilterNet’s
-  `libdeep_filter_ladspa-bin` install line.
 
 ## [0.1.24] — 2026-09-04
 
@@ -282,7 +291,8 @@ and this project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html)
   guidance.
 - MIT license (GigaSolo LLC).
 
-[Unreleased]: https://github.com/gigasolo/omavoice/compare/v0.1.24...HEAD
+[Unreleased]: https://github.com/gigasolo/omavoice/compare/v0.2.0...HEAD
+[0.2.0]: https://github.com/gigasolo/omavoice/compare/v0.1.24...v0.2.0
 [0.1.24]: https://github.com/gigasolo/omavoice/compare/v0.1.23...v0.1.24
 [0.1.23]: https://github.com/gigasolo/omavoice/compare/v0.1.22...v0.1.23
 [0.1.22]: https://github.com/gigasolo/omavoice/compare/v0.1.21...v0.1.22
