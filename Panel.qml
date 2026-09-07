@@ -989,11 +989,17 @@ Panel {
         }
       }
 
-      Column {
-        id: tunePage
+      Flickable {
+        id: tuneFlick
         anchors.fill: parent
         visible: root.tuneOpen
-        spacing: Style.space(12)
+        contentWidth: width
+        contentHeight: tuneInner.implicitHeight
+        clip: true
+        boundsBehavior: Flickable.StopAtBounds
+        flickableDirection: Flickable.VerticalFlick
+        interactive: contentHeight > height
+        ScrollBar.vertical: ScrollBar { policy: ScrollBar.AsNeeded }
 
         Column {
           id: tuneInner
@@ -1238,6 +1244,7 @@ Panel {
       script: {
         root.tuneOpen = root.pendingTuneOpen
         cardRotation.angle = -90
+        if (tuneFlick) tuneFlick.contentY = 0
       }
     }
     NumberAnimation {
