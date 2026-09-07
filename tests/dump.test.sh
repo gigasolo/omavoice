@@ -35,8 +35,14 @@ podcast_good="$(dump podcast --quality good)"
 podcast_best="$(dump podcast --quality best)"
 clean="$(dump clean)"
 
+echo "$meeting" | grep -A2 'name = libpipewire-module-filter-chain' | grep -q nofail \
+  && fail "filter-chain must not nofail or an empty host stays up without omavoice"
 echo "$meeting" | grep -q 'audio.aec' || fail "meeting must map audio.aec spa lib"
 echo "$meeting" | grep -q 'monitor.mode = true' || fail "meeting AEC must use monitor.mode"
+echo "$meeting" | grep -q 'node.name = "omavoice.aec.sink"' || fail "meeting AEC sink must be named so it can suspend"
+echo "$meeting" | grep -A4 'node.name = "omavoice.aec.sink"' | grep -q 'node.passive = true' \
+  || fail "meeting AEC sink must be node.passive"
+echo "$meeting" | grep -q 'node.suspend-on-idle = true' || fail "meeting AEC playback must suspend on idle"
 echo "$meeting" | grep -q 'webrtc.gain_control = false' || fail "meeting must disable webrtc AGC"
 echo "$meeting" | grep -q 'webrtc.noise_suppression = false' || fail "meeting must not stack WebRTC NS"
 echo "$meeting" | grep -q 'media.class = Audio/Sink' && fail "meeting must not invent an AEC sink"
@@ -66,6 +72,7 @@ echo "$meeting" | grep -q 'node.latency = 256/48000' || fail "meeting must pin 2
 echo "$meeting" | grep -q 'lsp-plug.in/plugins/lv2/compressor_mono' || fail "meeting needs compressor_mono"
 echo "$meeting" | grep -q 'lsp-plug.in/plugins/lv2/limiter_mono' || fail "meeting needs limiter_mono"
 echo "$meeting" | grep -q 'noise_suppressor_stereo' && fail "meeting must not use stereo RNNoise"
+echo "$meeting" | grep -q 'deep_filter' && fail "auto meeting must not stack DFN"
 
 echo "$podcast" | grep -q 'bq_highpass' || fail "podcast must high-pass before NS"
 echo "$podcast" | grep -q 'monitor.mode' && fail "podcast must not enable AEC this release"
@@ -77,6 +84,7 @@ if grep -q libdeep_filter_ladspa.so <<<"$podcast"; then
   echo "$podcast_good" | grep -q '"Attenuation Limit (dB)" = 50' || fail "podcast good DFN cap must be 50 dB"
   echo "$podcast_best" | grep -q '"Attenuation Limit (dB)" = 85' || fail "podcast best DFN cap must be 85 dB"
   echo "$podcast" | grep -q 'deep_filter_stereo' && fail "podcast must not use stereo DFN"
+  echo "$podcast" | grep -q 'noise_suppressor' && fail "podcast DFN must not stack RNNoise"
 else
   echo "$podcast" | grep -q 'noise_suppressor_mono' || fail "podcast RNNoise fallback must be mono"
   echo "$podcast" | grep -q '"VAD Threshold (%)" = 85.0' || fail "podcast better VAD must be 85"
@@ -90,5 +98,63 @@ echo "$clean" | grep -q 'audio.position = \[ MONO \]' || fail "clean must be mon
 echo "$clean" | grep -q 'node.latency = 256/48000' || fail "clean must pin 256/48000"
 echo "$clean" | grep -q 'noise_suppressor' && fail "clean must not denoise"
 echo "$clean" | grep -q 'monitor.mode' && fail "clean must not enable AEC"
+
+meeting_dfn="$(dump meeting --engine deepfilter)"
+echo "$meeting_dfn" | grep -q 'monitor.mode = true' || fail "meeting DFN must keep AEC"
+echo "$meeting_dfn" | grep -q 'webrtc.noise_suppression = false' || fail "meeting DFN must not stack WebRTC NS"
+echo "$meeting_dfn" | grep -q 'bq_highpass' || fail "meeting DFN must high-pass before NS"
+echo "$meeting_dfn" | grep -q 'deep_filter_mono' || fail "meeting --engine deepfilter must use DFN"
+echo "$meeting_dfn" | grep -q 'noise_suppressor' && fail "meeting DFN must not stack RNNoise"
+
+podcast_rn="$(dump podcast --engine rnnoise)"
+echo "$podcast_rn" | grep -q 'noise_suppressor_mono' || fail "podcast --engine rnnoise must use RNNoise"
+echo "$podcast_rn" | grep -q 'bq_highpass' || fail "podcast RNNoise must high-pass"
+echo "$podcast_rn" | grep -q 'monitor.mode' && fail "podcast RNNoise must not enable AEC"
+echo "$podcast_rn" | grep -q 'deep_filter' && fail "podcast RNNoise must not stack DFN"
+
+echo "$meeting" | grep -q 'noise_suppressor_mono' || fail "auto meeting must still use RNNoise"
+
+clean_forced="$(dump clean --engine deepfilter)"
+echo "$clean_forced" | grep -q 'bq_highpass' || fail "clean stays high-pass when engine is forced"
+echo "$clean_forced" | grep -q 'noise_suppressor' && fail "clean must not denoise when engine is forced"
+echo "$clean_forced" | grep -q 'deep_filter' && fail "clean must not run DFN when engine is forced"
+
+for kind in meeting podcast clean; do
+  conf=""
+  case $kind in
+    meeting) conf=$meeting ;;
+    podcast) conf=$podcast ;;
+    clean) conf=$clean ;;
+  esac
+  echo "$conf" | grep -q 'name = preamp' || fail "$kind must emit a named preamp node"
+  echo "$conf" | grep -q 'name = outgain' || fail "$kind must emit a named outgain node"
+  echo "$conf" | grep -A2 'name = preamp' | grep -q 'label = mixer' || fail "$kind preamp must be mixer"
+  echo "$conf" | grep -A2 'name = outgain' | grep -q 'label = mixer' || fail "$kind outgain must be mixer"
+  echo "$conf" | grep -A3 'name = preamp' | grep -q '"Gain 1"' || fail "$kind preamp must expose Gain 1"
+  echo "$conf" | grep -A3 'name = outgain' | grep -q '"Gain 1"' || fail "$kind outgain must expose Gain 1"
+  echo "$conf" | grep -q 'inputs = \[ "preamp:In 1" \]' || fail "$kind must enter at preamp"
+  echo "$conf" | grep -q 'outputs = \[ "outgain:Out" \]' || fail "$kind must exit at outgain"
+done
+
+gained="$(dump meeting --capture-gain-db 6 --output-gain-db -6)"
+echo "$gained" | grep -A3 'name = preamp' | grep -q '"Gain 1" = 1.99526231' \
+  || fail "capture +6 dB must bake linear ~2 on preamp"
+echo "$gained" | grep -A3 'name = outgain' | grep -q '"Gain 1" = 0.50118723' \
+  || fail "output -6 dB must bake linear ~0.5 on outgain"
+
+meeting_clean="$(dump meeting --engine clean)"
+echo "$meeting_clean" | grep -q 'noise_suppressor' && fail "meeting --engine clean must not denoise"
+echo "$meeting_clean" | grep -q 'deep_filter' && fail "meeting --engine clean must not run DFN"
+echo "$meeting_clean" | grep -q 'bq_highpass' || fail "meeting --engine clean still high-passes"
+
+meeting_dfn_good="$(dump meeting --engine deepfilter --quality good)"
+echo "$meeting_dfn_good" | grep -q '"Attenuation Limit (dB)" = 50' \
+  || fail "meeting DFN good cap must be 50 dB"
+
+set +e
+"$run" --dump --preset meeting --target 'foo"bar' --dir "$root" >/dev/null 2>&1
+evil=$?
+set -e
+[[ $evil -eq 2 ]] || fail "quoted --target must be rejected, got $evil"
 
 echo "dump.test: ok"

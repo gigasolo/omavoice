@@ -2,6 +2,7 @@ var NODE_NAME = "omavoice"
 var NODE_DESCRIPTION = "Omavoice"
 var PRESETS = ["meeting", "podcast", "clean"]
 var QUALITIES = ["good", "better", "best"]
+var ENGINES = ["auto", "rnnoise", "deepfilter"]
 
 function normalizePreset(value) {
   var preset = String(value || "").toLowerCase()
@@ -116,6 +117,12 @@ function shouldDeferSourcePick(currentName, hasUnboundNodes) {
   return !!String(currentName || "") && hasUnboundNodes === true
 }
 
+function pickFallbackName(defaultName, rememberedName) {
+  if (isCaptureSourceName(defaultName)) return String(defaultName)
+  if (isCaptureSourceName(rememberedName)) return String(rememberedName)
+  return ""
+}
+
 function pickSource(sources, pinnedName, defaultName) {
   var list = Array.isArray(sources) ? sources : []
   function findName(name) {
@@ -140,6 +147,11 @@ function pickSource(sources, pinnedName, defaultName) {
   if (usb.length > 1 && fallback && isUsbSourceName(fallback.name)) return fallback
   if (usb.length > 0) return usb[0]
   if (fallback && isCaptureSourceName(fallback.name)) return fallback
+  var bluetooth = []
+  for (var b = 0; b < list.length; b++) {
+    if (String(list[b].name || "").indexOf("bluez_input.") === 0) bluetooth.push(list[b])
+  }
+  if (bluetooth.length > 0) return bluetooth[0]
   for (var k = 0; k < list.length; k++) {
     if (isCaptureSourceName(list[k].name)) return list[k]
   }
@@ -160,6 +172,12 @@ function presetHint(preset) {
   return "Echo cancel and RNNoise for calls"
 }
 
+function normalizeEngine(value) {
+  var engine = String(value || "").toLowerCase()
+  if (ENGINES.indexOf(engine) >= 0) return engine
+  return "auto"
+}
+
 function engineForPreset(preset, haveRnnoise, haveDeepfilter) {
   var value = normalizePreset(preset)
   if (value === "clean") return "clean"
@@ -168,23 +186,106 @@ function engineForPreset(preset, haveRnnoise, haveDeepfilter) {
   return "clean"
 }
 
-function setupGuide(haveRnnoise) {
-  if (haveRnnoise) {
-    return { needed: false, hero: "", command: "", body: "" }
+function resolveEngine(preset, engineSetting, haveRnnoise, haveDeepfilter) {
+  var kind = normalizePreset(preset)
+  if (kind === "clean") return "clean"
+  var want = normalizeEngine(engineSetting)
+  if (want === "rnnoise" || want === "deepfilter") return want
+  return engineForPreset(kind, haveRnnoise, haveDeepfilter)
+}
+
+function engineChoiceHint(value) {
+  var want = normalizeEngine(value)
+  if (want === "rnnoise") return "Neural denoise. Never stacked with DeepFilterNet."
+  if (want === "deepfilter") return "Heavier denoise. Never stacked with RNNoise."
+  return "Meeting: RNNoise. Podcast: DeepFilterNet if installed, else RNNoise. Clean: none."
+}
+
+function clampGainDb(value) {
+  var n = Number(value)
+  if (!isFinite(n)) return 0
+  if (n < -12) return -12
+  if (n > 12) return 12
+  return n
+}
+
+function snapGainDb(value) {
+  var n = clampGainDb(value)
+  if (Math.abs(n) <= 0.4) return 0
+  return Math.round(n * 2) / 2
+}
+
+function gainDbToLinear(db) {
+  return Math.pow(10, clampGainDb(db) / 20)
+}
+
+function outputGainDbForPreset(preset, values) {
+  var kind = normalizePreset(preset)
+  var src = values || {}
+  if (kind === "podcast") return clampGainDb(src.podcastOutputGainDb)
+  if (kind === "clean") return clampGainDb(src.cleanOutputGainDb)
+  return clampGainDb(src.meetingOutputGainDb)
+}
+
+function captureGainDbForPreset(preset, values) {
+  var kind = normalizePreset(preset)
+  var src = values || {}
+  if (kind === "podcast") return clampGainDb(src.podcastCaptureGainDb)
+  if (kind === "clean") return clampGainDb(src.cleanCaptureGainDb)
+  return clampGainDb(src.meetingCaptureGainDb)
+}
+
+function qualityParams(preset, quality) {
+  var kind = normalizePreset(preset)
+  var level = normalizeQuality(quality)
+  if (kind === "podcast") {
+    if (level === "good") return { vad: 75.0, grace: 400, dfn: 50 }
+    if (level === "best") return { vad: 90.0, grace: 150, dfn: 85 }
+    return { vad: 85.0, grace: 200, dfn: 70 }
   }
-  return {
-    needed: true,
-    hero: "Install RNNoise",
-    command: "omarchy pkg add noise-suppression-for-voice",
-    body: "Meeting and Podcast presets need the RNNoise LADSPA plugin. Clean still works without it."
+  if (level === "good") return { vad: 70.0, grace: 500, dfn: 50 }
+  if (level === "best") return { vad: 85.0, grace: 250, dfn: 85 }
+  return { vad: 80.0, grace: 400, dfn: 70 }
+}
+
+function setupGuide(engine, haveRnnoise, haveDeepfilter, preset) {
+  var kind = normalizePreset(preset)
+  var want = normalizeEngine(engine)
+  var none = { needed: false, hero: "", command: "", body: "" }
+
+  function rnnoiseRow() {
+    return {
+      needed: true,
+      hero: "Install RNNoise",
+      command: "omarchy pkg add noise-suppression-for-voice",
+      body: "This engine needs the RNNoise LADSPA plugin. Clean still works without it."
+    }
   }
+
+  function dfnRow() {
+    return {
+      needed: true,
+      hero: "Install DeepFilterNet",
+      command: "omarchy pkg aur add libdeep_filter_ladspa-bin",
+      body: "DeepFilterNet is not installed. Reload after installing it."
+    }
+  }
+
+  if (kind === "clean") return none
+  if (want === "rnnoise") return haveRnnoise ? none : rnnoiseRow()
+  if (want === "deepfilter") return haveDeepfilter ? none : dfnRow()
+  if (kind === "podcast" && haveDeepfilter) return none
+  if (haveRnnoise) return none
+  return rnnoiseRow()
 }
 
 function statusText(state) {
   state = state || {}
   if (state.lastError) return String(state.lastError)
   if (!state.enabled) return "Off"
-  if (state.setupNeeded) return "RNNoise not installed"
+  if (state.setupNeeded && normalizePreset(state.preset) !== "clean") {
+    return String(state.setupHero || "Plugin not installed")
+  }
   if (!state.targetName) return "No microphone"
   if (state.running) return presetLabel(state.preset) + " · " + friendlyDeviceLabel(state.targetLabel || state.targetName)
   if (state.busy) return "Starting…"
@@ -197,6 +298,7 @@ if (typeof module !== "undefined") {
     NODE_DESCRIPTION: NODE_DESCRIPTION,
     PRESETS: PRESETS,
     QUALITIES: QUALITIES,
+    ENGINES: ENGINES,
     normalizePreset: normalizePreset,
     normalizeQuality: normalizeQuality,
     qualityIndex: qualityIndex,
@@ -212,10 +314,20 @@ if (typeof module !== "undefined") {
     sourceSignature: sourceSignature,
     sourcesUnchanged: sourcesUnchanged,
     shouldDeferSourcePick: shouldDeferSourcePick,
+    pickFallbackName: pickFallbackName,
     pickSource: pickSource,
     presetLabel: presetLabel,
     presetHint: presetHint,
+    normalizeEngine: normalizeEngine,
     engineForPreset: engineForPreset,
+    resolveEngine: resolveEngine,
+    engineChoiceHint: engineChoiceHint,
+    clampGainDb: clampGainDb,
+    snapGainDb: snapGainDb,
+    gainDbToLinear: gainDbToLinear,
+    outputGainDbForPreset: outputGainDbForPreset,
+    captureGainDbForPreset: captureGainDbForPreset,
+    qualityParams: qualityParams,
     setupGuide: setupGuide,
     statusText: statusText
   }

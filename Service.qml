@@ -20,7 +20,7 @@ Item {
   property string actionStatus: ""
   property string targetName: ""
   property string targetLabel: ""
-  property string previousDefaultName: ""
+
   property string hostKey: ""
   property var sources: []
   property bool promoted: false
@@ -70,15 +70,25 @@ Item {
   readonly property string podcastQuality: Model.normalizeQuality(setting("podcastQuality", "better"))
   readonly property string quality: preset === "podcast" ? podcastQuality : meetingQuality
   readonly property string pinnedSource: String(setting("pinnedSource", "") || "")
+  readonly property string previousAudioSource: String(setting("previousAudioSource", "") || "")
   readonly property bool setDefaultSource: setting("setDefaultSource", true) !== false
-  readonly property var setup: Model.setupGuide(haveRnnoise)
-  readonly property bool setupNeeded: setup.needed && preset !== "clean"
-  readonly property string engine: Model.engineForPreset(preset, haveRnnoise, haveDeepfilter)
+  readonly property string engineSetting: Model.normalizeEngine(setting("engine", "auto"))
+  readonly property string engine: Model.resolveEngine(preset, engineSetting, haveRnnoise, haveDeepfilter)
+  readonly property var setup: Model.setupGuide(engineSetting, haveRnnoise, haveDeepfilter, preset)
+  readonly property bool setupNeeded: setup.needed
+  readonly property real outputGainDb: Model.outputGainDbForPreset(preset, settings)
+  readonly property real captureGainDb: Model.captureGainDbForPreset(preset, settings)
+  property bool gainPreview: false
+  property real previewCaptureDb: 0
+  property real previewOutputDb: 0
+  property int hostAttempts: 0
+  property double hostStartedAt: 0
   readonly property string statusText: Model.statusText({
     enabled: enabled,
     running: running,
     busy: busy,
     setupNeeded: setupNeeded,
+    setupHero: setup.hero,
     preset: preset,
     targetName: targetName,
     targetLabel: targetLabel,
@@ -147,7 +157,8 @@ Item {
       return
     }
     if (!Model.sourcesUnchanged(sources, next)) sources = next
-    var picked = Model.pickSource(sources, pinnedSource, defaultSourceName)
+    var fallback = Model.pickFallbackName(defaultSourceName, previousAudioSource)
+    var picked = Model.pickSource(sources, pinnedSource, fallback)
     var nextName = picked ? String(picked.name) : ""
     var nextLabel = picked ? String(picked.description || picked.name) : ""
     if (nextName !== targetName || nextLabel !== targetLabel) {
@@ -158,7 +169,16 @@ Item {
   }
 
   function syncHost() {
-    if (!root.active || !enabled || !targetName) {
+    if (!root.active || !enabled) {
+      startDebounce.stop()
+      stopHost()
+      return
+    }
+    if (!targetName) {
+      // After a plugin reload the registry is still binding; do not kill a
+      // host we are about to start, and do not clear a pick that has not
+      // landed yet.
+      if (hasUnboundNodes || hostProcess.running) return
       startDebounce.stop()
       stopHost()
       return
@@ -168,16 +188,56 @@ Item {
 
   function startHostNow() {
     if (!root.active || !enabled || !targetName) return
-    var key = preset + "\0" + quality + "\0" + targetName + "\0" + pluginDir
+    if (!probed) return
+    if (hostAttempts >= 8) {
+      if (!lastError) lastError = "Omavoice did not appear in PipeWire"
+      return
+    }
+    var key = preset + "\0" + engine + "\0" + targetName + "\0" + pluginDir
     if (hostProcess.running && hostKey === key) return
     if (meterHoldProcess.running) meterHoldProcess.running = false
     meterHoldTarget = ""
+    hostAttempts += 1
     hostKey = key
     lastError = ""
     promoted = false
+    hostStartedAt = Date.now()
     hostProcess.running = false
-    hostProcess.command = [scriptPath("omavoice-run"), "--preset", preset, "--quality", quality, "--target", targetName, "--dir", pluginDir]
+    hostProcess.command = [scriptPath("omavoice-run"), "--preset", preset, "--quality", quality, "--engine", engine, "--capture-gain-db", String(captureGainDb), "--output-gain-db", String(outputGainDb), "--target", targetName, "--dir", pluginDir]
     hostProcess.running = true
+  }
+
+  function applyLiveControls() {
+    if (!root.active || !enabled || !hostProcess.running) return
+    liveDebounce.restart()
+  }
+
+  function previewGains(captureDb, outputDb) {
+    previewCaptureDb = Model.clampGainDb(captureDb)
+    previewOutputDb = Model.clampGainDb(outputDb)
+    gainPreview = true
+    applyLiveControls()
+  }
+
+  function clearGainPreview() {
+    gainPreview = false
+  }
+
+  function writeLiveControls() {
+    if (!root.active || !enabled || !hostProcess.running) return
+    var cap = gainPreview ? previewCaptureDb : captureGainDb
+    var out = gainPreview ? previewOutputDb : outputGainDb
+    var args = [scriptPath("omavoice-ctl"), "set"]
+    args.push("preamp:Gain 1", String(Model.gainDbToLinear(cap)))
+    args.push("outgain:Gain 1", String(Model.gainDbToLinear(out)))
+    var qp = Model.qualityParams(preset, quality)
+    if (engine === "rnnoise") {
+      args.push("denoise:VAD Threshold (%)", String(qp.vad))
+      args.push("denoise:VAD Grace Period (ms)", String(qp.grace))
+    } else if (engine === "deepfilter") {
+      args.push("denoise:Attenuation Limit (dB)", String(qp.dfn))
+    }
+    Quickshell.execDetached(args)
   }
 
   function stopHost() {
@@ -228,7 +288,9 @@ Item {
 
   function syncMeterHold() {
     var name = afterNodeName
-    var want = meterHoldWanted && running && enabled && !!name
+    // Do not require hostProcess.running: after a plugin reload the leftover
+    // omavoice node is in the registry before the new Process has started.
+    var want = meterHoldWanted && enabled && !!name
     if (!want) {
       meterHoldRetry.stop()
       if (meterHoldProcess.running) meterHoldProcess.running = false
@@ -264,9 +326,8 @@ Item {
     }
     var node = omavoiceNode()
     if (!node || node.id === undefined) return
-    if (defaultSourceName && previousDefaultName === "") {
-      previousDefaultName = defaultSourceName
-    }
+    if (defaultSourceName && Model.isCaptureSourceName(defaultSourceName) && defaultSourceName !== previousAudioSource)
+      persist({ previousAudioSource: defaultSourceName })
     Quickshell.execDetached([
       "omarchy-audio-input-set-default",
       String(node.id),
@@ -275,20 +336,20 @@ Item {
   }
 
   function restoreDefault() {
-    if (!previousDefaultName) return
+    var want = previousAudioSource
+    if (!want || Model.isOmavoiceName(want)) return
     var nodes = Pipewire.nodes && Pipewire.nodes.values ? Pipewire.nodes.values : []
     for (var i = 0; i < nodes.length; i++) {
       var node = nodes[i]
-      if (node && String(node.name || "") === previousDefaultName && node.id !== undefined) {
+      if (node && String(node.name || "") === want && node.id !== undefined) {
         Quickshell.execDetached([
           "omarchy-audio-input-set-default",
           String(node.id),
-          previousDefaultName
+          want
         ])
         break
       }
     }
-    previousDefaultName = ""
   }
 
   function probe() {
@@ -300,24 +361,32 @@ Item {
   // RNNoise or DeepFilterNet without restarting the shell.
   function reload() {
     reloading = true
-    probe()
-    if (!root.active || !enabled || !targetName) {
-      reloading = false
-      return
-    }
+    probed = false
     hostKey = ""
-    startHostNow()
+    hostAttempts = 0
+    probe()
+    if (!root.active || !enabled || !targetName) reloading = false
   }
 
-  onEnabledChanged: syncHost()
-  onPresetChanged: syncHost()
-  onQualityChanged: syncHost()
+  onEnabledChanged: { hostAttempts = 0; syncHost() }
+  onPresetChanged: { hostAttempts = 0; syncHost() }
+  onEngineChanged: { hostAttempts = 0; syncHost() }
+  onQualityChanged: applyLiveControls()
+  onOutputGainDbChanged: applyLiveControls()
+  onCaptureGainDbChanged: applyLiveControls()
+  onProbedChanged: if (probed) syncHost()
   onPinnedSourceChanged: refreshSources()
   onNodesChanged: refreshSources()
-  onTargetNameChanged: syncHost()
+  onTargetNameChanged: { hostAttempts = 0; syncHost() }
   onAfterNodeChanged: syncMeterHold()
   onAfterNodeNameChanged: syncMeterHold()
-  onAfterNodeIdChanged: syncMeterHold()
+  onAfterNodeIdChanged: {
+    syncMeterHold()
+    applyLiveControls()
+    if (afterNodeName) hostAttempts = 0
+    if (afterNodeName && !hostProcess.running && enabled && targetName && probed)
+      startHostNow()
+  }
   onSetDefaultSourceChanged: {
     if (setDefaultSource) {
       promoted = false
@@ -329,6 +398,7 @@ Item {
   onActiveChanged: {
     if (!active) stopHost()
     else {
+      hostAttempts = 0
       probe()
       refreshSources()
     }
@@ -350,6 +420,13 @@ Item {
     interval: 150
     repeat: false
     onTriggered: root.startHostNow()
+  }
+
+  Timer {
+    id: liveDebounce
+    interval: 80
+    repeat: false
+    onTriggered: root.writeLiveControls()
   }
 
   Timer {
@@ -380,11 +457,15 @@ Item {
           haveRnnoise = data.rnnoise === true
           haveDeepfilter = data.deepfilter === true
           haveWebrtc = data.webrtc === true
-          probed = true
           lastError = ""
         } catch (e) {
+          haveRnnoise = false
+          haveDeepfilter = false
+          haveWebrtc = false
           lastError = "Could not probe audio plugins"
+          root.reloading = false
         }
+        probed = true
       }
     }
   }
@@ -405,6 +486,25 @@ Item {
       }
       root.promoted = false
       root.syncMeterHold()
+      if (!root.active || !root.enabled || !root.targetName || !root.probed) return
+      if (root.afterNodeName) return
+      if (root.hostAttempts >= 8) return
+      startDebounce.restart()
+    }
+  }
+
+  Timer {
+    id: hostBindWatch
+    interval: 1000
+    running: root.active && root.enabled && !root.afterNodeName && root.hostAttempts < 8
+    repeat: true
+    onTriggered: {
+      if (root.afterNodeName) return
+      if (!root.probed || !root.targetName) return
+      if (hostProcess.running && Date.now() - root.hostStartedAt < 2500) return
+      root.hostKey = ""
+      if (hostProcess.running) hostProcess.running = false
+      root.startHostNow()
     }
   }
 
@@ -412,7 +512,7 @@ Item {
     id: meterHoldProcess
     onRunningChanged: {
       if (running) return
-      if (root.meterHoldWanted && root.running && root.afterNodeName) meterHoldRetry.restart()
+      if (root.meterHoldWanted && root.afterNodeName) meterHoldRetry.restart()
     }
   }
 
@@ -426,7 +526,7 @@ Item {
   Timer {
     id: meterHoldWatch
     interval: 800
-    running: root.meterHoldWanted && root.running && root.enabled && !!root.afterNodeName && !meterHoldProcess.running
+    running: root.meterHoldWanted && root.enabled && !!root.afterNodeName && !meterHoldProcess.running
     repeat: true
     onTriggered: root.syncMeterHold()
   }

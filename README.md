@@ -13,12 +13,12 @@
   <a href="LICENSE"><img src="https://img.shields.io/badge/license-MIT-22c55e?style=flat-square" alt="License: MIT"></a>
   <img src="https://img.shields.io/badge/omarchy-4%20Quattro-0ea5e9?style=flat-square" alt="Omarchy 4 Quattro">
   <img src="https://img.shields.io/badge/pipewire-filter--chain-a3e635?style=flat-square" alt="PipeWire filter-chain">
-  <img src="https://img.shields.io/badge/version-0.1.24-111827?style=flat-square" alt="Version 0.1.24">
+  <img src="https://img.shields.io/badge/version-0.2.0-111827?style=flat-square" alt="Version 0.2.0">
 </p>
 
 <p align="center">
-  <img src="preview.png" alt="Omavoice panel: Meeting, Podcast, Clean, and microphone picker" width="380">
-  <img src="docs/preview-tune.png" alt="Preset tuning: Softer, Balanced, Stronger" width="380">
+  <img src="preview.png" alt="Omavoice panel: Meeting, Podcast, Clean, Level on the selected mic" width="380">
+  <img src="docs/preview-tune.png" alt="Preset tuning: engine picker, Softer / Balanced / Stronger" width="380">
 </p>
 
 Pick **Omavoice** in Zoom, Google Meet, OBS, or a browser. The plugin sits under those apps as a PipeWire source, so you do not configure each one. USB mics attach themselves when you plug them in.
@@ -32,10 +32,10 @@ An independent [MIT](LICENSE)-licensed plugin by [GigaSolo](https://github.com/g
 | | Meeting | Podcast | Clean |
 | --- | --- | --- | --- |
 | **For** | Zoom, Meet, Teams | OBS, interviews, local record | Program mixes, music beds |
-| **Does** | Monitor-mode AEC + RNNoise mono + compressor | High-pass + DeepFilterNet3 (or RNNoise) + compressor | High-pass only |
+| **Does** | Monitor-mode AEC + denoise + compressor | High-pass + denoise + compressor | High-pass only |
 | **Keeps** | Your voice on a laptop with speakers | Speech that sounds finished | Applause, keys, and music |
 
-Right-click the mark to toggle. Open the panel to switch presets and pick a microphone. Each mic row shows a live level; the selected row adds a hairline of what Omavoice is sending.
+Right-click the mark to toggle. Open the panel to switch presets and pick a microphone. Each mic row shows a live level; the selected row adds a hairline of what Omavoice is sending. The chevron on that row opens **Output** (what the call hears) and **Input** (this mic into Omavoice), −12…+12 dB, without restarting the host. PRESET tune picks the denoise engine and shows which one is running.
 
 In the app itself, choose **Omavoice** as the microphone and turn *its* noise cancellation off. Two denoisers stacked sound hollow.
 
@@ -67,20 +67,20 @@ omarchy plugin add "$PWD" --enable
 
 Do not symlink the checkout into `~/.config/omarchy/plugins` — Omarchy refuses plugins that contain symlinks.
 
-### Optional Podcast engine
+### Optional DeepFilterNet engine
 
 ```sh
 omarchy pkg aur add libdeep_filter_ladspa-bin
 ```
 
-If that plugin is missing, Podcast uses RNNoise. Meeting still echo-cancels without RNNoise, but the neural denoise needs `noise-suppression-for-voice`. After installing either package, click **reload** next to on/off. You do not restart the shell.
+**Auto** keeps today’s policy: Meeting uses RNNoise, Podcast uses DeepFilterNet3 when that plugin is present (otherwise RNNoise), Clean is high-pass only. On the PRESET tune page you can pin **RNNoise** or **DeepFilterNet** instead. The engines never stack. If the chosen engine is missing, the panel shows the install command; click **reload** next to on/off after installing. You do not restart the shell.
 
 ## Use
 
 | Action | How |
 | --- | --- |
 | Open or close the panel | Left-click the mark |
-| Tune a preset | Settings on PRESET, then Softer / Balanced / Stronger |
+| Tune a preset | Settings on PRESET: engine picker, then Softer / Balanced / Stronger |
 | Automatic microphone | AUTOMATIC on the MICROPHONE header |
 | Toggle Omavoice | Right-click, or `o` |
 | Reload processing | Reload next to on/off, or `r` |
@@ -108,7 +108,7 @@ The host is a dedicated PipeWire client, the same isolation Omarchy uses for spe
 
 ## While it's running
 
-Meeting echo cancel can use CPU while speakers play, even with no call. After meters and `pw-cat` run only while the panel is open. Disable the plugin to stop the host.
+Meeting echo cancel can use CPU while speakers play, even with no call. AEC nodes are passive and suspend after a few idle seconds; if the session sink is playing, the monitor may still run. After meters and `pw-cat` run only while the panel is open. Disable the plugin to stop the host. Restore goes back to the microphone Omavoice replaced, not to Omavoice itself.
 
 ## Update and remove
 
@@ -128,7 +128,7 @@ omarchy plugin list | grep omavoice
 omarchy plugin enable gigasolo.omavoice --section right
 ```
 
-**The panel asks for RNNoise.** Run `omarchy pkg add noise-suppression-for-voice`, or click the setup row, then **reload**.
+**The panel asks for RNNoise or DeepFilterNet.** Run the command on the setup row (`omarchy pkg add noise-suppression-for-voice` or `omarchy pkg aur add libdeep_filter_ladspa-bin`), then **reload**.
 
 **The app still hears the raw USB mic.** Select **Omavoice** inside Zoom / Meet / OBS, not the hardware device.
 

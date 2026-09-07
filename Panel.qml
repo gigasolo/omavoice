@@ -21,14 +21,25 @@ Panel {
   property int phraseIndex: 0
   property bool tuneOpen: false
   property bool pendingTuneOpen: false
+  property bool levelOpen: false
 
   readonly property var sharedService: bar && bar.shell && typeof bar.shell.serviceFor === "function"
     ? bar.shell.serviceFor(moduleName) : null
   readonly property var service: sharedService || localService
 
   function pushSettings() { if (service) service.settings = settings }
+  function armMeterHold() {
+    if (!opened || !service || typeof service.setMeterHold !== "function") return
+    service.setMeterHold(true)
+  }
   onSettingsChanged: pushSettings()
-  onServiceChanged: pushSettings()
+  onServiceChanged: {
+    pushSettings()
+    if (opened) displaySources = captureSources.slice()
+    armMeterHold()
+  }
+  readonly property string afterHoldName: service.afterNodeName || ""
+  onAfterHoldNameChanged: armMeterHold()
   Component.onCompleted: pushSettings()
 
   readonly property var presets: [
@@ -116,6 +127,37 @@ Panel {
     persistSettings({ podcastQuality: Model.normalizeQuality(value) })
   }
 
+  function formatGainDb(db) {
+    var n = Model.snapGainDb(db)
+    return (n > 0 ? "+" : "") + n.toFixed(1)
+  }
+
+  function setOutputGainDb(value) {
+    var db = Model.snapGainDb(value)
+    var key = "meetingOutputGainDb"
+    if (service.preset === "podcast") key = "podcastOutputGainDb"
+    else if (service.preset === "clean") key = "cleanOutputGainDb"
+    var patch = {}
+    patch[key] = db
+    persistSettings(patch)
+    if (service && typeof service.clearGainPreview === "function") service.clearGainPreview()
+  }
+
+  function setEngine(value) {
+    persistSettings({ engine: Model.normalizeEngine(value) })
+  }
+
+  function setCaptureGainDb(value) {
+    var db = Model.snapGainDb(value)
+    var key = "meetingCaptureGainDb"
+    if (service.preset === "podcast") key = "podcastCaptureGainDb"
+    else if (service.preset === "clean") key = "cleanCaptureGainDb"
+    var patch = {}
+    patch[key] = db
+    persistSettings(patch)
+    if (service && typeof service.clearGainPreview === "function") service.clearGainPreview()
+  }
+
   component QualitySlider: Column {
     required property string title
     required property string preset
@@ -171,6 +213,67 @@ Panel {
           horizontalAlignment: index === 0 ? Text.AlignLeft : (index === 2 ? Text.AlignRight : Text.AlignHCenter)
         }
       }
+    }
+  }
+
+  component GainRow: RowLayout {
+    required property string title
+    required property real persisted
+    property string hint: ""
+    property real held: persisted
+    signal moved(real value)
+    signal released(real value)
+
+    width: parent.width
+    spacing: Style.space(8)
+
+    onPersistedChanged: if (!gainSlider.dragging) held = persisted
+
+    HoverHandler { id: gainHover }
+    PanelToolTip {
+      visible: hint !== "" && gainHover.hovered
+      text: hint
+      fontFamily: root.fontFamily
+    }
+
+    Text {
+      text: title
+      color: root.dim
+      font.family: root.fontFamily
+      font.pixelSize: Style.font.caption
+      Layout.preferredWidth: Style.space(56)
+      Layout.alignment: Qt.AlignVCenter
+    }
+
+    PanelSlider {
+      id: gainSlider
+      Layout.fillWidth: true
+      Layout.alignment: Qt.AlignVCenter
+      bar: root.bar
+      minimum: -12
+      maximum: 12
+      step: 0.5
+      value: held
+      onMoved: function(v) {
+        var s = Model.snapGainDb(v)
+        held = s
+        moved(s)
+      }
+      onReleased: function(v) {
+        var s = Model.snapGainDb(v)
+        held = s
+        released(s)
+      }
+    }
+
+    Text {
+      Layout.preferredWidth: Style.space(44)
+      Layout.alignment: Qt.AlignVCenter
+      horizontalAlignment: Text.AlignRight
+      text: root.formatGainDb(gainSlider.dragging ? held : persisted)
+      color: root.dim
+      font.family: root.fontFamily
+      font.pixelSize: Style.font.caption
     }
   }
 
@@ -242,6 +345,7 @@ Panel {
     if (!opened) {
       tuneOpen = false
       pendingTuneOpen = false
+      levelOpen = false
       if (cardRotation) cardRotation.angle = 0
       if (typeof service.setMeterHold === "function") service.setMeterHold(false)
       return
@@ -273,7 +377,7 @@ Panel {
   PwNodePeakMonitor {
     id: afterPeakMonitor
     node: service.afterNode
-    enabled: root.opened && root.metersArmed && service.running && !!service.afterNode
+    enabled: root.opened && root.metersArmed && !!service.afterNode
   }
 
   onCaptureSourcesChanged: if (opened) sourceRefreshTimer.restart()
@@ -704,69 +808,141 @@ Panel {
                     enabled: root.opened && root.metersArmed && !!node
                   }
 
-                  RowLayout {
+                  Column {
                     id: sourceInner
                     anchors.left: parent.left
                     anchors.right: parent.right
                     anchors.verticalCenter: parent.verticalCenter
                     anchors.leftMargin: Style.space(8)
                     anchors.rightMargin: Style.space(8)
-                    spacing: Style.space(10)
+                    spacing: Style.space(6)
 
-                    Column {
-                      Layout.fillWidth: true
-                      Layout.alignment: Qt.AlignVCenter
-                      spacing: 1
-                      Text {
-                        width: parent.width
-                        text: Model.friendlyDeviceLabel(modelData.description || modelData.name)
-                        color: root.foreground
-                        font.family: root.fontFamily
-                        font.pixelSize: Style.font.body
-                        font.bold: sourceRow.isActive
-                        elide: Text.ElideRight
+                    RowLayout {
+                      id: sourceMeterRow
+                      width: parent.width
+                      spacing: Style.space(10)
+
+                      Column {
+                        Layout.fillWidth: true
+                        Layout.alignment: Qt.AlignVCenter
+                        spacing: 1
+                        Text {
+                          width: parent.width
+                          text: Model.friendlyDeviceLabel(modelData.description || modelData.name)
+                          color: root.foreground
+                          font.family: root.fontFamily
+                          font.pixelSize: Style.font.body
+                          font.bold: sourceRow.isActive
+                          elide: Text.ElideRight
+                        }
+                        Text {
+                          width: parent.width
+                          text: Model.sourceKind(modelData.name) === "usb" ? "USB" : Model.sourceKind(modelData.name)
+                          color: root.dim
+                          font.family: root.fontFamily
+                          font.pixelSize: Style.font.caption
+                        }
                       }
-                      Text {
-                        width: parent.width
-                        text: Model.sourceKind(modelData.name) === "usb" ? "USB" : Model.sourceKind(modelData.name)
-                        color: root.dim
-                        font.family: root.fontFamily
-                        font.pixelSize: Style.font.caption
+
+                      Item {
+                        Layout.preferredWidth: Style.space(72)
+                        Layout.preferredHeight: Style.space(8)
+                        Layout.alignment: Qt.AlignVCenter
+
+                        Rectangle {
+                          anchors.fill: parent
+                          color: Util.alpha(root.foreground, 0.18)
+
+                          Rectangle {
+                            height: parent.height
+                            width: parent.width * Math.max(0, Math.min(1, rowPeak.peak))
+                            color: sourceRow.isActive
+                              ? Util.alpha(root.foreground, 0.40)
+                              : Util.alpha(root.foreground, 0.55)
+                            Behavior on width { NumberAnimation { duration: 70 } }
+                          }
+
+                          Rectangle {
+                            visible: sourceRow.isActive && !!service.afterNode
+                            height: Math.max(2, Math.ceil(parent.height * 0.4))
+                            width: parent.width * Math.max(0, Math.min(1, afterPeakMonitor.peak))
+                            anchors.verticalCenter: parent.verticalCenter
+                            color: root.foreground
+                            Behavior on width { NumberAnimation { duration: 70 } }
+                          }
+                        }
+                      }
+
+                      MouseArea {
+                        id: levelHit
+                        visible: sourceRow.isActive
+                        Layout.alignment: Qt.AlignVCenter
+                        implicitWidth: Style.space(22)
+                        implicitHeight: Style.space(22)
+                        hoverEnabled: true
+                        cursorShape: Qt.PointingHandCursor
+                        onClicked: root.levelOpen = !root.levelOpen
+
+                        Text {
+                          anchors.centerIn: parent
+                          // 󰅂 is right in this font (clock "next month"). Dropdown uses 󰅀 for down.
+                          text: root.levelOpen ? "󰅀" : "󰅁"
+                          color: root.dim
+                          font.family: root.fontFamily
+                          font.pixelSize: Style.font.body
+                        }
+
+                        PanelToolTip {
+                          visible: levelHit.containsMouse
+                          text: "Level"
+                          fontFamily: root.fontFamily
+                        }
                       }
                     }
 
                     Item {
-                      Layout.preferredWidth: Style.space(72)
-                      Layout.preferredHeight: Style.space(8)
-                      Layout.alignment: Qt.AlignVCenter
+                      id: levelDrawer
+                      width: parent.width
+                      visible: sourceRow.isActive
+                      height: sourceRow.isActive && root.levelOpen ? levelInner.implicitHeight : 0
+                      clip: true
+                      Behavior on height { NumberAnimation { duration: 160; easing.type: Easing.OutCubic } }
 
-                      Rectangle {
-                        anchors.fill: parent
-                        color: Util.alpha(root.foreground, 0.18)
+                      Column {
+                        id: levelInner
+                        width: parent.width
+                        spacing: Style.space(8)
 
-                        Rectangle {
-                          height: parent.height
-                          width: parent.width * Math.max(0, Math.min(1, rowPeak.peak))
-                          color: sourceRow.isActive
-                            ? Util.alpha(root.foreground, 0.40)
-                            : Util.alpha(root.foreground, 0.55)
-                          Behavior on width { NumberAnimation { duration: 70 } }
+                        GainRow {
+                          title: "Output"
+                          persisted: service.outputGainDb
+                          onMoved: function(v) {
+                            if (service && typeof service.previewGains === "function")
+                              service.previewGains(service.captureGainDb, v)
+                          }
+                          onReleased: function(v) { root.setOutputGainDb(v) }
                         }
 
-                        Rectangle {
-                          visible: sourceRow.isActive && service.running
-                          height: Math.max(2, Math.ceil(parent.height * 0.4))
-                          width: parent.width * Math.max(0, Math.min(1, afterPeakMonitor.peak))
-                          anchors.verticalCenter: parent.verticalCenter
-                          color: root.foreground
-                          Behavior on width { NumberAnimation { duration: 70 } }
+                        GainRow {
+                          title: "Input"
+                          persisted: service.captureGainDb
+                          hint: "Before noise suppression."
+                          onMoved: function(v) {
+                            if (service && typeof service.previewGains === "function")
+                              service.previewGains(v, service.outputGainDb)
+                          }
+                          onReleased: function(v) { root.setCaptureGainDb(v) }
                         }
                       }
                     }
                   }
 
                   MouseArea {
-                    anchors.fill: parent
+                    anchors.left: parent.left
+                    anchors.right: parent.right
+                    anchors.rightMargin: sourceRow.isActive ? Style.space(8) + Style.space(10) + Style.space(22) : 0
+                    anchors.top: parent.top
+                    height: sourceMeterRow.height + Style.space(8)
                     hoverEnabled: true
                     preventStealing: true
                     cursorShape: Qt.PointingHandCursor
@@ -828,6 +1004,78 @@ Panel {
           }
 
           PanelSeparator { foreground: root.foreground }
+
+          Column {
+            width: parent.width
+            spacing: Style.space(8)
+
+            Text {
+              text: "Engine"
+              color: root.foreground
+              font.family: root.fontFamily
+              font.pixelSize: Style.font.subtitle
+              font.bold: true
+            }
+
+            Row {
+              width: parent.width
+              spacing: Style.space(6)
+
+              Repeater {
+                model: [
+                  { value: "auto", label: "Auto" },
+                  { value: "rnnoise", label: "RNNoise" },
+                  { value: "deepfilter", label: "DeepFilterNet" }
+                ]
+                CursorSurface {
+                  required property var modelData
+                  width: Math.floor((parent.width - Style.space(6) * 2) / 3)
+                  implicitHeight: Style.space(32)
+                  foreground: root.foreground
+                  MouseArea {
+                    id: engineHit
+                    anchors.fill: parent
+                    hoverEnabled: true
+                    cursorShape: Qt.PointingHandCursor
+                    onClicked: root.setEngine(modelData.value)
+                  }
+                  PanelToolTip {
+                    visible: engineHit.containsMouse
+                    text: Model.engineChoiceHint(modelData.value)
+                    fontFamily: root.fontFamily
+                  }
+                  Rectangle {
+                    anchors.fill: parent
+                    radius: Style.cornerRadius
+                    color: service.engineSetting === modelData.value
+                      ? (bar ? Style.selectedFillFor(bar.foreground, Color.accent) : Color.accent)
+                      : "transparent"
+                    border.width: 1
+                    border.color: Qt.rgba(root.foreground.r, root.foreground.g, root.foreground.b, 0.18)
+                  }
+                  Text {
+                    anchors.centerIn: parent
+                    text: modelData.label
+                    color: root.foreground
+                    font.family: root.fontFamily
+                    font.pixelSize: Style.font.caption
+                    font.bold: service.engineSetting === modelData.value
+                  }
+                  Rectangle {
+                    visible: service.engineSetting === "auto" && service.engine === modelData.value
+                    width: Style.space(6)
+                    height: Style.space(6)
+                    radius: width / 2
+                    color: root.foreground
+                    anchors.top: parent.top
+                    anchors.right: parent.right
+                    anchors.topMargin: Style.space(6)
+                    anchors.rightMargin: Style.space(6)
+                  }
+                }
+              }
+            }
+          }
 
           QualitySlider {
             title: "Meeting"

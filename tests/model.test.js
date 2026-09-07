@@ -71,6 +71,30 @@ test("pickSource falls back to the default builtin when no USB is present", () =
   assert.equal(picked.name, builtin.name)
 })
 
+const bluez = {
+  name: "bluez_input.A0:0C:E2:D0:C3:81",
+  description: "OpenFit Pro by Shokz"
+}
+
+test("pickFallbackName ignores omavoice and keeps a remembered capture", () => {
+  assert.equal(Model.pickFallbackName(builtin.name, bluez.name), builtin.name)
+  assert.equal(Model.pickFallbackName("omavoice", bluez.name), bluez.name)
+  assert.equal(Model.pickFallbackName("omavoice", "omavoice"), "")
+  assert.equal(Model.pickFallbackName("", ""), "")
+})
+
+test("pickSource uses a remembered BT headset when default is already omavoice", () => {
+  const fallback = Model.pickFallbackName("omavoice", bluez.name)
+  const picked = Model.pickSource([builtin, bluez], "", fallback)
+  assert.equal(picked.name, bluez.name)
+})
+
+test("pickSource prefers bluetooth over builtin when nothing is remembered", () => {
+  const fallback = Model.pickFallbackName("omavoice", "")
+  const picked = Model.pickSource([builtin, bluez], "", fallback)
+  assert.equal(picked.name, bluez.name)
+})
+
 test("normalizeQuality defaults to better", () => {
   assert.equal(Model.normalizeQuality("good"), "good")
   assert.equal(Model.normalizeQuality("BEST"), "best")
@@ -103,11 +127,94 @@ test("engineForPreset uses DeepFilterNet only for podcast when present", () => {
   assert.equal(Model.engineForPreset("meeting", false, false), "clean")
 })
 
-test("setupGuide asks for RNNoise when the LADSPA plugin is missing", () => {
-  const missing = Model.setupGuide(false)
-  assert.equal(missing.needed, true)
-  assert.match(missing.command, /noise-suppression-for-voice/)
-  assert.equal(Model.setupGuide(true).needed, false)
+test("resolveEngine honors an explicit picker and keeps Clean HPF-only", () => {
+  assert.equal(Model.normalizeEngine(""), "auto")
+  assert.equal(Model.normalizeEngine("DEEPFILTER"), "deepfilter")
+  assert.equal(Model.resolveEngine("meeting", "auto", true, true), "rnnoise")
+  assert.equal(Model.resolveEngine("podcast", "auto", true, true), "deepfilter")
+  assert.equal(Model.resolveEngine("meeting", "deepfilter", true, true), "deepfilter")
+  assert.equal(Model.resolveEngine("podcast", "rnnoise", true, true), "rnnoise")
+  assert.equal(Model.resolveEngine("meeting", "deepfilter", true, false), "deepfilter")
+  assert.equal(Model.resolveEngine("clean", "deepfilter", true, true), "clean")
+  assert.equal(Model.resolveEngine("clean", "auto", true, true), "clean")
+})
+
+test("engine copy names the picker tips", () => {
+  assert.match(Model.engineChoiceHint("auto"), /Meeting/)
+  assert.match(Model.engineChoiceHint("rnnoise"), /Never stacked/)
+  assert.match(Model.engineChoiceHint("deepfilter"), /Heavier/)
+})
+
+test("clampGainDb and gainDbToLinear convert output trim", () => {
+  assert.equal(Model.clampGainDb(0), 0)
+  assert.equal(Model.clampGainDb(-20), -12)
+  assert.equal(Model.clampGainDb(20), 12)
+  assert.equal(Model.clampGainDb("nope"), 0)
+  assert.equal(Model.clampGainDb(undefined), 0)
+  assert.equal(Model.gainDbToLinear(0), 1)
+  assert.ok(Math.abs(Model.gainDbToLinear(6) - 2) < 0.01)
+  assert.ok(Math.abs(Model.gainDbToLinear(-6) - 0.5) < 0.01)
+  assert.equal(Model.snapGainDb(0.2), 0)
+  assert.equal(Model.snapGainDb(-0.4), 0)
+  assert.equal(Model.snapGainDb(0.5), 0.5)
+  assert.equal(Model.snapGainDb(0.76), 1)
+  assert.equal(Model.snapGainDb(-1.24), -1)
+  assert.equal(Model.snapGainDb(20), 12)
+  const all = {
+    meetingOutputGainDb: 1,
+    podcastOutputGainDb: 2,
+    cleanOutputGainDb: 3,
+    meetingCaptureGainDb: 4,
+    podcastCaptureGainDb: 5,
+    cleanCaptureGainDb: 6
+  }
+  assert.equal(Model.outputGainDbForPreset("meeting", all), 1)
+  assert.equal(Model.outputGainDbForPreset("podcast", all), 2)
+  assert.equal(Model.outputGainDbForPreset("clean", all), 3)
+  assert.equal(Model.captureGainDbForPreset("meeting", all), 4)
+  assert.equal(Model.captureGainDbForPreset("podcast", all), 5)
+  assert.equal(Model.captureGainDbForPreset("clean", all), 6)
+  assert.equal(Model.outputGainDbForPreset("clean", {}), 0)
+})
+
+test("qualityParams matches the dump VAD / DFN tables", () => {
+  assert.deepEqual(Model.qualityParams("meeting", "better"), { vad: 80.0, grace: 400, dfn: 70 })
+  assert.deepEqual(Model.qualityParams("meeting", "good"), { vad: 70.0, grace: 500, dfn: 50 })
+  assert.deepEqual(Model.qualityParams("meeting", "best"), { vad: 85.0, grace: 250, dfn: 85 })
+  assert.deepEqual(Model.qualityParams("podcast", "better"), { vad: 85.0, grace: 200, dfn: 70 })
+  assert.deepEqual(Model.qualityParams("podcast", "good"), { vad: 75.0, grace: 400, dfn: 50 })
+  assert.deepEqual(Model.qualityParams("podcast", "best"), { vad: 90.0, grace: 150, dfn: 85 })
+})
+
+test("setupGuide asks for the chosen engine when the plugin is missing", () => {
+  const missingRn = Model.setupGuide("auto", false, false, "meeting")
+  assert.equal(missingRn.needed, true)
+  assert.match(missingRn.command, /noise-suppression-for-voice/)
+  assert.equal(Model.setupGuide("auto", true, false, "meeting").needed, false)
+  assert.equal(Model.setupGuide("auto", false, false, "clean").needed, false)
+  assert.equal(Model.setupGuide("auto", false, true, "podcast").needed, false)
+  const missingDfn = Model.setupGuide("deepfilter", true, false, "meeting")
+  assert.equal(missingDfn.needed, true)
+  assert.match(missingDfn.command, /libdeep_filter_ladspa-bin/)
+  const missingForcedRn = Model.setupGuide("rnnoise", false, true, "podcast")
+  assert.equal(missingForcedRn.needed, true)
+  assert.match(missingForcedRn.command, /noise-suppression-for-voice/)
+  assert.equal(Model.setupGuide("rnnoise", false, false, "clean").needed, false)
+  assert.equal(Model.setupGuide("deepfilter", false, false, "clean").needed, false)
+})
+
+test("statusText does not report a missing engine on Clean", () => {
+  const text = Model.statusText({
+    enabled: true,
+    running: true,
+    setupNeeded: true,
+    setupHero: "Install RNNoise",
+    preset: "clean",
+    targetName: usb.name,
+    targetLabel: usb.description
+  })
+  assert.match(text, /Clean/)
+  assert.equal(text.includes("Install RNNoise"), false)
 })
 
 test("statusText reports the live preset and device", () => {

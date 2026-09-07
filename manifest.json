@@ -2,11 +2,11 @@
   "schemaVersion": 1,
   "id": "gigasolo.omavoice",
   "name": "Omavoice",
-  "version": "0.1.24",
+  "version": "0.2.0",
   "author": "GigaSolo",
   "license": "MIT",
   "homepage": "https://github.com/gigasolo/omavoice",
-  "description": "A virtual microphone for Zoom, Meet, and podcasts: noise cancellation, echo cancel, and a clean speech chain on USB or any PipeWire source.",
+  "description": "A virtual microphone for Zoom, Meet, and OBS. Live output and input, Meeting / Podcast / Clean presets, and an RNNoise or DeepFilterNet picker.",
   "kinds": [
     "service",
     "bar-widget"
@@ -17,7 +17,7 @@
   },
   "barWidget": {
     "displayName": "Omavoice",
-    "description": "Toggle Omavoice, pick a USB mic, and switch Meeting, Podcast, or Clean presets.",
+    "description": "Virtual mic for calls and recording. Live level, Meeting / Podcast / Clean, RNNoise or DeepFilterNet.",
     "category": "Audio",
     "aliases": [
       "omavoice",
@@ -31,9 +31,17 @@
       "enabled": true,
       "preset": "meeting",
       "pinnedSource": "",
+      "previousAudioSource": "",
       "setDefaultSource": true,
+      "engine": "auto",
       "meetingQuality": "better",
-      "podcastQuality": "better"
+      "podcastQuality": "better",
+      "meetingOutputGainDb": 0,
+      "podcastOutputGainDb": 0,
+      "cleanOutputGainDb": 0,
+      "meetingCaptureGainDb": 0,
+      "podcastCaptureGainDb": 0,
+      "cleanCaptureGainDb": 0
     },
     "schema": [
       {
@@ -54,10 +62,28 @@
         "defaultValue": "meeting"
       },
       {
+        "key": "engine",
+        "type": "enum",
+        "label": "Denoise engine",
+        "options": [
+          "auto",
+          "rnnoise",
+          "deepfilter"
+        ],
+        "defaultValue": "auto"
+      },
+      {
         "key": "pinnedSource",
         "type": "string",
         "label": "Pinned source node name",
         "description": "Empty means auto: prefer a USB capture, otherwise the default mic.",
+        "defaultValue": ""
+      },
+      {
+        "key": "previousAudioSource",
+        "type": "string",
+        "label": "Last real capture before Omavoice",
+        "description": "Used by Auto when the default source is already omavoice. Not a pin.",
         "defaultValue": ""
       },
       {
@@ -87,6 +113,60 @@
           "best"
         ],
         "defaultValue": "better"
+      },
+      {
+        "key": "meetingOutputGainDb",
+        "type": "number",
+        "label": "Meeting output gain (dB)",
+        "min": -12,
+        "max": 12,
+        "step": 0.5,
+        "defaultValue": 0
+      },
+      {
+        "key": "podcastOutputGainDb",
+        "type": "number",
+        "label": "Podcast output gain (dB)",
+        "min": -12,
+        "max": 12,
+        "step": 0.5,
+        "defaultValue": 0
+      },
+      {
+        "key": "cleanOutputGainDb",
+        "type": "number",
+        "label": "Clean output gain (dB)",
+        "min": -12,
+        "max": 12,
+        "step": 0.5,
+        "defaultValue": 0
+      },
+      {
+        "key": "meetingCaptureGainDb",
+        "type": "number",
+        "label": "Meeting capture gain (dB)",
+        "min": -12,
+        "max": 12,
+        "step": 0.5,
+        "defaultValue": 0
+      },
+      {
+        "key": "podcastCaptureGainDb",
+        "type": "number",
+        "label": "Podcast capture gain (dB)",
+        "min": -12,
+        "max": 12,
+        "step": 0.5,
+        "defaultValue": 0
+      },
+      {
+        "key": "cleanCaptureGainDb",
+        "type": "number",
+        "label": "Clean capture gain (dB)",
+        "min": -12,
+        "max": 12,
+        "step": 0.5,
+        "defaultValue": 0
       }
     ]
   }

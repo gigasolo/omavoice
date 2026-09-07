@@ -1,0 +1,35 @@
+#!/usr/bin/env bash
+# Props live on omavoice.capture.
+set -euo pipefail
+
+usage() {
+  echo "Usage: omavoice-ctl set [KEY VALUE ...]" >&2
+  exit 2
+}
+
+[[ ${1:-} == set ]] || usage
+shift
+
+node_id() {
+  local name=$1
+  pw-cli ls Node 2>/dev/null | awk -v want="$name" '
+    /^id / { id=$2; sub(/,/, "", id) }
+    $0 ~ "node.name = \"" want "\"" { print id; exit }
+  '
+}
+
+id=$(node_id "omavoice.capture")
+if [[ -z $id ]]; then
+  id=$(node_id "omavoice")
+fi
+[[ -n $id ]] || exit 1
+[[ $# -gt 0 ]] || exit 0
+(( $# % 2 == 0 )) || usage
+
+params=""
+while [[ $# -gt 0 ]]; do
+  params+=" \"$1\" $2"
+  shift 2
+done
+
+exec pw-cli s "$id" Props "{ params = [$params ] }"
