@@ -17,8 +17,8 @@
 </p>
 
 <p align="center">
-  <img src="preview.png" alt="Omavoice panel: Meeting, Podcast, Clean, and microphone picker" width="380">
-  <img src="docs/preview-tune.png" alt="Preset tuning: Softer, Balanced, Stronger" width="380">
+  <img src="preview.png" alt="Omavoice panel: Meeting, Podcast, Clean, Level on the selected mic" width="380">
+  <img src="docs/preview-tune.png" alt="Preset tuning: engine picker, Softer / Balanced / Stronger" width="380">
 </p>
 
 Pick **Omavoice** in Zoom, Google Meet, OBS, or a browser. The plugin sits under those apps as a PipeWire source, so you do not configure each one. USB mics attach themselves when you plug them in.

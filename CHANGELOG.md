@@ -27,6 +27,7 @@ Live level and engine picker. Notes is not in this release.
 ### Changed
 
 - Level chevron points left when closed and down when open.
+- Marketplace `preview.png` is the live panel with Level open; `docs/preview-tune.png` is the engine picker.
 
 ### Fixed
 
