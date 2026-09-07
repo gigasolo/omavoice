@@ -594,4 +594,32 @@ for stale in "$runtime_dir"/host.conf "$runtime_dir"/host.*.conf; do
   rm -f -- "$stale"
 done
 
-exec /usr/bin/pipewire -c "$conf"
+pipewire_pid=""
+stop_pipewire() {
+  if [[ -n $pipewire_pid ]]; then
+    kill "$pipewire_pid" 2>/dev/null || true
+    wait "$pipewire_pid" 2>/dev/null || true
+    pipewire_pid=""
+  fi
+}
+trap stop_pipewire EXIT TERM INT
+
+/usr/bin/pipewire -c "$conf" &
+pipewire_pid=$!
+omavoice_ready() {
+  pw-cli ls Node 2>/dev/null | grep -Eq 'node\.name = "omavoice"$' || return 1
+  pw-cli ls Client 2>/dev/null | grep -Fq "pipewire.sec.pid = \"$pipewire_pid\""
+}
+for i in $(seq 1 50); do
+  kill -0 "$pipewire_pid" 2>/dev/null || exit 1
+  omavoice_ready && break
+  sleep 0.1
+done
+if ! omavoice_ready; then
+  echo "omavoice-run: omavoice did not appear in PipeWire" >&2
+  exit 1
+fi
+wait "$pipewire_pid"
+status=$?
+pipewire_pid=""
+exit "$status"
