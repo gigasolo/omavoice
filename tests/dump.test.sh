@@ -90,6 +90,9 @@ echo "$meeting_bright" | grep -A4 'name = hp' | grep -q '"Freq" = 100.0' || fail
 echo "$meeting_bright" | grep -A5 'name = eq_air' | grep -q '"Gain" = 2.5' || fail "Bright look air gain must be +2.5"
 meeting_air_alias="$(dump meeting --eq air)"
 echo "$meeting_air_alias" | grep -A5 'name = eq_air' | grep -q '"Gain" = 2.5' || fail "old --eq air must map to Bright"
+meeting_presence_alias="$(dump meeting --eq presence)"
+echo "$meeting_presence_alias" | grep -A5 'name = eq_body' | grep -q '"Gain" = -2.5' || fail "old --eq presence must map to Clear"
+echo "$meeting_presence_alias" | grep -A5 'name = eq_pres' | grep -q '"Gain" = 2.0' || fail "old --eq presence must map to Clear"
 
 echo "$podcast" | grep -q 'bq_highpass' || fail "podcast must high-pass before NS"
 echo "$podcast" | grep -q 'monitor.mode' && fail "podcast must not enable AEC this release"

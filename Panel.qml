@@ -261,7 +261,6 @@ Panel {
     required property real persisted
     property string hint: ""
     property real held: persisted
-    property bool eqTrim: false
     signal moved(real value)
     signal released(real value)
 
@@ -294,17 +293,17 @@ Panel {
       Layout.fillWidth: true
       Layout.alignment: Qt.AlignVCenter
       bar: root.bar
-      minimum: eqTrim ? -6 : -12
-      maximum: eqTrim ? 6 : 12
+      minimum: -12
+      maximum: 12
       step: 0.5
       value: held
       onMoved: function(v) {
-        var s = eqTrim ? Model.snapEqTrimDb(v) : Model.snapGainDb(v)
+        var s = Model.snapGainDb(v)
         held = s
         moved(s)
       }
       onReleased: function(v) {
-        var s = eqTrim ? Model.snapEqTrimDb(v) : Model.snapGainDb(v)
+        var s = Model.snapGainDb(v)
         held = s
         released(s)
       }

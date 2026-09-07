@@ -81,9 +81,9 @@ Item {
   readonly property string eqCurve: Model.eqCurveForPreset(preset, settings)
   readonly property var eqTrim: Model.eqTrimForPreset(preset, settings)
   readonly property var eqBands: Model.eqBandGains(eqCurve, eqPreview ? previewEqTrim : eqTrim)
-  readonly property real eqBodyDb: Model.eqBandGains(eqCurve, eqPreview ? previewEqTrim : eqTrim).body
-  readonly property real eqPresDb: Model.eqBandGains(eqCurve, eqPreview ? previewEqTrim : eqTrim).pres
-  readonly property real eqAirDb: Model.eqBandGains(eqCurve, eqPreview ? previewEqTrim : eqTrim).air
+  readonly property real eqBodyDb: eqBands.body
+  readonly property real eqPresDb: eqBands.pres
+  readonly property real eqAirDb: eqBands.air
   property bool gainPreview: false
   property real previewCaptureDb: 0
   property real previewOutputDb: 0
@@ -411,6 +411,9 @@ Item {
   onOutputGainDbChanged: applyLiveControls()
   onCaptureGainDbChanged: applyLiveControls()
   onEqCurveChanged: applyLiveControls()
+  onEqBodyDbChanged: applyLiveControls()
+  onEqPresDbChanged: applyLiveControls()
+  onEqAirDbChanged: applyLiveControls()
   onProbedChanged: if (probed) syncHost()
   onPinnedSourceChanged: refreshSources()
   onNodesChanged: refreshSources()
