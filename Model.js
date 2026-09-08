@@ -250,6 +250,32 @@ function engineChoiceHint(value) {
   return "Meeting: RNNoise. Podcast: DeepFilterNet if installed, else RNNoise. Clean: none."
 }
 
+function engineLabel(engine) {
+  var want = String(engine || "")
+  if (want === "deepfilter") return "DeepFilterNet"
+  if (want === "rnnoise") return "RNNoise"
+  if (want === "clean") return "Clean"
+  return "Auto"
+}
+
+function hostSwitchReason(prevKey, nextKey, reloading) {
+  if (reloading) return "reload"
+  var old = String(prevKey || "").split("\0")
+  var neu = String(nextKey || "").split("\0")
+  if (!old[0] || old.length < 4) return "start"
+  if (old[0] !== neu[0]) return "preset"
+  if (old[1] !== neu[1]) return "engine"
+  if (old[2] !== neu[2]) return "target"
+  return "start"
+}
+
+function busyStatusText(reason, preset, engineSetting) {
+  if (reason === "engine") return "Starting " + engineLabel(engineSetting) + "…"
+  if (reason === "target") return "Switching microphone…"
+  if (reason === "reload") return "Reloading…"
+  return "Starting " + presetLabel(preset) + "…"
+}
+
 function clampGainDb(value) {
   var n = Number(value)
   if (!isFinite(n)) return 0
@@ -488,8 +514,9 @@ function statusText(state) {
     return String(state.setupHero || "Plugin not installed")
   }
   if (!state.targetName) return "No microphone"
+  if (state.busyReason) return busyStatusText(state.busyReason, state.preset, state.engineSetting)
   if (state.running) return presetLabel(state.preset) + " · " + friendlyDeviceLabel(state.targetLabel || state.targetName)
-  if (state.busy) return "Starting " + presetLabel(state.preset) + "…"
+  if (state.busy) return busyStatusText("start", state.preset, state.engineSetting)
   return "Idle"
 }
 
@@ -528,6 +555,9 @@ if (typeof module !== "undefined") {
     engineForPreset: engineForPreset,
     resolveEngine: resolveEngine,
     engineChoiceHint: engineChoiceHint,
+    engineLabel: engineLabel,
+    hostSwitchReason: hostSwitchReason,
+    busyStatusText: busyStatusText,
     clampGainDb: clampGainDb,
     clampEqTrimDb: clampEqTrimDb,
     snapEqTrimDb: snapEqTrimDb,

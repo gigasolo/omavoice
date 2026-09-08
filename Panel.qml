@@ -63,8 +63,8 @@ Panel {
   readonly property color urgent: bar ? bar.urgent : Color.urgent
   readonly property color dim: Qt.darker(foreground, 1.55)
   readonly property string fontFamily: bar ? bar.fontFamily : Style.font.family
-  readonly property color iconColor: service.enabled && service.running ? foreground : dim
-  readonly property color barIconColor: service.enabled && service.running ? barForeground : Qt.darker(barForeground, 1.55)
+  readonly property color iconColor: service.enabled && service.running && !service.busyReason ? foreground : dim
+  readonly property color barIconColor: service.enabled && service.running && !service.busyReason ? barForeground : Qt.darker(barForeground, 1.55)
   readonly property bool headerHasCursor: cursorActive && focusSection === "header"
   readonly property string toggleHint: service.enabled ? "Turn Omavoice off" : "Turn Omavoice on"
   readonly property string barTooltip: {
@@ -81,6 +81,7 @@ Panel {
   ]
   readonly property string heroPhraseText: {
     if (service.lastError !== "") return "Couldn't start"
+    if (service.busyReason) return service.statusText
     if (service.running) return activePhrases[phraseIndex % activePhrases.length]
     return service.statusText
   }
@@ -604,11 +605,11 @@ Panel {
               anchors.right: powerSwitch.left
               anchors.rightMargin: Style.space(4)
               anchors.verticalCenter: parent.verticalCenter
-              iconText: service.reloading ? "󰑓" : "󰑐"
+              iconText: service.busyReason === "reload" || service.reloading ? "󰑓" : "󰑐"
               tooltipText: "Reload processing"
               foreground: root.foreground
               fontFamily: root.fontFamily
-              enabled: !service.reloading
+              enabled: service.busyReason !== "reload" && !service.reloading
               onClicked: if (typeof service.reload === "function") service.reload()
             }
 
@@ -734,7 +735,7 @@ Panel {
                   implicitHeight: Style.space(36)
                   hasCursor: root.cursorActive && root.focusSection === "presets" && root.presetIndex === index
                   foreground: root.foreground
-                  opacity: isCurrent && service.busy ? 0.55 : 1
+                  opacity: isCurrent && (service.busyReason === "preset" || service.busyReason === "start") ? 0.55 : 1
                   Behavior on opacity { NumberAnimation { duration: 120 } }
                   MouseArea {
                     anchors.fill: parent
@@ -874,6 +875,8 @@ Panel {
                   foreground: root.foreground
                   fill: root.bar ? Style.hoverFillFor(root.bar.foreground, Color.accent) : "transparent"
                   currentFill: root.bar ? Style.selectedFillFor(root.bar.foreground, Color.accent) : "transparent"
+                  opacity: isActive && service.busyReason === "target" ? 0.55 : 1
+                  Behavior on opacity { NumberAnimation { duration: 120 } }
 
                   PwNodePeakMonitor {
                     id: rowPeak
@@ -1021,7 +1024,7 @@ Panel {
               }
               Text {
                 width: parent.width
-                visible: service.busy
+                visible: !!service.busyReason
                 text: service.statusText.toUpperCase()
                 color: root.dim
                 font.family: root.fontFamily
@@ -1063,10 +1066,13 @@ Panel {
                 CursorSurface {
                   required property var modelData
                   required property int index
+                  readonly property bool isCurrent: service.engineSetting === modelData.value
                   width: Math.floor((parent.width - Style.space(6) * 2) / 3)
                   implicitHeight: Style.space(32)
                   hasCursor: root.cursorActive && root.focusSection === "engine" && root.engineIndex === index
                   foreground: root.foreground
+                  opacity: isCurrent && service.busyReason === "engine" ? 0.55 : 1
+                  Behavior on opacity { NumberAnimation { duration: 120 } }
                   MouseArea {
                     id: engineHit
                     anchors.fill: parent
@@ -1087,7 +1093,7 @@ Panel {
                   Rectangle {
                     anchors.fill: parent
                     radius: Style.cornerRadius
-                    color: service.engineSetting === modelData.value
+                    color: isCurrent
                       ? (bar ? Style.selectedFillFor(bar.foreground, Color.accent) : Color.accent)
                       : "transparent"
                     border.width: 1
@@ -1099,7 +1105,7 @@ Panel {
                     color: root.foreground
                     font.family: root.fontFamily
                     font.pixelSize: Style.font.caption
-                    font.bold: service.engineSetting === modelData.value
+                    font.bold: isCurrent
                   }
                   Rectangle {
                     visible: service.engineSetting === "auto" && service.engine === modelData.value

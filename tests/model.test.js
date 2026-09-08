@@ -348,3 +348,26 @@ test("statusText names the preset while the host is starting", () => {
   })
   assert.equal(text, "Starting Podcast…")
 })
+
+test("statusText names the duck: engine, mic, reload", () => {
+  assert.equal(Model.busyStatusText("engine", "meeting", "deepfilter"), "Starting DeepFilterNet…")
+  assert.equal(Model.busyStatusText("target", "meeting", "auto"), "Switching microphone…")
+  assert.equal(Model.busyStatusText("reload", "meeting", "auto"), "Reloading…")
+  assert.equal(Model.statusText({
+    enabled: true,
+    running: true,
+    busyReason: "preset",
+    preset: "clean",
+    targetName: usb.name
+  }), "Starting Clean…")
+})
+
+test("hostSwitchReason prefers preset over engine", () => {
+  const prev = "meeting\0rnnoise\0mic\0/dir"
+  const next = "podcast\0deepfilter\0mic\0/dir"
+  assert.equal(Model.hostSwitchReason(prev, next, false), "preset")
+  assert.equal(Model.hostSwitchReason(prev, "meeting\0deepfilter\0mic\0/dir", false), "engine")
+  assert.equal(Model.hostSwitchReason(prev, "meeting\0rnnoise\0usb\0/dir", false), "target")
+  assert.equal(Model.hostSwitchReason(prev, next, true), "reload")
+  assert.equal(Model.hostSwitchReason("", next, false), "start")
+})

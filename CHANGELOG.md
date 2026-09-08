@@ -25,9 +25,10 @@ and this project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html)
   idle, and the AEC speaker monitor unlinks unless a real client (not the
   panel hold) is capturing Omavoice.
 - Disable restores the pinned microphone, not a leftover Bluetooth default.
-- Switching Meeting / Podcast / Clean still restarts the host (the chain
-  changes). The hero says **Starting Podcast…** instead of spinning the
-  power switch, and the selected chip dims until Omavoice is back.
+- Switching preset, engine, or microphone still restarts the host. The
+  hero names the wait (**Starting Podcast…**, **Starting RNNoise…**,
+  **Switching microphone…**, **Reloading…**) instead of spinning the
+  power switch, and the control you clicked dims until Omavoice is back.
 
 ### Changed
 

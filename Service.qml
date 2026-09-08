@@ -27,6 +27,7 @@ Item {
   property bool meterHoldWanted: false
   property string meterHoldTarget: ""
   property bool reloading: false
+  property string busyReason: ""
 
   // Quickshell leaves PwNode.name empty until the node is bound.
   readonly property var nodes: Pipewire.nodes ? Pipewire.nodes.values : []
@@ -107,9 +108,11 @@ Item {
     enabled: enabled,
     running: running,
     busy: busy,
+    busyReason: busyReason,
     setupNeeded: setupNeeded,
     setupHero: setup.hero,
     preset: preset,
+    engineSetting: engineSetting,
     targetName: targetName,
     targetLabel: targetLabel,
     lastError: lastError
@@ -216,6 +219,7 @@ Item {
     }
     var key = preset + "\0" + engine + "\0" + targetName + "\0" + pluginDir
     if (hostProcess.running && hostKey === key) return
+    busyReason = Model.hostSwitchReason(hostKey, key, reloading)
     if (meterHoldProcess.running) meterHoldProcess.running = false
     meterHoldTarget = ""
     hostAttempts += 1
@@ -277,6 +281,8 @@ Item {
 
   function stopHost() {
     startDebounce.stop()
+    busyReason = ""
+    reloading = false
     if (meterHoldProcess.running) meterHoldProcess.running = false
     meterHoldTarget = ""
     if (hostProcess.running) hostProcess.running = false
@@ -405,16 +411,28 @@ Item {
   // RNNoise or DeepFilterNet without restarting the shell.
   function reload() {
     reloading = true
+    busyReason = "reload"
     probed = false
     hostKey = ""
     hostAttempts = 0
     probe()
-    if (!root.active || !enabled || !targetName) reloading = false
+    if (!root.active || !enabled || !targetName) {
+      reloading = false
+      busyReason = ""
+    }
   }
 
-  onEnabledChanged: { hostAttempts = 0; syncHost() }
-  onPresetChanged: { hostAttempts = 0; syncHost() }
-  onEngineChanged: { hostAttempts = 0; syncHost() }
+  onEnabledChanged: {
+    busyReason = enabled ? "start" : ""
+    hostAttempts = 0
+    syncHost()
+  }
+  onPresetChanged: { busyReason = "preset"; hostAttempts = 0; syncHost() }
+  onEngineChanged: {
+    if (busyReason !== "preset" && busyReason !== "reload") busyReason = "engine"
+    hostAttempts = 0
+    syncHost()
+  }
   onQualityChanged: applyLiveControls()
   onEqCurveChanged: applyLiveControls()
   onEqBodyDbChanged: applyLiveControls()
@@ -426,7 +444,12 @@ Item {
     refreshSources()
     aecSyncDebounce.restart()
   }
-  onTargetNameChanged: { hostAttempts = 0; syncHost() }
+  onTargetNameChanged: {
+    if (busyReason !== "preset" && busyReason !== "engine" && busyReason !== "reload")
+      busyReason = "target"
+    hostAttempts = 0
+    syncHost()
+  }
   onAfterNodeChanged: syncMeterHold()
   onAfterNodeNameChanged: {
     syncMeterHold()
@@ -434,6 +457,11 @@ Item {
     if (afterNodeName) {
       lastError = ""
       hostAttempts = 0
+      var key = preset + "\0" + engine + "\0" + targetName + "\0" + pluginDir
+      if (hostKey === key) {
+        busyReason = ""
+        reloading = false
+      }
     }
   }
   onAfterNodeIdChanged: {
@@ -548,10 +576,7 @@ Item {
       }
     }
     onRunningChanged: {
-      if (running) {
-        root.reloading = false
-        return
-      }
+      if (running) return
       root.promoted = false
       root.syncMeterHold()
     }
