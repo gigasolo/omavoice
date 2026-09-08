@@ -168,6 +168,8 @@ grep -q 'preset + "\\0" + engine + "\\0" + targetName' "$root/Service.qml" || fa
 grep -q 'preset + "\\0" + quality + "\\0"' "$root/Service.qml" && fail "hostKey must not include quality"
 grep -q 'onQualityChanged: applyLiveControls' "$root/Service.qml" || fail "quality must apply live"
 grep -q 'onOutputGainDbChanged: applyLiveControls' "$root/Service.qml" || fail "output gain must apply live"
+grep -q 'id: liveCtlProcess' "$root/Service.qml" || fail "live Level must run ctl as a Process so Gain 1 stays one argv"
+grep -A2 'function applyLiveControls' "$root/Service.qml" | grep -q 'hostProcess.running' && fail "live Level must not wait on hostProcess.running"
 grep -q 'onCaptureGainDbChanged: applyLiveControls' "$root/Service.qml" || fail "capture gain must apply live"
 grep -q 'onEqBodyDbChanged: applyLiveControls' "$root/Service.qml" || fail "body trim must apply live"
 grep -q 'onEqPresDbChanged: applyLiveControls' "$root/Service.qml" || fail "presence trim must apply live"

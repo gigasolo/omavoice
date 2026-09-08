@@ -238,7 +238,7 @@ Item {
   }
 
   function applyLiveControls() {
-    if (!root.active || !enabled || !hostProcess.running) return
+    if (!root.active || !enabled) return
     liveDebounce.restart()
   }
 
@@ -268,7 +268,7 @@ Item {
   }
 
   function writeLiveControls() {
-    if (!root.active || !enabled || !hostProcess.running) return
+    if (!root.active || !enabled) return
     var cap = gainPreview ? previewCaptureDb : captureGainDb
     var out = gainPreview ? previewOutputDb : outputGainDb
     var args = [scriptPath("omavoice-ctl"), "set"]
@@ -288,7 +288,11 @@ Item {
       args.push("eq_pres:Gain", String(bands.pres))
       args.push("eq_air:Gain", String(bands.air))
     }
-    Quickshell.execDetached(args)
+    // Process.command keeps "preamp:Gain 1" as one argv. execDetached is
+    // easy to split, and hostProcess.running is the wrapper not the graph.
+    liveCtlProcess.command = args
+    if (liveCtlProcess.running) liveCtlProcess.running = false
+    liveCtlProcess.running = true
   }
 
   function stopHost() {
@@ -501,6 +505,10 @@ Item {
     interval: 80
     repeat: false
     onTriggered: root.writeLiveControls()
+  }
+
+  Process {
+    id: liveCtlProcess
   }
 
   Timer {
