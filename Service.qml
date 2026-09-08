@@ -45,8 +45,8 @@ Item {
   }
   PwObjectTracker { objects: root.trackedNodes }
 
-  readonly property bool busy: hostProcess.running && !running
-  readonly property bool running: hostProcess.running
+  readonly property bool running: !!afterNodeName
+  readonly property bool busy: enabled && !afterNodeName && (hostProcess.running || (hostAttempts > 0 && hostAttempts < 8))
   // After meters and the panel hold need the bound source. Matching the
   // unbound description fires onAfterNodeChanged too early, then the same
   // object later gets name "omavoice" with no second change — After stays
@@ -214,7 +214,6 @@ Item {
     meterHoldTarget = ""
     hostAttempts += 1
     hostKey = key
-    lastError = ""
     promoted = false
     hostStartedAt = Date.now()
     hostProcess.running = false
@@ -429,7 +428,13 @@ Item {
   onNodesChanged: refreshSources()
   onTargetNameChanged: { hostAttempts = 0; syncHost() }
   onAfterNodeChanged: syncMeterHold()
-  onAfterNodeNameChanged: syncMeterHold()
+  onAfterNodeNameChanged: {
+    syncMeterHold()
+    if (afterNodeName) {
+      lastError = ""
+      hostAttempts = 0
+    }
+  }
   onAfterNodeIdChanged: {
     syncMeterHold()
     applyLiveControls()
@@ -526,7 +531,8 @@ Item {
     stderr: StdioCollector {
       onStreamFinished: {
         var text = String(this.text || "").trim()
-        if (text && !hostProcess.running) lastError = Model.hostErrorText("host", text)
+        if (text && !hostProcess.running && root.hostAttempts >= 8)
+          lastError = Model.hostErrorText("host", text)
       }
     }
     onRunningChanged: {
@@ -548,9 +554,7 @@ Item {
       if (root.afterNodeName) return
       if (root.defaultSourceName === Model.NODE_NAME) return
       if (!root.probed || !root.targetName) return
-      if (hostProcess.running && Date.now() - root.hostStartedAt < 8000) return
-      root.hostKey = ""
-      if (hostProcess.running) hostProcess.running = false
+      if (hostProcess.running) return
       root.startHostNow()
     }
   }

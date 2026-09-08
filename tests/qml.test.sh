@@ -11,7 +11,7 @@ grep -q 'id: rowPeak' "$root/Panel.qml" || fail "each mic row needs a peak monit
 grep -q 'PwNodePeakMonitor' "$root/Panel.qml" || fail "Panel must use PwNodePeakMonitor"
 grep -q 'afterPeakMonitor.peak' "$root/Panel.qml" || fail "selected row must show After"
 grep -q 'enabled: root.opened && root.metersArmed && !!node' "$root/Panel.qml" || fail "row meters must rebind after graph changes"
-grep -q 'onAfterNodeNameChanged: syncMeterHold' "$root/Service.qml" || fail "hold must wait for the bound Omavoice name"
+grep -q 'onAfterNodeNameChanged' "$root/Service.qml" || fail "hold must wait for the bound Omavoice name"
 grep -q 'onAfterNodeIdChanged' "$root/Service.qml" || fail "hold must retarget when omavoice is a new node"
 grep -q 'meterHoldTarget === token' "$root/Service.qml" || fail "meter hold must key the node id, not only the name omavoice"
 grep -q 'afterHoldKey' "$root/Panel.qml" || fail "panel must re-arm After hold when the omavoice id changes"
@@ -45,7 +45,9 @@ grep -q 'leftover omavoice nodes still in the session' "$root/scripts/omavoice-r
 grep -q 'id: hostBindWatch' "$root/Service.qml" || fail "empty host must restart until the omavoice node appears"
 grep -q 'hostKey === key && afterNodeName' "$root/Service.qml" || fail "a running Process is not a healthy host without the omavoice node"
 grep -q 'defaultSourceName === Model.NODE_NAME' "$root/Service.qml" || fail "After must bind the default source when it is omavoice"
-grep -q 'hostStartedAt < 8000' "$root/Service.qml" || fail "empty host must get 8s to join the session before restart"
+grep -A12 'id: hostBindWatch' "$root/Service.qml" | grep -q 'if (hostProcess.running) return' \
+  || fail "bind watch must not kill a live wrapper"
+grep -q 'hostAttempts >= 8' "$root/Service.qml" || fail "start error only after retries are exhausted"
 grep -A20 'id: hostProcess' "$root/Service.qml" | grep -q startDebounce \
   && fail "hostProcess stop must not startDebounce; overlapping omavoice-run deletes the next conf"
 grep -q '/proc/$pid' "$root/scripts/omavoice-run" || fail "stale host conf must not delete a live pid's file"
