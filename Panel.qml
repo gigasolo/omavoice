@@ -90,9 +90,15 @@ Panel {
   function persistSettings(values) {
     var entry = { id: root.moduleName }
     for (var existing in root.settings) if (existing !== "id") entry[existing] = root.settings[existing]
-    for (var key in values) {
-      if (values[key] === undefined) delete entry[key]
-      else entry[key] = values[key]
+    var keys = []
+    try { if (values) keys = Object.keys(values) } catch (e) {}
+    if (values && keys.length === 0) {
+      for (var key in values) keys.push(key)
+    }
+    for (var i = 0; i < keys.length; i++) {
+      var k = keys[i]
+      if (values[k] === undefined) delete entry[k]
+      else entry[k] = values[k]
     }
     root.settings = entry
     if (root.bar && root.bar.shell && typeof root.bar.shell.updateEntryInline === "function")
@@ -146,7 +152,13 @@ Panel {
   }
 
   function setOutputGainDb(value) {
-    persistSettings(Model.sharedGainPatch("output", value))
+    var db = Model.snapGainDb(value)
+    persistSettings({
+      outputGainDb: db,
+      meetingOutputGainDb: db,
+      podcastOutputGainDb: db,
+      cleanOutputGainDb: db
+    })
     if (service && typeof service.clearGainPreview === "function") service.clearGainPreview()
   }
 
@@ -194,7 +206,13 @@ Panel {
   }
 
   function setCaptureGainDb(value) {
-    persistSettings(Model.sharedGainPatch("capture", value))
+    var db = Model.snapGainDb(value)
+    persistSettings({
+      captureGainDb: db,
+      meetingCaptureGainDb: db,
+      podcastCaptureGainDb: db,
+      cleanCaptureGainDb: db
+    })
     if (service && typeof service.clearGainPreview === "function") service.clearGainPreview()
   }
 
@@ -328,7 +346,7 @@ Panel {
       Layout.preferredWidth: Style.space(44)
       Layout.alignment: Qt.AlignVCenter
       horizontalAlignment: Text.AlignRight
-      text: root.formatGainDb(gainSlider.dragging ? held : persisted)
+      text: root.formatGainDb(held)
       color: root.dim
       font.family: root.fontFamily
       font.pixelSize: Style.font.caption
