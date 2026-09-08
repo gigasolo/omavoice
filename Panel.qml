@@ -263,23 +263,31 @@ Panel {
     property real minimum: -12
     property real maximum: 12
     property real held: persisted
+    property real lastSent: persisted
     signal moved(real value)
     signal released(real value)
 
     width: parent.width
     spacing: Style.space(8)
 
-    Binding on held {
-      when: !gainSlider.dragging
-      value: persisted
+    // PanelSlider drops dragging before released(). Rebinding held then
+    // would copy persisted back and persist the old +1.0 / +1.5.
+    onPersistedChanged: {
+      lastSent = persisted
+      if (!gainSlider.dragging) held = persisted
     }
-
-    onPersistedChanged: if (!gainSlider.dragging) held = persisted
 
     function snapHeld(v) {
       var s = Model.snapGainDb(v)
       if (s < minimum) s = minimum
       if (s > maximum) s = maximum
+      return s
+    }
+
+    function applyHeld(v) {
+      var s = snapHeld(v)
+      held = s
+      lastSent = s
       return s
     }
 
@@ -308,13 +316,9 @@ Panel {
       maximum: parent.maximum
       step: 0.5
       value: held
-      onMoved: function(v) {
-        var s = snapHeld(v)
-        held = s
-        moved(s)
-      }
+      onMoved: function(v) { moved(applyHeld(v)) }
       onReleased: function(v) {
-        var s = snapHeld(v)
+        var s = lastSent
         held = s
         released(s)
       }

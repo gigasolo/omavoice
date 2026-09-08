@@ -159,6 +159,8 @@ grep -q '"outputGainDb"' "$root/manifest.json" || fail "schema needs one shared 
 grep -q '"captureGainDb"' "$root/manifest.json" || fail "schema needs one shared captureGainDb"
 grep -q 'sharedGainPatch("output"' "$root/Panel.qml" || fail "Output must stamp every preset key so the fader sticks"
 grep -q 'sharedGainPatch("capture"' "$root/Panel.qml" || fail "Input must stamp every preset key so the fader sticks"
+grep -q 'Binding on held {' "$root/Panel.qml" && fail "GainRow must not rebind held when the slider drops dragging"
+grep -q 'property real lastSent' "$root/Panel.qml" || fail "GainRow must persist the last dragged value, not the stale released() arg"
 grep -q 'preset + "\\0" + engine + "\\0" + targetName' "$root/Service.qml" || fail "hostKey must include engine"
 grep -q 'preset + "\\0" + quality + "\\0"' "$root/Service.qml" && fail "hostKey must not include quality"
 grep -q 'onQualityChanged: applyLiveControls' "$root/Service.qml" || fail "quality must apply live"
