@@ -327,14 +327,20 @@ Item {
   function setMeterHold(on) {
     meterHoldWanted = on === true
     syncMeterHold()
+    aecSyncDebounce.restart()
+  }
+
+  function syncAecMonitor() {
+    if (!root.active || !enabled || preset !== "meeting" || !afterNodeName) return
+    Quickshell.execDetached([scriptPath("omavoice-ctl"), "aec-sync"])
   }
 
   function syncMeterHold() {
     var name = afterNodeName
     var id = afterNodeId
     var token = name && id ? name + ":" + id : ""
-    // Meeting AEC keeps the chain running. Podcast/Clean stay silent
-    // unless a hold is attached to this node id, not the previous omavoice.
+    // Panel After needs a consumer. Podcast/Clean stay silent unless a
+    // hold is attached to this node id, not the previous omavoice.
     var want = meterHoldWanted && enabled && !!token
     if (!want) {
       meterHoldRetry.stop()
@@ -426,11 +432,15 @@ Item {
   onEqAirDbChanged: applyLiveControls()
   onProbedChanged: if (probed) syncHost()
   onPinnedSourceChanged: refreshSources()
-  onNodesChanged: refreshSources()
+  onNodesChanged: {
+    refreshSources()
+    aecSyncDebounce.restart()
+  }
   onTargetNameChanged: { hostAttempts = 0; syncHost() }
   onAfterNodeChanged: syncMeterHold()
   onAfterNodeNameChanged: {
     syncMeterHold()
+    aecSyncDebounce.restart()
     if (afterNodeName) {
       lastError = ""
       hostAttempts = 0
@@ -483,6 +493,13 @@ Item {
     interval: 80
     repeat: false
     onTriggered: root.writeLiveControls()
+  }
+
+  Timer {
+    id: aecSyncDebounce
+    interval: 500
+    repeat: false
+    onTriggered: root.syncAecMonitor()
   }
 
   Timer {

@@ -77,8 +77,10 @@ echo "$meeting" | grep -A16 'media.class = Audio/Source' | grep -q 'node.virtual
   || fail "omavoice source must be node.virtual"
 echo "$meeting" | grep -A16 'media.class = Audio/Source' | grep -q 'media.role = Communication' \
   || fail "omavoice source must be Communication"
+echo "$meeting" | grep -A16 'media.class = Audio/Source' | grep -q 'session.suspend-timeout-seconds = 3' \
+  || fail "omavoice source must suspend when nothing is listening"
 echo "$meeting" | grep -A16 'media.class = Audio/Source' | grep -q 'session.suspend-timeout-seconds = 0' \
-  || fail "omavoice source must not idle-destroy after 3s"
+  && fail "suspend-timeout 0 keeps Meeting AEC scheduled with no call"
 echo "$meeting" | grep -A16 'media.class = Audio/Source' | grep -q 'node.always-process' \
   && fail "always-process makes capture fail target-not-found and destroys After"
 echo "$meeting" | grep -A16 'media.class = Audio/Source' | grep -q 'stream.dont-remix = true' \

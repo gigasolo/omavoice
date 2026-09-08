@@ -284,7 +284,7 @@ $capture_pin
                 media.class = Audio/Source
                 node.virtual = true
                 media.role = Communication
-                session.suspend-timeout-seconds = 0
+                session.suspend-timeout-seconds = 3
                 stream.dont-remix = true
                 audio.rate = 48000
                 audio.position = [ MONO ]

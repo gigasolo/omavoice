@@ -21,6 +21,9 @@ and this project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html)
   selected. Capture stays pinned to the named target (`dont-fallback`,
   `linger`, `dont-move`). The panel meters only the chosen row. Unpinned
   Bluetooth no longer beats the builtin mic.
+- Meeting suspends when nothing is listening: the published source may
+  idle, and the AEC speaker monitor unlinks unless a real client (not the
+  panel hold) is capturing Omavoice.
 
 ### Changed
 
