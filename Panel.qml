@@ -17,6 +17,8 @@ Panel {
   property string focusSection: "header"
   property int sourceIndex: 0
   property int presetIndex: 0
+  property int engineIndex: 0
+  property int eqIndex: 0
   property bool cursorActive: false
   property int phraseIndex: 0
   property bool tuneOpen: false
@@ -108,6 +110,15 @@ Panel {
   function chooseSource(name) {
     persistSettings({ pinnedSource: String(name || "") })
     if (service && typeof service.pinSource === "function") service.pinSource(name)
+  }
+
+  function setChipHover(section, on) {
+    if (on) {
+      cursorActive = true
+      focusSection = section
+      return
+    }
+    if (focusSection === section) cursorActive = false
   }
 
   function showTune(open) {
@@ -725,14 +736,7 @@ Panel {
               spacing: Style.space(6)
 
               HoverHandler {
-                onHoveredChanged: {
-                  if (hovered) {
-                    root.cursorActive = true
-                    root.focusSection = "presets"
-                  } else if (root.focusSection === "presets") {
-                    root.cursorActive = false
-                  }
-                }
+                onHoveredChanged: root.setChipHover("presets", hovered)
               }
 
               Repeater {
@@ -860,8 +864,14 @@ Panel {
             }
 
             Column {
+              id: sourceList
               width: parent.width
               spacing: Style.space(4)
+
+              HoverHandler {
+                onHoveredChanged: root.setChipHover("sources", hovered)
+              }
+
               Repeater {
                 model: displaySources
                 CursorSurface {
@@ -1102,8 +1112,13 @@ Panel {
             }
 
             Row {
+              id: engineRow
               width: parent.width
               spacing: Style.space(6)
+
+              HoverHandler {
+                onHoveredChanged: root.setChipHover("engine", hovered)
+              }
 
               Repeater {
                 model: [
@@ -1113,14 +1128,21 @@ Panel {
                 ]
                 CursorSurface {
                   required property var modelData
+                  required property int index
                   width: Math.floor((parent.width - Style.space(6) * 2) / 3)
                   implicitHeight: Style.space(32)
+                  hasCursor: root.cursorActive && root.focusSection === "engine" && root.engineIndex === index
                   foreground: root.foreground
                   MouseArea {
                     id: engineHit
                     anchors.fill: parent
                     hoverEnabled: true
                     cursorShape: Qt.PointingHandCursor
+                    onEntered: {
+                      root.cursorActive = true
+                      root.focusSection = "engine"
+                      root.engineIndex = index
+                    }
                     onClicked: root.setEngine(modelData.value)
                   }
                   PanelToolTip {
@@ -1198,8 +1220,16 @@ Panel {
               opacity: enabled ? 1 : 0.5
 
               Row {
+                id: voiceRow
                 width: parent.width
                 spacing: Style.space(6)
+
+                HoverHandler {
+                  onHoveredChanged: {
+                    if (service.preset === "clean") return
+                    root.setChipHover("voice", hovered)
+                  }
+                }
 
                 Repeater {
                   model: [
@@ -1210,14 +1240,22 @@ Panel {
                   ]
                   CursorSurface {
                     required property var modelData
+                    required property int index
                     width: Math.floor((parent.width - Style.space(6) * 3) / 4)
                     implicitHeight: Style.space(32)
+                    hasCursor: service.preset !== "clean" && root.cursorActive && root.focusSection === "voice" && root.eqIndex === index
                     foreground: root.foreground
                     MouseArea {
                       id: eqHit
                       anchors.fill: parent
                       hoverEnabled: true
                       cursorShape: Qt.PointingHandCursor
+                      onEntered: {
+                        if (service.preset === "clean") return
+                        root.cursorActive = true
+                        root.focusSection = "voice"
+                        root.eqIndex = index
+                      }
                       onClicked: root.setEqCurve(modelData.value)
                     }
                     PanelToolTip {
