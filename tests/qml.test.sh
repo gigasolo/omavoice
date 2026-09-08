@@ -183,6 +183,8 @@ grep -q 'id: powerSwitch' "$root/Panel.qml" || fail "on/off must be the original
 grep -q 'id: powerButton' "$root/Panel.qml" && fail "power icon button must be gone"
 grep -q 'function showTune' "$root/Panel.qml" || fail "preset settings must flip to a tune page"
 grep -q 'id: presetTuneButton' "$root/Panel.qml" || fail "PRESET needs a settings action"
+grep -q 'id: presetRow' "$root/Panel.qml" || fail "preset chips must live in presetRow"
+grep -A12 'id: presetRow' "$root/Panel.qml" | grep -q 'HoverHandler' || fail "preset hover must clear when the cursor leaves the chips"
 grep -q 'iconText: "󰒓"' "$root/Panel.qml" || fail "preset tuning must use a settings icon"
 grep -q 'text: "AUTOMATIC"' "$root/Panel.qml" || fail "MICROPHONE must use the network AUTOMATIC toggle"
 grep -q 'id: pageFlip' "$root/Panel.qml" || fail "tune page must animate like HEY"

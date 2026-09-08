@@ -720,8 +720,20 @@ Panel {
             }
 
             Row {
+              id: presetRow
               width: parent.width
               spacing: Style.space(6)
+
+              HoverHandler {
+                onHoveredChanged: {
+                  if (hovered) {
+                    root.cursorActive = true
+                    root.focusSection = "presets"
+                  } else if (root.focusSection === "presets") {
+                    root.cursorActive = false
+                  }
+                }
+              }
 
               Repeater {
                 model: root.presets
