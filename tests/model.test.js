@@ -89,6 +89,14 @@ test("pickSource uses a remembered BT headset when default is already omavoice",
   assert.equal(picked.name, bluez.name)
 })
 
+test("restoreCaptureName prefers the pin over a remembered bluetooth source", () => {
+  assert.equal(Model.restoreCaptureName(builtin.name, bluez.name, [builtin, bluez]), builtin.name)
+  assert.equal(Model.restoreCaptureName("", bluez.name, [builtin, bluez]), bluez.name)
+  assert.equal(Model.restoreCaptureName("omavoice", bluez.name, [builtin, bluez]), bluez.name)
+  assert.equal(Model.restoreCaptureName("", "omavoice", [builtin, bluez]), "")
+  assert.equal(Model.restoreCaptureName("alsa_input.usb-gone", "", [builtin, bluez]), "")
+})
+
 test("pickSource prefers builtin over unpinned bluetooth", () => {
   const fallback = Model.pickFallbackName("omavoice", "")
   const picked = Model.pickSource([builtin, bluez], "", fallback)

@@ -193,6 +193,19 @@ function pickSource(sources, pinnedName, defaultName) {
   return null
 }
 
+function restoreCaptureName(pinnedName, previousName, sources) {
+  var list = Array.isArray(sources) ? sources : []
+  function present(name) {
+    var want = String(name || "")
+    if (!want || !isCaptureSourceName(want) || isOmavoiceName(want)) return ""
+    for (var i = 0; i < list.length; i++) {
+      if (String(list[i].name || "") === want) return want
+    }
+    return ""
+  }
+  return present(pinnedName) || present(previousName)
+}
+
 function presetLabel(preset) {
   var value = normalizePreset(preset)
   if (value === "podcast") return "Podcast"
@@ -477,6 +490,7 @@ if (typeof module !== "undefined") {
     shouldDeferSourcePick: shouldDeferSourcePick,
     pickFallbackName: pickFallbackName,
     pickSource: pickSource,
+    restoreCaptureName: restoreCaptureName,
     presetLabel: presetLabel,
     presetHint: presetHint,
     normalizeEngine: normalizeEngine,

@@ -24,6 +24,7 @@ and this project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html)
 - Meeting suspends when nothing is listening: the published source may
   idle, and the AEC speaker monitor unlinks unless a real client (not the
   panel hold) is capturing Omavoice.
+- Disable restores the pinned microphone, not a leftover Bluetooth default.
 
 ### Changed
 

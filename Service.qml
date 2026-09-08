@@ -388,8 +388,8 @@ Item {
   }
 
   function restoreDefault() {
-    var want = previousAudioSource
-    if (!want || Model.isOmavoiceName(want)) return
+    var want = Model.restoreCaptureName(pinnedSource, previousAudioSource, sources)
+    if (!want) return
     var nodes = Pipewire.nodes && Pipewire.nodes.values ? Pipewire.nodes.values : []
     for (var i = 0; i < nodes.length; i++) {
       var node = nodes[i]
