@@ -32,6 +32,9 @@ and this project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html)
 
 - Marketplace `preview.png` is the live panel with Output / Input open;
   `docs/preview-tune.png` is the Voice looks page.
+- Input and Output are one pair for every preset. Meeting / Podcast / Clean
+  no longer keep separate Level trims. Old per-preset keys still apply until
+  you move a fader.
 
 ## [0.2.0] — 2026-09-06
 

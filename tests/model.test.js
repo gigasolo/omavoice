@@ -253,8 +253,11 @@ test("clampGainDb and gainDbToLinear convert output trim", () => {
   assert.equal(Model.outputGainDbForPreset("podcast", all), 2)
   assert.equal(Model.outputGainDbForPreset("clean", all), 3)
   assert.equal(Model.captureGainDbForPreset("meeting", all), 4)
-  assert.equal(Model.captureGainDbForPreset("podcast", all), 5)
-  assert.equal(Model.captureGainDbForPreset("clean", all), 6)
+  assert.equal(Model.outputGainDbForPreset("podcast", { outputGainDb: 7, ...all }), 7)
+  assert.equal(Model.captureGainDbForPreset("clean", { captureGainDb: -1, ...all }), -1)
+  assert.equal(Model.outputGainDbForPreset("meeting", { outputGainDb: 2 }), 2)
+  assert.equal(Model.outputGainDbForPreset("podcast", { outputGainDb: 2 }), 2)
+  assert.equal(Model.outputGainDbForPreset("clean", { outputGainDb: 2 }), 2)
   assert.equal(Model.outputGainDbForPreset("clean", {}), 0)
 })
 

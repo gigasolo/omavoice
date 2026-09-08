@@ -146,13 +146,7 @@ Panel {
   }
 
   function setOutputGainDb(value) {
-    var db = Model.snapGainDb(value)
-    var key = "meetingOutputGainDb"
-    if (service.preset === "podcast") key = "podcastOutputGainDb"
-    else if (service.preset === "clean") key = "cleanOutputGainDb"
-    var patch = {}
-    patch[key] = db
-    persistSettings(patch)
+    persistSettings({ outputGainDb: Model.snapGainDb(value) })
     if (service && typeof service.clearGainPreview === "function") service.clearGainPreview()
   }
 
@@ -200,13 +194,7 @@ Panel {
   }
 
   function setCaptureGainDb(value) {
-    var db = Model.snapGainDb(value)
-    var key = "meetingCaptureGainDb"
-    if (service.preset === "podcast") key = "podcastCaptureGainDb"
-    else if (service.preset === "clean") key = "cleanCaptureGainDb"
-    var patch = {}
-    patch[key] = db
-    persistSettings(patch)
+    persistSettings({ captureGainDb: Model.snapGainDb(value) })
     if (service && typeof service.clearGainPreview === "function") service.clearGainPreview()
   }
 

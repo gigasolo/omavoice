@@ -385,20 +385,31 @@ function gainDbToLinear(db) {
   return Math.pow(10, clampGainDb(db) / 20)
 }
 
+function hasGain(src, key) {
+  return src && src[key] !== undefined && src[key] !== null && src[key] !== ""
+}
+
+function gainDbFromKeys(src, keys) {
+  for (var i = 0; i < keys.length; i++) {
+    if (hasGain(src, keys[i])) return clampGainDb(src[keys[i]])
+  }
+  return 0
+}
+
 function outputGainDbForPreset(preset, values) {
   var kind = normalizePreset(preset)
-  var src = values || {}
-  if (kind === "podcast") return clampGainDb(src.podcastOutputGainDb)
-  if (kind === "clean") return clampGainDb(src.cleanOutputGainDb)
-  return clampGainDb(src.meetingOutputGainDb)
+  var first = "meetingOutputGainDb"
+  if (kind === "podcast") first = "podcastOutputGainDb"
+  else if (kind === "clean") first = "cleanOutputGainDb"
+  return gainDbFromKeys(values || {}, ["outputGainDb", first, "meetingOutputGainDb", "podcastOutputGainDb", "cleanOutputGainDb"])
 }
 
 function captureGainDbForPreset(preset, values) {
   var kind = normalizePreset(preset)
-  var src = values || {}
-  if (kind === "podcast") return clampGainDb(src.podcastCaptureGainDb)
-  if (kind === "clean") return clampGainDb(src.cleanCaptureGainDb)
-  return clampGainDb(src.meetingCaptureGainDb)
+  var first = "meetingCaptureGainDb"
+  if (kind === "podcast") first = "podcastCaptureGainDb"
+  else if (kind === "clean") first = "cleanCaptureGainDb"
+  return gainDbFromKeys(values || {}, ["captureGainDb", first, "meetingCaptureGainDb", "podcastCaptureGainDb", "cleanCaptureGainDb"])
 }
 
 function qualityParams(preset, quality) {
