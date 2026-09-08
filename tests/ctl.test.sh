@@ -13,10 +13,10 @@ cat >"$tmpdir/pw-cli" <<EOF
 #!/usr/bin/env bash
 if [[ \${1:-} == ls && \${2:-} == Node ]]; then
   cat <<'NODES'
-id 10, type PipeWire:Interface:Node/3
- node.name = "omavoice"
-id 11, type PipeWire:Interface:Node/3
- node.name = "omavoice.capture"
+	id 10, type PipeWire:Interface:Node/3
+		node.name = "omavoice"
+	id 11, type PipeWire:Interface:Node/3
+		node.name = "omavoice.capture"
 NODES
   exit 0
 fi

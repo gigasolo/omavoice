@@ -160,6 +160,7 @@ Panel {
       cleanOutputGainDb: db
     })
     if (service && typeof service.clearGainPreview === "function") service.clearGainPreview()
+    if (service && typeof service.applyLiveControls === "function") service.applyLiveControls()
   }
 
   function setEngine(value) {
@@ -214,6 +215,7 @@ Panel {
       cleanCaptureGainDb: db
     })
     if (service && typeof service.clearGainPreview === "function") service.clearGainPreview()
+    if (service && typeof service.applyLiveControls === "function") service.applyLiveControls()
   }
 
   component QualitySlider: Column {

@@ -77,9 +77,10 @@ fi
 
 node_id() {
   local name=$1
+  # pw-cli ls prefixes the id line with a tab: "\tid 80, type ..."
   pw-cli ls Node 2>/dev/null | awk -v want="$name" '
-    /^id / { id=$2; sub(/,/, "", id) }
-    $0 ~ "node.name = \"" want "\"" { print id; exit }
+    match($0, /id [0-9]+,/) { id = substr($0, RSTART + 3, RLENGTH - 4) }
+    index($0, "node.name = \"" want "\"") { print id; exit }
   '
 }
 

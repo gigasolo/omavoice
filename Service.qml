@@ -272,9 +272,6 @@ Item {
     var cap = gainPreview ? previewCaptureDb : captureGainDb
     var out = gainPreview ? previewOutputDb : outputGainDb
     var args = [scriptPath("omavoice-ctl"), "set"]
-    if (captureNodeId) {
-      args.push("--id", captureNodeId)
-    }
     args.push("preamp:Gain 1", String(Model.gainDbToLinear(cap)))
     args.push("outgain:Gain 1", String(Model.gainDbToLinear(out)))
     var qp = Model.qualityParams(preset, quality)
