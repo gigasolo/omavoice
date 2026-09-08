@@ -25,9 +25,9 @@ and this project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html)
   idle, and the AEC speaker monitor unlinks unless a real client (not the
   panel hold) is capturing Omavoice.
 - Disable restores the pinned microphone, not a leftover Bluetooth default.
-- Live faders look up `omavoice.capture` by name (`pw-cli ls` id lines are
-  tab-prefixed) and run `omavoice-ctl` as a Process so `preamp:Gain 1` stays
-  one argument. They do not wait on `hostProcess.running`.
+- Input and Output bake into the host on release. Live `pw-cli` mixer
+  writes do not change the DSP. The selected mic shows one Omavoice
+  meter, not Before/After.
 
 ### Changed
 

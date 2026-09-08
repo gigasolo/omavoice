@@ -210,6 +210,12 @@ Item {
     startDebounce.restart()
   }
 
+  function rebuildHost() {
+    hostKey = ""
+    hostAttempts = 0
+    syncHost()
+  }
+
   function startHostNow() {
     if (!root.active || !enabled || !targetName) return
     if (!probed) return
@@ -217,7 +223,7 @@ Item {
       if (!lastError) lastError = Model.hostErrorText("bind")
       return
     }
-    var key = preset + "\0" + engine + "\0" + targetName + "\0" + pluginDir
+    var key = preset + "\0" + engine + "\0" + targetName + "\0" + pluginDir + "\0" + String(captureGainDb) + "\0" + String(outputGainDb)
     if (hostProcess.running && hostKey === key) return
     if (meterHoldProcess.running) meterHoldProcess.running = false
     meterHoldTarget = ""
@@ -246,7 +252,6 @@ Item {
     previewCaptureDb = Model.clampGainDb(captureDb)
     previewOutputDb = Model.clampGainDb(outputDb)
     gainPreview = true
-    applyLiveControls()
   }
 
   function clearGainPreview() {
@@ -269,11 +274,7 @@ Item {
 
   function writeLiveControls() {
     if (!root.active || !enabled) return
-    var cap = gainPreview ? previewCaptureDb : captureGainDb
-    var out = gainPreview ? previewOutputDb : outputGainDb
     var args = [scriptPath("omavoice-ctl"), "set"]
-    args.push("preamp:Gain 1", String(Model.gainDbToLinear(cap)))
-    args.push("outgain:Gain 1", String(Model.gainDbToLinear(out)))
     var qp = Model.qualityParams(preset, quality)
     if (engine === "rnnoise") {
       args.push("denoise:VAD Threshold (%)", String(qp.vad))
@@ -288,8 +289,6 @@ Item {
       args.push("eq_pres:Gain", String(bands.pres))
       args.push("eq_air:Gain", String(bands.air))
     }
-    // Process.command keeps "preamp:Gain 1" as one argv. execDetached is
-    // easy to split, and hostProcess.running is the wrapper not the graph.
     liveCtlProcess.command = args
     if (liveCtlProcess.running) liveCtlProcess.running = false
     liveCtlProcess.running = true
@@ -436,8 +435,8 @@ Item {
   onPresetChanged: { hostAttempts = 0; syncHost() }
   onEngineChanged: { hostAttempts = 0; syncHost() }
   onQualityChanged: applyLiveControls()
-  onOutputGainDbChanged: applyLiveControls()
-  onCaptureGainDbChanged: applyLiveControls()
+  onOutputGainDbChanged: { hostAttempts = 0; syncHost() }
+  onCaptureGainDbChanged: { hostAttempts = 0; syncHost() }
   onEqCurveChanged: applyLiveControls()
   onEqBodyDbChanged: applyLiveControls()
   onEqPresDbChanged: applyLiveControls()

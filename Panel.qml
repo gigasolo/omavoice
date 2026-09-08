@@ -160,7 +160,7 @@ Panel {
       cleanOutputGainDb: db
     })
     if (service && typeof service.clearGainPreview === "function") service.clearGainPreview()
-    if (service && typeof service.applyLiveControls === "function") service.applyLiveControls()
+    if (service && typeof service.rebuildHost === "function") service.rebuildHost()
   }
 
   function setEngine(value) {
@@ -215,7 +215,7 @@ Panel {
       cleanCaptureGainDb: db
     })
     if (service && typeof service.clearGainPreview === "function") service.clearGainPreview()
-    if (service && typeof service.applyLiveControls === "function") service.applyLiveControls()
+    if (service && typeof service.rebuildHost === "function") service.rebuildHost()
   }
 
   component QualitySlider: Column {
@@ -446,6 +446,15 @@ Panel {
     if (panelFlick) panelFlick.contentY = 0
     if (typeof service.setMeterHold === "function") service.setMeterHold(true)
     Qt.callLater(function() { keyCatcher.forceActiveFocus() })
+  }
+
+  readonly property real levelPreview: {
+    if (!service || !service.gainPreview) return 1
+    var po = Model.gainDbToLinear(service.previewOutputDb)
+    var pc = Model.gainDbToLinear(service.previewCaptureDb)
+    var o = Model.gainDbToLinear(service.outputGainDb)
+    var c = Model.gainDbToLinear(service.captureGainDb)
+    return (po / Math.max(o, 0.0001)) * (pc / Math.max(c, 0.0001))
   }
 
   readonly property string meterEpoch: {
@@ -899,15 +908,6 @@ Panel {
                   fill: root.bar ? Style.hoverFillFor(root.bar.foreground, Color.accent) : "transparent"
                   currentFill: root.bar ? Style.selectedFillFor(root.bar.foreground, Color.accent) : "transparent"
 
-                  PwNodePeakMonitor {
-                    id: rowPeak
-                    node: {
-                      var _ = service.nodes
-                      return service.nodeNamed ? service.nodeNamed(modelData.name) : null
-                    }
-                    enabled: root.opened && root.metersArmed && sourceRow.isActive && !!node
-                  }
-
                   Column {
                     id: sourceInner
                     anchors.left: parent.left
@@ -952,21 +952,11 @@ Panel {
                         Rectangle {
                           anchors.fill: parent
                           color: Util.alpha(root.foreground, 0.18)
+                          visible: sourceRow.isActive
 
                           Rectangle {
                             height: parent.height
-                            width: parent.width * Math.max(0, Math.min(1, rowPeak.peak))
-                            color: sourceRow.isActive
-                              ? Util.alpha(root.foreground, 0.40)
-                              : Util.alpha(root.foreground, 0.55)
-                            Behavior on width { NumberAnimation { duration: 70 } }
-                          }
-
-                          Rectangle {
-                            visible: sourceRow.isActive && !!service.afterNode
-                            height: Math.max(2, Math.ceil(parent.height * 0.4))
-                            width: parent.width * Math.max(0, Math.min(1, afterPeakMonitor.peak))
-                            anchors.verticalCenter: parent.verticalCenter
+                            width: parent.width * Math.max(0, Math.min(1, afterPeakMonitor.peak * root.levelPreview))
                             color: root.foreground
                             Behavior on width { NumberAnimation { duration: 70 } }
                           }
