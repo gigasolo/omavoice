@@ -1,33 +1,103 @@
 #!/usr/bin/env bash
-# Props live on omavoice.capture.
+# Live Props on omavoice.capture, and tear down classic AEC sink links.
+# Meeting AEC is monitor.mode only: never play the default sink into
+# omavoice.aec.sink (that loops far-end audio back to the call).
 set -euo pipefail
 
 usage() {
-  echo "Usage: omavoice-ctl set [KEY VALUE ...]" >&2
+  echo "Usage: omavoice-ctl set [--id N] [KEY VALUE ...] | aec-sync" >&2
   exit 2
 }
 
-[[ ${1:-} == set ]] || usage
+cmd=${1:-}
+[[ -n $cmd ]] || usage
 shift
+
+if [[ $cmd == aec-sync ]]; then
+  exec python3 - <<'PY'
+import json, subprocess, sys
+
+data = json.loads(subprocess.check_output(["pw-dump"]))
+names = {}
+for obj in data:
+    props = (obj.get("info") or {}).get("props") or {}
+    names[obj.get("id")] = props.get("node.name")
+
+voice = next((i for i, n in names.items() if n == "omavoice"), None)
+sink = next((i for i, n in names.items() if n == "omavoice.aec.sink"), None)
+if voice is None or sink is None:
+    sys.exit(0)
+
+ignore = {"omavoice.meter.hold", "quickshell"}
+real = False
+sink_links = []
+for obj in data:
+    if obj.get("type") != "PipeWire:Interface:Link":
+        continue
+    props = (obj.get("info") or {}).get("props") or {}
+    src, dst = props.get("link.output.node"), props.get("link.input.node")
+    if src == voice:
+        dest = names.get(dst) or ""
+        if dest not in ignore:
+            real = True
+    if dst == sink:
+        sink_links.append(obj.get("id"))
+
+# monitor.mode already reads the default sink monitor. Never play that
+# sink into omavoice.aec.sink — that is the classic AEC path and loops
+# far-end audio into the call. Leave monitor.mode's links alone while a
+# real client is capturing; only drop sink links when idle.
+if real:
+    sys.exit(0)
+
+for link_id in sink_links:
+    if link_id is None:
+        continue
+    subprocess.call(["pw-cli", "destroy", str(link_id)], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+PY
+fi
+
+[[ $cmd == set ]] || usage
 
 node_id() {
   local name=$1
+  # pw-cli ls prefixes the id line with a tab: "\tid 80, type ..."
   pw-cli ls Node 2>/dev/null | awk -v want="$name" '
-    /^id / { id=$2; sub(/,/, "", id) }
-    $0 ~ "node.name = \"" want "\"" { print id; exit }
+    match($0, /id [0-9]+,/) { id = substr($0, RSTART + 3, RLENGTH - 4) }
+    index($0, "node.name = \"" want "\"") { print id; exit }
   '
 }
 
-id=$(node_id "omavoice.capture")
+allowed_key() {
+  case $1 in
+    "preamp:Gain 1"|"outgain:Gain 1"|"hp:Freq"|"eq_body:Gain"|"eq_pres:Gain"|"eq_air:Gain") return 0 ;;
+    "denoise:VAD Threshold (%)"|"denoise:VAD Grace Period (ms)"|"denoise:Attenuation Limit (dB)") return 0 ;;
+    *) return 1 ;;
+  esac
+}
+
+id=""
+if [[ ${1:-} == --id ]]; then
+  id=${2:-}
+  shift 2
+  [[ $id =~ ^[0-9]+$ ]] || usage
+fi
+
 if [[ -z $id ]]; then
-  id=$(node_id "omavoice")
+  id=$(node_id "omavoice.capture")
+  if [[ -z $id ]]; then
+    id=$(node_id "omavoice")
+  fi
 fi
 [[ -n $id ]] || exit 1
 [[ $# -gt 0 ]] || exit 0
 (( $# % 2 == 0 )) || usage
 
 params=""
+numeric='^[0-9eE.+-]+$'
 while [[ $# -gt 0 ]]; do
+  allowed_key "$1" || usage
+  [[ $2 =~ $numeric ]] || usage
   params+=" \"$1\" $2"
   shift 2
 done

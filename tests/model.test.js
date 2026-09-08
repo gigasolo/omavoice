@@ -89,10 +89,91 @@ test("pickSource uses a remembered BT headset when default is already omavoice",
   assert.equal(picked.name, bluez.name)
 })
 
-test("pickSource prefers bluetooth over builtin when nothing is remembered", () => {
+test("restoreCaptureName prefers the pin over a remembered bluetooth source", () => {
+  assert.equal(Model.restoreCaptureName(builtin.name, bluez.name, [builtin, bluez]), builtin.name)
+  assert.equal(Model.restoreCaptureName("", bluez.name, [builtin, bluez]), bluez.name)
+  assert.equal(Model.restoreCaptureName("omavoice", bluez.name, [builtin, bluez]), bluez.name)
+  assert.equal(Model.restoreCaptureName("", "omavoice", [builtin, bluez]), "")
+  assert.equal(Model.restoreCaptureName("alsa_input.usb-gone", "", [builtin, bluez]), "")
+})
+
+test("pickSource prefers builtin over unpinned bluetooth", () => {
   const fallback = Model.pickFallbackName("omavoice", "")
   const picked = Model.pickSource([builtin, bluez], "", fallback)
-  assert.equal(picked.name, bluez.name)
+  assert.equal(picked.name, builtin.name)
+})
+
+test("bluetoothAddress normalizes colon and underscore MACs", () => {
+  assert.equal(Model.bluetoothAddress("bluez_input.A0:0C:E2:D0:C3:81"), "A0:0C:E2:D0:C3:81")
+  assert.equal(Model.bluetoothAddress("bluez_input.A0_0C_E2_D0_C3_81.0"), "A0:0C:E2:D0:C3:81")
+  assert.equal(Model.bluetoothAddress(builtin.name), "")
+})
+
+test("dedupeCaptureSources keeps one bluez row per address", () => {
+  const twin = { name: "bluez_input.A0_0C_E2_D0_C3_81.headset-head-unit", description: bluez.description }
+  const rows = Model.dedupeCaptureSources([builtin, bluez, twin], "")
+  assert.equal(rows.length, 2)
+  assert.equal(rows[0].name, builtin.name)
+  assert.equal(rows[1].name, bluez.name)
+  const preferred = Model.dedupeCaptureSources([bluez, twin], twin.name)
+  assert.equal(preferred.length, 1)
+  assert.equal(preferred[0].name, twin.name)
+})
+
+test("eqCurveParams matches the 0.3 voice table", () => {
+  assert.deepEqual(Model.eqCurveParams("neutral"), { hpHz: 80, body: 0, pres: 0, air: 0 })
+  assert.deepEqual(Model.eqCurveParams("warm"), { hpHz: 80, body: 2.0, pres: -1.5, air: 0 })
+  assert.deepEqual(Model.eqCurveParams("clear"), { hpHz: 80, body: -2.5, pres: 2.0, air: 0 })
+  assert.deepEqual(Model.eqCurveParams("bright"), { hpHz: 100, body: 0, pres: 1.0, air: 2.5 })
+  assert.equal(Model.eqCurveParams("nope").hpHz, 80)
+})
+
+test("eqCurveForPreset maps old Presence/Air looks and defaults Clear on Podcast", () => {
+  assert.equal(Model.normalizeEqCurve("presence"), "clear")
+  assert.equal(Model.normalizeEqCurve("air"), "bright")
+  assert.equal(Model.eqCurveForPreset("meeting", {}), "warm")
+  assert.equal(Model.eqCurveForPreset("podcast", {}), "clear")
+  assert.equal(Model.eqCurveForPreset("clean", { meetingEq: "bright" }), "")
+  assert.equal(Model.eqCurveForPreset("meeting", { meetingEq: "air" }), "bright")
+  assert.equal(Model.eqCurveForPreset("podcast", { podcastEq: "presence" }), "clear")
+})
+
+test("eqBandGains adds trim and clamps to 12 dB", () => {
+  const clear = Model.eqBandGains("clear", { body: 1 })
+  assert.equal(clear.body, -1.5)
+  assert.equal(clear.pres, 2.0)
+  assert.equal(Model.eqBandGains("warm", { body: 12 }).body, 8)
+  assert.equal(Model.eqBandGains("bright", { air: -6 }).air, -3.5)
+  assert.equal(Model.snapEqTrimDb(0.3), 0)
+  assert.equal(Model.snapEqTrimDb(1.24), 1)
+  assert.equal(Model.clampEqTrimDb(9), 6)
+})
+
+test("Clean ignores voice EQ trim", () => {
+  const trim = Model.eqTrimForPreset("clean", { meetingEqBodyDb: 4, podcastEqBodyDb: 3 })
+  assert.deepEqual(trim, { body: 0, pres: 0, air: 0 })
+})
+
+test("eqTrimForPreset reads only the active preset schema keys", () => {
+  assert.deepEqual(
+    Model.eqTrimForPreset("meeting", { meetingEqBodyDb: 4, podcastEqBodyDb: 3, podcastEqPresenceDb: 2 }),
+    { body: 4, pres: 0, air: 0 }
+  )
+  assert.deepEqual(
+    Model.eqTrimForPreset("podcast", { meetingEqBodyDb: 4, podcastEqPresenceDb: 2, podcastEqAirDb: -1 }),
+    { body: 0, pres: 2, air: -1 }
+  )
+  assert.equal(Model.eqTrimForPreset("meeting", { meetingEqBodyDb: 9 }).body, 6)
+  assert.equal(Model.eqTrimForPreset("meeting", { meetingEqPresenceDb: "nope" }).pres, 0)
+})
+
+test("eqBandRange is the look ±6 clamp for Voice writes", () => {
+  assert.deepEqual(Model.eqBandRange("neutral", "body"), { min: -6, max: 6 })
+  assert.deepEqual(Model.eqBandRange("warm", "body"), { min: -4, max: 8 })
+  assert.deepEqual(Model.eqBandRange("clear", "body"), { min: -8.5, max: 3.5 })
+  assert.deepEqual(Model.eqBandRange("bright", "air"), { min: -3.5, max: 8.5 })
+  assert.equal(Model.snapEqBandDb("warm", "body", 12), 8)
+  assert.equal(Model.snapEqBandDb("warm", "body", -12), -4)
 })
 
 test("normalizeQuality defaults to better", () => {
@@ -172,9 +253,19 @@ test("clampGainDb and gainDbToLinear convert output trim", () => {
   assert.equal(Model.outputGainDbForPreset("podcast", all), 2)
   assert.equal(Model.outputGainDbForPreset("clean", all), 3)
   assert.equal(Model.captureGainDbForPreset("meeting", all), 4)
-  assert.equal(Model.captureGainDbForPreset("podcast", all), 5)
-  assert.equal(Model.captureGainDbForPreset("clean", all), 6)
+  assert.equal(Model.outputGainDbForPreset("podcast", { outputGainDb: 7, ...all }), 7)
+  assert.equal(Model.captureGainDbForPreset("clean", { captureGainDb: -1, ...all }), -1)
+  assert.equal(Model.outputGainDbForPreset("meeting", { outputGainDb: 2 }), 2)
+  assert.equal(Model.outputGainDbForPreset("podcast", { outputGainDb: 2 }), 2)
+  assert.equal(Model.outputGainDbForPreset("clean", { outputGainDb: 2 }), 2)
   assert.equal(Model.outputGainDbForPreset("clean", {}), 0)
+  assert.deepEqual(Model.sharedGainPatch("output", 2), {
+    outputGainDb: 2,
+    meetingOutputGainDb: 2,
+    podcastOutputGainDb: 2,
+    cleanOutputGainDb: 2
+  })
+  assert.equal(Model.sharedGainPatch("capture", 1.24).meetingCaptureGainDb, 1)
 })
 
 test("qualityParams matches the dump VAD / DFN tables", () => {
@@ -203,6 +294,24 @@ test("setupGuide asks for the chosen engine when the plugin is missing", () => {
   assert.equal(Model.setupGuide("deepfilter", false, false, "clean").needed, false)
 })
 
+test("hostErrorText is one short sentence", () => {
+  assert.equal(Model.hostErrorText("bind"), "Could not start the microphone.")
+  assert.equal(Model.hostErrorText("probe"), "Could not check audio plugins.")
+  assert.equal(Model.hostErrorText("host", "omavoice-run: session PipeWire did not answer"), "PipeWire did not answer.")
+  assert.equal(Model.hostErrorText("host", "can't load config /run/user/1000/omavoice/host.1.conf"), "Could not start the microphone.")
+})
+
+test("statusText does not repeat lastError", () => {
+  const text = Model.statusText({
+    enabled: true,
+    running: false,
+    lastError: "Could not start the microphone.",
+    targetName: usb.name
+  })
+  assert.equal(text, "Idle")
+  assert.equal(text.includes("Could not start"), false)
+})
+
 test("statusText does not report a missing engine on Clean", () => {
   const text = Model.statusText({
     enabled: true,
@@ -227,4 +336,38 @@ test("statusText reports the live preset and device", () => {
   })
   assert.match(text, /Meeting/)
   assert.match(text, /QUALCOMM/)
+})
+
+test("statusText names the preset while the host is starting", () => {
+  const text = Model.statusText({
+    enabled: true,
+    running: false,
+    busy: true,
+    preset: "podcast",
+    targetName: usb.name
+  })
+  assert.equal(text, "Starting Podcast…")
+})
+
+test("statusText names the duck: engine, mic, reload", () => {
+  assert.equal(Model.busyStatusText("engine", "meeting", "deepfilter"), "Starting DeepFilterNet…")
+  assert.equal(Model.busyStatusText("target", "meeting", "auto"), "Switching microphone…")
+  assert.equal(Model.busyStatusText("reload", "meeting", "auto"), "Reloading…")
+  assert.equal(Model.statusText({
+    enabled: true,
+    running: true,
+    busyReason: "preset",
+    preset: "clean",
+    targetName: usb.name
+  }), "Starting Clean…")
+})
+
+test("hostSwitchReason prefers preset over engine", () => {
+  const prev = "meeting\0rnnoise\0mic\0/dir"
+  const next = "podcast\0deepfilter\0mic\0/dir"
+  assert.equal(Model.hostSwitchReason(prev, next, false), "preset")
+  assert.equal(Model.hostSwitchReason(prev, "meeting\0deepfilter\0mic\0/dir", false), "engine")
+  assert.equal(Model.hostSwitchReason(prev, "meeting\0rnnoise\0usb\0/dir", false), "target")
+  assert.equal(Model.hostSwitchReason(prev, next, true), "reload")
+  assert.equal(Model.hostSwitchReason("", next, false), "start")
 })

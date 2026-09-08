@@ -13,10 +13,10 @@ cat >"$tmpdir/pw-cli" <<EOF
 #!/usr/bin/env bash
 if [[ \${1:-} == ls && \${2:-} == Node ]]; then
   cat <<'NODES'
-id 10, type PipeWire:Interface:Node/3
- node.name = "omavoice"
-id 11, type PipeWire:Interface:Node/3
- node.name = "omavoice.capture"
+	id 10, type PipeWire:Interface:Node/3
+		node.name = "omavoice"
+	id 11, type PipeWire:Interface:Node/3
+		node.name = "omavoice.capture"
 NODES
   exit 0
 fi
@@ -41,5 +41,19 @@ mapfile -t args < "$log"
 [[ ${args[3]} == *'"preamp:Gain 1"'* ]] || fail "must quote preamp:Gain 1: ${args[3]:-}"
 [[ ${args[3]} == *'"denoise:VAD Threshold (%)"'* ]] || fail "must quote VAD key: ${args[3]:-}"
 [[ ${args[3]} != *' id 10 '* && ${args[1]} != 10 ]] || fail "must not target published omavoice"
+
+rm -f -- "$log"
+"$ctl" set --id 99 "preamp:Gain 1" 2.0
+mapfile -t args < "$log"
+[[ ${args[1]} == 99 ]] || fail "--id must skip ls, got ${args[1]:-}"
+
+set +e
+"$ctl" set --id 11 "preamp:Gain 1" '1.0}' >/dev/null 2>&1
+bad_val=$?
+"$ctl" set --id 11 "nope" 1 >/dev/null 2>&1
+bad_key=$?
+set -e
+[[ $bad_val -eq 2 ]] || fail "non-numeric value must exit 2, got $bad_val"
+[[ $bad_key -eq 2 ]] || fail "unknown key must exit 2, got $bad_key"
 
 echo "ctl.test: ok"

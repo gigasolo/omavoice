@@ -55,16 +55,34 @@ echo "$meeting_good" | grep -q '"VAD Threshold (%)" = 70.0' || fail "meeting goo
 echo "$meeting_good" | grep -q '"VAD Grace Period (ms)" = 500' || fail "meeting good grace must be 500"
 echo "$meeting_best" | grep -q '"VAD Threshold (%)" = 85.0' || fail "meeting best VAD must be 85"
 echo "$meeting_best" | grep -q '"VAD Grace Period (ms)" = 250' || fail "meeting best grace must be 250"
-echo "$meeting" | grep -A10 'node.name = "omavoice.capture"' | grep -q 'node.dont-fallback = true' \
-  || fail "omavoice.capture must not fall back to another mic"
-echo "$meeting" | grep -A12 'node.name = "omavoice.capture"' | grep -q 'stream.dont-remix = true' \
+echo "$meeting" | grep -A16 'node.name = "omavoice.capture"' | grep -q 'node.dont-fallback = true' \
+  || fail "meeting capture must not fall back onto bluetooth"
+echo "$meeting" | grep -A16 'node.name = "omavoice.capture"' | grep -q 'node.linger = true' \
+  || fail "meeting capture must linger so dont-fallback does not destroy omavoice"
+echo "$meeting" | grep -A16 'node.name = "omavoice.capture"' | grep -q 'node.dont-move = true' \
+  || fail "meeting capture must not be dragged onto bluetooth"
+echo "$meeting" | grep -A16 'node.name = "omavoice.capture"' | grep -q 'Stream/Input/Audio/Internal' \
+  && fail "meeting capture Internal hides omavoice from the session"
+echo "$podcast" | grep -A16 'node.name = "omavoice.capture"' | grep -q 'node.dont-fallback' \
+  && fail "podcast capture dont-fallback destroys omavoice when the mic is not visible yet"
+echo "$clean" | grep -A16 'node.name = "omavoice.capture"' | grep -q 'node.dont-fallback' \
+  && fail "clean capture dont-fallback destroys omavoice when the mic is not visible yet"
+echo "$meeting" | grep -A12 'node.name = "omavoice.aec.capture"' | grep -q 'node.linger = true' \
+  || fail "AEC capture must linger on the named mic"
+echo "$meeting" | grep -A12 'node.name = "omavoice.aec.capture"' | grep -q 'node.dont-move = true' \
+  || fail "AEC capture must not be dragged onto bluetooth"
+echo "$meeting" | grep -A16 'node.name = "omavoice.capture"' | grep -q 'stream.dont-remix = true' \
   || fail "omavoice.capture must not remix"
 echo "$meeting" | grep -A16 'media.class = Audio/Source' | grep -q 'node.virtual = true' \
   || fail "omavoice source must be node.virtual"
 echo "$meeting" | grep -A16 'media.class = Audio/Source' | grep -q 'media.role = Communication' \
   || fail "omavoice source must be Communication"
 echo "$meeting" | grep -A16 'media.class = Audio/Source' | grep -q 'session.suspend-timeout-seconds = 3' \
-  || fail "omavoice source must suspend after 3s idle"
+  || fail "omavoice source must suspend when nothing is listening"
+echo "$meeting" | grep -A16 'media.class = Audio/Source' | grep -q 'session.suspend-timeout-seconds = 0' \
+  && fail "suspend-timeout 0 keeps Meeting AEC scheduled with no call"
+echo "$meeting" | grep -A16 'media.class = Audio/Source' | grep -q 'node.always-process' \
+  && fail "always-process makes capture fail target-not-found and destroys After"
 echo "$meeting" | grep -A16 'media.class = Audio/Source' | grep -q 'stream.dont-remix = true' \
   || fail "omavoice source must not remix"
 echo "$meeting" | grep -q 'audio.position = \[ MONO \]' || fail "meeting must be mono"
@@ -73,6 +91,48 @@ echo "$meeting" | grep -q 'lsp-plug.in/plugins/lv2/compressor_mono' || fail "mee
 echo "$meeting" | grep -q 'lsp-plug.in/plugins/lv2/limiter_mono' || fail "meeting needs limiter_mono"
 echo "$meeting" | grep -q 'noise_suppressor_stereo' && fail "meeting must not use stereo RNNoise"
 echo "$meeting" | grep -q 'deep_filter' && fail "auto meeting must not stack DFN"
+echo "$meeting" | grep -q 'bq_highpass' || fail "meeting must high-pass in 0.3"
+echo "$meeting" | grep -q 'name = eq_body' || fail "meeting must emit eq_body"
+echo "$meeting" | grep -q 'name = eq_pres' || fail "meeting must emit eq_pres"
+echo "$meeting" | grep -q 'name = eq_air' || fail "meeting must emit eq_air"
+echo "$meeting" | grep -q 'bq_peaking' || fail "meeting voice EQ uses peaking bands"
+echo "$meeting" | grep -q 'bq_highshelf' || fail "meeting air band must be highshelf"
+echo "$meeting" | grep -A5 'name = eq_body' | grep -q '"Freq" = 250' || fail "eq_body must peak at 250 Hz"
+echo "$meeting" | grep -A5 'name = eq_body' | grep -q '"Q" = 0.9' || fail "eq_body Q must be 0.9"
+echo "$meeting" | grep -A5 'name = eq_pres' | grep -q '"Freq" = 3000' || fail "eq_pres must peak at 3000 Hz"
+echo "$meeting" | grep -A5 'name = eq_pres' | grep -q '"Q" = 1.0' || fail "eq_pres Q must be 1.0"
+echo "$meeting" | grep -A5 'name = eq_air' | grep -q '"Freq" = 8000' || fail "eq_air must shelf at 8000 Hz"
+echo "$meeting" | grep -A5 'name = eq_air' | grep -q '"Q" = 0.707' || fail "eq_air Q must be 0.707"
+echo "$meeting" | grep -A5 'name = eq_body' | grep -q '"Gain" = 2.0' || fail "meeting Warm body must be +2.0"
+echo "$meeting" | grep -A5 'name = eq_pres' | grep -q '"Gain" = -1.5' || fail "meeting Warm presence must be -1.5"
+echo "$podcast" | grep -q 'name = eq_body' || fail "podcast must emit voice EQ"
+echo "$podcast" | grep -A5 'name = eq_body' | grep -q '"Gain" = -2.5' || fail "podcast Clear body must be -2.5"
+echo "$podcast" | grep -A5 'name = eq_pres' | grep -q '"Gain" = 2.0' || fail "podcast Clear mid must be +2.0"
+echo "$clean" | grep -q 'name = eq_body' && fail "clean must not emit voice EQ"
+echo "$clean" | grep -q 'name = eq_pres' && fail "clean must not emit eq_pres"
+echo "$clean" | grep -q 'name = eq_air' && fail "clean must not emit eq_air"
+echo "$clean" | grep -q 'bq_peaking' && fail "clean must not emit peaking EQ"
+echo "$clean" | grep -q 'bq_highshelf' && fail "clean must not emit highshelf EQ"
+meeting_neutral="$(dump meeting --eq neutral)"
+echo "$meeting_neutral" | grep -A4 'name = hp' | grep -q '"Freq" = 80.0' || fail "Neutral look must high-pass at 80 Hz"
+echo "$meeting_neutral" | grep -q 'name = eq_body' || fail "Neutral must keep eq_body for live Gain"
+echo "$meeting_neutral" | grep -q 'name = eq_pres' || fail "Neutral must keep eq_pres for live Gain"
+echo "$meeting_neutral" | grep -q 'name = eq_air' || fail "Neutral must keep eq_air for live Gain"
+echo "$meeting_neutral" | grep -A5 'name = eq_body' | grep -q '"Gain" = 0.0' || fail "Neutral body must be 0 dB"
+echo "$meeting_neutral" | grep -A5 'name = eq_pres' | grep -q '"Gain" = 0.0' || fail "Neutral presence must be 0 dB"
+echo "$meeting_neutral" | grep -A5 'name = eq_air' | grep -q '"Gain" = 0.0' || fail "Neutral air must be 0 dB"
+meeting_bright="$(dump meeting --eq bright)"
+echo "$meeting_bright" | grep -A4 'name = hp' | grep -q '"Freq" = 100.0' || fail "Bright look must raise HPF to 100 Hz"
+echo "$meeting_bright" | grep -A5 'name = eq_air' | grep -q '"Gain" = 2.5' || fail "Bright look air gain must be +2.5"
+meeting_air_alias="$(dump meeting --eq air)"
+echo "$meeting_air_alias" | grep -A5 'name = eq_air' | grep -q '"Gain" = 2.5' || fail "old --eq air must map to Bright"
+meeting_presence_alias="$(dump meeting --eq presence)"
+echo "$meeting_presence_alias" | grep -A5 'name = eq_body' | grep -q '"Gain" = -2.5' || fail "old --eq presence must map to Clear"
+echo "$meeting_presence_alias" | grep -A5 'name = eq_pres' | grep -q '"Gain" = 2.0' || fail "old --eq presence must map to Clear"
+meeting_body_trim="$(dump meeting --eq warm --eq-body-db 1)"
+echo "$meeting_body_trim" | grep -A5 'name = eq_body' | grep -q '"Gain" = 3.0' || fail "Warm --eq-body-db 1 must bake +3.0"
+meeting_body_clamp="$(dump meeting --eq warm --eq-body-db 12)"
+echo "$meeting_body_clamp" | grep -A5 'name = eq_body' | grep -q '"Gain" = 8.0' || fail "Warm --eq-body-db 12 must clamp trim to +8.0"
 
 echo "$podcast" | grep -q 'bq_highpass' || fail "podcast must high-pass before NS"
 echo "$podcast" | grep -q 'monitor.mode' && fail "podcast must not enable AEC this release"
@@ -80,6 +140,8 @@ echo "$podcast" | grep -q 'audio.position = \[ MONO \]' || fail "podcast must be
 echo "$podcast" | grep -q 'node.latency = 256/48000' || fail "podcast must pin 256/48000"
 if grep -q libdeep_filter_ladspa.so <<<"$podcast"; then
   echo "$podcast" | grep -q 'deep_filter_mono' || fail "podcast must use DFN mono when present"
+  echo "$podcast" | grep -q 'denoise:Audio In' || fail "DFN ports are Audio In / Audio Out"
+  echo "$podcast" | grep -q 'denoise:Input' && fail "DFN must not use RNNoise Input/Output port names"
   echo "$podcast" | grep -q '"Attenuation Limit (dB)" = 70' || fail "podcast better DFN cap must be 70 dB"
   echo "$podcast_good" | grep -q '"Attenuation Limit (dB)" = 50' || fail "podcast good DFN cap must be 50 dB"
   echo "$podcast_best" | grep -q '"Attenuation Limit (dB)" = 85' || fail "podcast best DFN cap must be 85 dB"
@@ -104,7 +166,9 @@ echo "$meeting_dfn" | grep -q 'monitor.mode = true' || fail "meeting DFN must ke
 echo "$meeting_dfn" | grep -q 'webrtc.noise_suppression = false' || fail "meeting DFN must not stack WebRTC NS"
 echo "$meeting_dfn" | grep -q 'bq_highpass' || fail "meeting DFN must high-pass before NS"
 echo "$meeting_dfn" | grep -q 'deep_filter_mono' || fail "meeting --engine deepfilter must use DFN"
+echo "$meeting_dfn" | grep -q 'denoise:Audio In' || fail "meeting DFN must link Audio In"
 echo "$meeting_dfn" | grep -q 'noise_suppressor' && fail "meeting DFN must not stack RNNoise"
+echo "$meeting" | grep -q 'denoise:Input' || fail "meeting RNNoise ports are Input/Output"
 
 podcast_rn="$(dump podcast --engine rnnoise)"
 echo "$podcast_rn" | grep -q 'noise_suppressor_mono' || fail "podcast --engine rnnoise must use RNNoise"

@@ -7,6 +7,44 @@ and this project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html)
 
 ## [Unreleased]
 
+## [0.3.0] — 2026-09-08
+
+Voice looks, pinned capture, honest meters. Notes, NVIDIA, and Speex are
+not in this release.
+
+### Added
+
+- Voice looks on PRESET tune (Neutral / Warm / Clear / Bright) and Body /
+  Presence / Air knobs on a fixed ±12 dB scale (writes still clamp to look
+  ±6). Meeting defaults Warm, Podcast Clear. On Clean, Voice stays visible
+  and disabled. Live biquads, no host restart. NVIDIA and Speex are not in
+  this cut.
+
+### Fixed
+
+- Meeting no longer captures a Bluetooth headset when the laptop mic is
+  selected. Capture stays pinned to the named target (`dont-fallback`,
+  `linger`, `dont-move`). The panel meters only the chosen row. Unpinned
+  Bluetooth no longer beats the builtin mic.
+- Meeting no longer `pw-link`s the default sink into `omavoice.aec.sink`
+  when a call starts. That classic AEC path, on top of `monitor.mode`,
+  sent far-end audio back to Google Meet. Echo cancel stays
+  `monitor.mode` only.
+- Disable restores the pinned microphone, not a leftover Bluetooth default.
+- Switching preset, engine, or microphone still restarts the host. The
+  hero names the wait (**Starting Podcast…**, **Starting RNNoise…**,
+  **Switching microphone…**, **Reloading…**) instead of spinning the
+  power switch, and the control you clicked dims until Omavoice is back.
+
+### Changed
+
+- Marketplace `preview.png` is the live panel; `docs/preview-tune.png` is
+  the Voice looks page.
+- Input / Output faders are out of this cut. Isolated filter-chain mixer
+  writes do not drive the DSP, and restarting the host on release is the
+  wrong product. The selected mic keeps Before (device) and After
+  (Omavoice) meters so noise suppression is visible.
+
 ## [0.2.0] — 2026-09-06
 
 Live level and engine picker. Notes is not in this release.
@@ -292,7 +330,8 @@ Live level and engine picker. Notes is not in this release.
   guidance.
 - MIT license (GigaSolo LLC).
 
-[Unreleased]: https://github.com/gigasolo/omavoice/compare/v0.2.0...HEAD
+[Unreleased]: https://github.com/gigasolo/omavoice/compare/v0.3.0...HEAD
+[0.3.0]: https://github.com/gigasolo/omavoice/compare/v0.2.0...v0.3.0
 [0.2.0]: https://github.com/gigasolo/omavoice/compare/v0.1.24...v0.2.0
 [0.1.24]: https://github.com/gigasolo/omavoice/compare/v0.1.23...v0.1.24
 [0.1.23]: https://github.com/gigasolo/omavoice/compare/v0.1.22...v0.1.23

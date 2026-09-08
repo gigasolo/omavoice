@@ -17,11 +17,12 @@ Panel {
   property string focusSection: "header"
   property int sourceIndex: 0
   property int presetIndex: 0
+  property int engineIndex: 0
+  property int eqIndex: 0
   property bool cursorActive: false
   property int phraseIndex: 0
   property bool tuneOpen: false
   property bool pendingTuneOpen: false
-  property bool levelOpen: false
 
   readonly property var sharedService: bar && bar.shell && typeof bar.shell.serviceFor === "function"
     ? bar.shell.serviceFor(moduleName) : null
@@ -38,8 +39,8 @@ Panel {
     if (opened) displaySources = captureSources.slice()
     armMeterHold()
   }
-  readonly property string afterHoldName: service.afterNodeName || ""
-  onAfterHoldNameChanged: armMeterHold()
+  readonly property string afterHoldKey: (service.afterNodeName || "") + ":" + (service.afterNodeId || "")
+  onAfterHoldKeyChanged: armMeterHold()
   Component.onCompleted: pushSettings()
 
   readonly property var presets: [
@@ -62,8 +63,8 @@ Panel {
   readonly property color urgent: bar ? bar.urgent : Color.urgent
   readonly property color dim: Qt.darker(foreground, 1.55)
   readonly property string fontFamily: bar ? bar.fontFamily : Style.font.family
-  readonly property color iconColor: service.enabled && service.running ? foreground : dim
-  readonly property color barIconColor: service.enabled && service.running ? barForeground : Qt.darker(barForeground, 1.55)
+  readonly property color iconColor: service.enabled && service.running && !service.busyReason ? foreground : dim
+  readonly property color barIconColor: service.enabled && service.running && !service.busyReason ? barForeground : Qt.darker(barForeground, 1.55)
   readonly property bool headerHasCursor: cursorActive && focusSection === "header"
   readonly property string toggleHint: service.enabled ? "Turn Omavoice off" : "Turn Omavoice on"
   readonly property string barTooltip: {
@@ -78,17 +79,26 @@ Panel {
     "Catching the voice",
     "Cutting the echo"
   ]
-  readonly property string heroPhraseText: service.running
-    ? activePhrases[phraseIndex % activePhrases.length]
-    : service.statusText
+  readonly property string heroPhraseText: {
+    if (service.lastError !== "") return "Couldn't start"
+    if (service.busyReason) return service.statusText
+    if (service.running) return activePhrases[phraseIndex % activePhrases.length]
+    return service.statusText
+  }
   readonly property var setup: service.setup || { needed: false }
 
   function persistSettings(values) {
     var entry = { id: root.moduleName }
     for (var existing in root.settings) if (existing !== "id") entry[existing] = root.settings[existing]
-    for (var key in values) {
-      if (values[key] === undefined) delete entry[key]
-      else entry[key] = values[key]
+    var keys = []
+    try { if (values) keys = Object.keys(values) } catch (e) {}
+    if (values && keys.length === 0) {
+      for (var key in values) keys.push(key)
+    }
+    for (var i = 0; i < keys.length; i++) {
+      var k = keys[i]
+      if (values[k] === undefined) delete entry[k]
+      else entry[k] = values[k]
     }
     root.settings = entry
     if (root.bar && root.bar.shell && typeof root.bar.shell.updateEntryInline === "function")
@@ -106,6 +116,15 @@ Panel {
   function chooseSource(name) {
     persistSettings({ pinnedSource: String(name || "") })
     if (service && typeof service.pinSource === "function") service.pinSource(name)
+  }
+
+  function setChipHover(section, on) {
+    if (on) {
+      cursorActive = true
+      focusSection = section
+      return
+    }
+    if (focusSection === section) cursorActive = false
   }
 
   function showTune(open) {
@@ -132,30 +151,47 @@ Panel {
     return (n > 0 ? "+" : "") + n.toFixed(1)
   }
 
-  function setOutputGainDb(value) {
-    var db = Model.snapGainDb(value)
-    var key = "meetingOutputGainDb"
-    if (service.preset === "podcast") key = "podcastOutputGainDb"
-    else if (service.preset === "clean") key = "cleanOutputGainDb"
-    var patch = {}
-    patch[key] = db
-    persistSettings(patch)
-    if (service && typeof service.clearGainPreview === "function") service.clearGainPreview()
-  }
-
   function setEngine(value) {
     persistSettings({ engine: Model.normalizeEngine(value) })
   }
 
-  function setCaptureGainDb(value) {
-    var db = Model.snapGainDb(value)
-    var key = "meetingCaptureGainDb"
-    if (service.preset === "podcast") key = "podcastCaptureGainDb"
-    else if (service.preset === "clean") key = "cleanCaptureGainDb"
+  function setEqCurve(value) {
+    if (service.preset === "clean") return
+    var prefix = service.preset === "podcast" ? "podcastEq" : "meetingEq"
     var patch = {}
-    patch[key] = db
+    patch[prefix] = Model.normalizeEqCurve(value, "neutral")
+    patch[prefix + "BodyDb"] = 0
+    patch[prefix + "PresenceDb"] = 0
+    patch[prefix + "AirDb"] = 0
     persistSettings(patch)
-    if (service && typeof service.clearGainPreview === "function") service.clearGainPreview()
+    if (service && typeof service.clearEqPreview === "function") service.clearEqPreview()
+    if (service && typeof service.applyLiveControls === "function") service.applyLiveControls()
+  }
+
+  function eqCurveBase(band) {
+    return Model.eqBandBase(service.eqCurve || "neutral", band)
+  }
+
+  function setEqTrimDb(band, value) {
+    if (service.preset === "clean") return
+    var trim = Model.snapEqTrimDb(Model.snapEqBandDb(service.eqCurve || "neutral", band, value) - eqCurveBase(band))
+    var prefix = service.preset === "podcast" ? "podcastEq" : "meetingEq"
+    var key = prefix + "BodyDb"
+    if (band === "pres") key = prefix + "PresenceDb"
+    else if (band === "air") key = prefix + "AirDb"
+    var patch = {}
+    patch[key] = trim
+    persistSettings(patch)
+    if (service && typeof service.clearEqPreview === "function") service.clearEqPreview()
+    if (service && typeof service.applyLiveControls === "function") service.applyLiveControls()
+  }
+
+  function previewEqBand(band, value) {
+    if (!service || typeof service.previewEqGains !== "function") return
+    var t = service.eqTrim || { body: 0, pres: 0, air: 0 }
+    var next = { body: t.body, pres: t.pres, air: t.air }
+    next[band] = Model.snapEqTrimDb(Model.snapEqBandDb(service.eqCurve || "neutral", band, value) - eqCurveBase(band))
+    service.previewEqGains(next.body, next.pres, next.air)
   }
 
   component QualitySlider: Column {
@@ -220,14 +256,36 @@ Panel {
     required property string title
     required property real persisted
     property string hint: ""
+    property real minimum: -12
+    property real maximum: 12
     property real held: persisted
+    property real lastSent: persisted
     signal moved(real value)
     signal released(real value)
 
     width: parent.width
     spacing: Style.space(8)
 
-    onPersistedChanged: if (!gainSlider.dragging) held = persisted
+    // PanelSlider drops dragging before released(). Rebinding held then
+    // would copy persisted back and persist the old +1.0 / +1.5.
+    onPersistedChanged: {
+      lastSent = persisted
+      if (!gainSlider.dragging) held = persisted
+    }
+
+    function snapHeld(v) {
+      var s = Model.snapGainDb(v)
+      if (s < minimum) s = minimum
+      if (s > maximum) s = maximum
+      return s
+    }
+
+    function applyHeld(v) {
+      var s = snapHeld(v)
+      held = s
+      lastSent = s
+      return s
+    }
 
     HoverHandler { id: gainHover }
     PanelToolTip {
@@ -250,17 +308,13 @@ Panel {
       Layout.fillWidth: true
       Layout.alignment: Qt.AlignVCenter
       bar: root.bar
-      minimum: -12
-      maximum: 12
+      minimum: parent.minimum
+      maximum: parent.maximum
       step: 0.5
       value: held
-      onMoved: function(v) {
-        var s = Model.snapGainDb(v)
-        held = s
-        moved(s)
-      }
+      onMoved: function(v) { moved(applyHeld(v)) }
       onReleased: function(v) {
-        var s = Model.snapGainDb(v)
+        var s = lastSent
         held = s
         released(s)
       }
@@ -270,10 +324,21 @@ Panel {
       Layout.preferredWidth: Style.space(44)
       Layout.alignment: Qt.AlignVCenter
       horizontalAlignment: Text.AlignRight
-      text: root.formatGainDb(gainSlider.dragging ? held : persisted)
+      text: root.formatGainDb(held)
       color: root.dim
       font.family: root.fontFamily
       font.pixelSize: Style.font.caption
+    }
+  }
+
+  component VoiceRow: GainRow {
+    required property string band
+    // Fixed ±12 so changing a look moves the thumb. Writes still clamp to look ±6.
+    function snapHeld(v) {
+      var s = Model.snapEqBandDb(service.eqCurve || "neutral", band, v)
+      if (s < minimum) s = minimum
+      if (s > maximum) s = maximum
+      return s
     }
   }
 
@@ -345,7 +410,6 @@ Panel {
     if (!opened) {
       tuneOpen = false
       pendingTuneOpen = false
-      levelOpen = false
       if (cardRotation) cardRotation.angle = 0
       if (typeof service.setMeterHold === "function") service.setMeterHold(false)
       return
@@ -541,11 +605,11 @@ Panel {
               anchors.right: powerSwitch.left
               anchors.rightMargin: Style.space(4)
               anchors.verticalCenter: parent.verticalCenter
-              iconText: service.reloading ? "󰑓" : "󰑐"
+              iconText: service.busyReason === "reload" || service.reloading ? "󰑓" : "󰑐"
               tooltipText: "Reload processing"
               foreground: root.foreground
               fontFamily: root.fontFamily
-              enabled: !service.reloading
+              enabled: service.busyReason !== "reload" && !service.reloading
               onClicked: if (typeof service.reload === "function") service.reload()
             }
 
@@ -554,7 +618,6 @@ Panel {
               anchors.right: parent.right
               anchors.verticalCenter: parent.verticalCenter
               checked: service.enabled
-              busy: service.busy && !service.running
               hasCursor: header.ringVisible
               foreground: root.foreground
               onHovered: function(on) { if (on) header.focusHero() }
@@ -654,18 +717,26 @@ Panel {
             }
 
             Row {
+              id: presetRow
               width: parent.width
               spacing: Style.space(6)
+
+              HoverHandler {
+                onHoveredChanged: root.setChipHover("presets", hovered)
+              }
 
               Repeater {
                 model: root.presets
                 CursorSurface {
                   required property var modelData
                   required property int index
+                  readonly property bool isCurrent: service.preset === modelData.value
                   width: Math.floor((parent.width - Style.space(6) * 2) / 3)
                   implicitHeight: Style.space(36)
                   hasCursor: root.cursorActive && root.focusSection === "presets" && root.presetIndex === index
                   foreground: root.foreground
+                  opacity: isCurrent && (service.busyReason === "preset" || service.busyReason === "start") ? 0.55 : 1
+                  Behavior on opacity { NumberAnimation { duration: 120 } }
                   MouseArea {
                     anchors.fill: parent
                     hoverEnabled: true
@@ -680,7 +751,7 @@ Panel {
                   Rectangle {
                     anchors.fill: parent
                     radius: Style.cornerRadius
-                    color: service.preset === modelData.value
+                    color: isCurrent
                       ? (bar ? Style.selectedFillFor(bar.foreground, Color.accent) : Color.accent)
                       : "transparent"
                     border.width: 1
@@ -692,7 +763,7 @@ Panel {
                     color: root.foreground
                     font.family: root.fontFamily
                     font.pixelSize: Style.font.caption
-                    font.bold: service.preset === modelData.value
+                    font.bold: isCurrent
                   }
                 }
               }
@@ -782,8 +853,14 @@ Panel {
             }
 
             Column {
+              id: sourceList
               width: parent.width
               spacing: Style.space(4)
+
+              HoverHandler {
+                onHoveredChanged: root.setChipHover("sources", hovered)
+              }
+
               Repeater {
                 model: displaySources
                 CursorSurface {
@@ -798,6 +875,8 @@ Panel {
                   foreground: root.foreground
                   fill: root.bar ? Style.hoverFillFor(root.bar.foreground, Color.accent) : "transparent"
                   currentFill: root.bar ? Style.selectedFillFor(root.bar.foreground, Color.accent) : "transparent"
+                  opacity: isActive && service.busyReason === "target" ? 0.55 : 1
+                  Behavior on opacity { NumberAnimation { duration: 120 } }
 
                   PwNodePeakMonitor {
                     id: rowPeak
@@ -805,7 +884,7 @@ Panel {
                       var _ = service.nodes
                       return service.nodeNamed ? service.nodeNamed(modelData.name) : null
                     }
-                    enabled: root.opened && root.metersArmed && !!node
+                    enabled: root.opened && root.metersArmed && sourceRow.isActive && !!node
                   }
 
                   Column {
@@ -872,75 +951,12 @@ Panel {
                           }
                         }
                       }
-
-                      MouseArea {
-                        id: levelHit
-                        visible: sourceRow.isActive
-                        Layout.alignment: Qt.AlignVCenter
-                        implicitWidth: Style.space(22)
-                        implicitHeight: Style.space(22)
-                        hoverEnabled: true
-                        cursorShape: Qt.PointingHandCursor
-                        onClicked: root.levelOpen = !root.levelOpen
-
-                        Text {
-                          anchors.centerIn: parent
-                          // 󰅂 is right in this font (clock "next month"). Dropdown uses 󰅀 for down.
-                          text: root.levelOpen ? "󰅀" : "󰅁"
-                          color: root.dim
-                          font.family: root.fontFamily
-                          font.pixelSize: Style.font.body
-                        }
-
-                        PanelToolTip {
-                          visible: levelHit.containsMouse
-                          text: "Level"
-                          fontFamily: root.fontFamily
-                        }
-                      }
-                    }
-
-                    Item {
-                      id: levelDrawer
-                      width: parent.width
-                      visible: sourceRow.isActive
-                      height: sourceRow.isActive && root.levelOpen ? levelInner.implicitHeight : 0
-                      clip: true
-                      Behavior on height { NumberAnimation { duration: 160; easing.type: Easing.OutCubic } }
-
-                      Column {
-                        id: levelInner
-                        width: parent.width
-                        spacing: Style.space(8)
-
-                        GainRow {
-                          title: "Output"
-                          persisted: service.outputGainDb
-                          onMoved: function(v) {
-                            if (service && typeof service.previewGains === "function")
-                              service.previewGains(service.captureGainDb, v)
-                          }
-                          onReleased: function(v) { root.setOutputGainDb(v) }
-                        }
-
-                        GainRow {
-                          title: "Input"
-                          persisted: service.captureGainDb
-                          hint: "Before noise suppression."
-                          onMoved: function(v) {
-                            if (service && typeof service.previewGains === "function")
-                              service.previewGains(v, service.outputGainDb)
-                          }
-                          onReleased: function(v) { root.setCaptureGainDb(v) }
-                        }
-                      }
                     }
                   }
 
                   MouseArea {
                     anchors.left: parent.left
                     anchors.right: parent.right
-                    anchors.rightMargin: sourceRow.isActive ? Style.space(8) + Style.space(10) + Style.space(22) : 0
                     anchors.top: parent.top
                     height: sourceMeterRow.height + Style.space(8)
                     hoverEnabled: true
@@ -960,11 +976,17 @@ Panel {
         }
       }
 
-      Column {
-        id: tunePage
+      Flickable {
+        id: tuneFlick
         anchors.fill: parent
         visible: root.tuneOpen
-        spacing: Style.space(12)
+        contentWidth: width
+        contentHeight: tuneInner.implicitHeight
+        clip: true
+        boundsBehavior: Flickable.StopAtBounds
+        flickableDirection: Flickable.VerticalFlick
+        interactive: contentHeight > height
+        ScrollBar.vertical: ScrollBar { policy: ScrollBar.AsNeeded }
 
         Column {
           id: tuneInner
@@ -1000,6 +1022,15 @@ Panel {
                 font.pixelSize: Style.font.title
                 font.bold: true
               }
+              Text {
+                width: parent.width
+                visible: !!service.busyReason
+                text: service.statusText.toUpperCase()
+                color: root.dim
+                font.family: root.fontFamily
+                font.pixelSize: Style.font.bodySmall
+                elide: Text.ElideRight
+              }
             }
           }
 
@@ -1018,8 +1049,13 @@ Panel {
             }
 
             Row {
+              id: engineRow
               width: parent.width
               spacing: Style.space(6)
+
+              HoverHandler {
+                onHoveredChanged: root.setChipHover("engine", hovered)
+              }
 
               Repeater {
                 model: [
@@ -1029,14 +1065,24 @@ Panel {
                 ]
                 CursorSurface {
                   required property var modelData
+                  required property int index
+                  readonly property bool isCurrent: service.engineSetting === modelData.value
                   width: Math.floor((parent.width - Style.space(6) * 2) / 3)
                   implicitHeight: Style.space(32)
+                  hasCursor: root.cursorActive && root.focusSection === "engine" && root.engineIndex === index
                   foreground: root.foreground
+                  opacity: isCurrent && service.busyReason === "engine" ? 0.55 : 1
+                  Behavior on opacity { NumberAnimation { duration: 120 } }
                   MouseArea {
                     id: engineHit
                     anchors.fill: parent
                     hoverEnabled: true
                     cursorShape: Qt.PointingHandCursor
+                    onEntered: {
+                      root.cursorActive = true
+                      root.focusSection = "engine"
+                      root.engineIndex = index
+                    }
                     onClicked: root.setEngine(modelData.value)
                   }
                   PanelToolTip {
@@ -1047,7 +1093,7 @@ Panel {
                   Rectangle {
                     anchors.fill: parent
                     radius: Style.cornerRadius
-                    color: service.engineSetting === modelData.value
+                    color: isCurrent
                       ? (bar ? Style.selectedFillFor(bar.foreground, Color.accent) : Color.accent)
                       : "transparent"
                     border.width: 1
@@ -1059,7 +1105,7 @@ Panel {
                     color: root.foreground
                     font.family: root.fontFamily
                     font.pixelSize: Style.font.caption
-                    font.bold: service.engineSetting === modelData.value
+                    font.bold: isCurrent
                   }
                   Rectangle {
                     visible: service.engineSetting === "auto" && service.engine === modelData.value
@@ -1073,6 +1119,136 @@ Panel {
                     anchors.rightMargin: Style.space(6)
                   }
                 }
+              }
+            }
+          }
+
+          Column {
+            width: parent.width
+            spacing: Style.space(8)
+
+            Item {
+              width: parent.width
+              implicitHeight: Math.max(voiceTitle.implicitHeight, voiceDisabled.implicitHeight)
+
+              Text {
+                id: voiceTitle
+                anchors.left: parent.left
+                anchors.verticalCenter: parent.verticalCenter
+                text: "Voice"
+                color: root.foreground
+                font.family: root.fontFamily
+                font.pixelSize: Style.font.subtitle
+                font.bold: true
+              }
+
+              PanelSectionHeader {
+                id: voiceDisabled
+                visible: service.preset === "clean"
+                anchors.right: parent.right
+                anchors.verticalCenter: parent.verticalCenter
+                text: "DISABLED"
+                foreground: root.foreground
+                fontFamily: root.fontFamily
+              }
+            }
+
+            Column {
+              width: parent.width
+              spacing: Style.space(8)
+              enabled: service.preset !== "clean"
+              opacity: enabled ? 1 : 0.5
+
+              Row {
+                id: voiceRow
+                width: parent.width
+                spacing: Style.space(6)
+
+                HoverHandler {
+                  onHoveredChanged: {
+                    if (service.preset === "clean") return
+                    root.setChipHover("voice", hovered)
+                  }
+                }
+
+                Repeater {
+                  model: [
+                    { value: "neutral", label: "Neutral" },
+                    { value: "warm", label: "Warm" },
+                    { value: "clear", label: "Clear" },
+                    { value: "bright", label: "Bright" }
+                  ]
+                  CursorSurface {
+                    required property var modelData
+                    required property int index
+                    width: Math.floor((parent.width - Style.space(6) * 3) / 4)
+                    implicitHeight: Style.space(32)
+                    hasCursor: service.preset !== "clean" && root.cursorActive && root.focusSection === "voice" && root.eqIndex === index
+                    foreground: root.foreground
+                    MouseArea {
+                      id: eqHit
+                      anchors.fill: parent
+                      hoverEnabled: true
+                      cursorShape: Qt.PointingHandCursor
+                      onEntered: {
+                        if (service.preset === "clean") return
+                        root.cursorActive = true
+                        root.focusSection = "voice"
+                        root.eqIndex = index
+                      }
+                      onClicked: root.setEqCurve(modelData.value)
+                    }
+                    PanelToolTip {
+                      visible: eqHit.containsMouse
+                      text: Model.eqCurveHint(modelData.value)
+                      fontFamily: root.fontFamily
+                    }
+                    Rectangle {
+                      anchors.fill: parent
+                      radius: Style.cornerRadius
+                      color: (service.eqCurve || "neutral") === modelData.value
+                        ? (bar ? Style.selectedFillFor(bar.foreground, Color.accent) : Color.accent)
+                        : "transparent"
+                      border.width: 1
+                      border.color: Qt.rgba(root.foreground.r, root.foreground.g, root.foreground.b, 0.18)
+                    }
+                    Text {
+                      anchors.centerIn: parent
+                      text: modelData.label
+                      color: root.foreground
+                      font.family: root.fontFamily
+                      font.pixelSize: Style.font.caption
+                      font.bold: (service.eqCurve || "neutral") === modelData.value
+                    }
+                  }
+                }
+              }
+
+              VoiceRow {
+                title: "Body"
+                band: "body"
+                persisted: service.eqBodyDb
+                hint: "Named curve plus your trim."
+                onMoved: function(v) { root.previewEqBand("body", v) }
+                onReleased: function(v) { root.setEqTrimDb("body", v) }
+              }
+
+              VoiceRow {
+                title: "Presence"
+                band: "pres"
+                persisted: service.eqPresDb
+                hint: "Named curve plus your trim."
+                onMoved: function(v) { root.previewEqBand("pres", v) }
+                onReleased: function(v) { root.setEqTrimDb("pres", v) }
+              }
+
+              VoiceRow {
+                title: "Air"
+                band: "air"
+                persisted: service.eqAirDb
+                hint: "Named curve plus your trim."
+                onMoved: function(v) { root.previewEqBand("air", v) }
+                onReleased: function(v) { root.setEqTrimDb("air", v) }
               }
             }
           }
@@ -1109,6 +1285,7 @@ Panel {
       script: {
         root.tuneOpen = root.pendingTuneOpen
         cardRotation.angle = -90
+        if (tuneFlick) tuneFlick.contentY = 0
       }
     }
     NumberAnimation {

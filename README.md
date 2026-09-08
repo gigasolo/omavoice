@@ -13,12 +13,12 @@
   <a href="LICENSE"><img src="https://img.shields.io/badge/license-MIT-22c55e?style=flat-square" alt="License: MIT"></a>
   <img src="https://img.shields.io/badge/omarchy-4%20Quattro-0ea5e9?style=flat-square" alt="Omarchy 4 Quattro">
   <img src="https://img.shields.io/badge/pipewire-filter--chain-a3e635?style=flat-square" alt="PipeWire filter-chain">
-  <img src="https://img.shields.io/badge/version-0.2.0-111827?style=flat-square" alt="Version 0.2.0">
+  <img src="https://img.shields.io/badge/version-0.3.0-111827?style=flat-square" alt="Version 0.3.0">
 </p>
 
 <p align="center">
-  <img src="preview.png" alt="Omavoice panel: Meeting, Podcast, Clean, Level on the selected mic" width="380">
-  <img src="docs/preview-tune.png" alt="Preset tuning: engine picker, Softer / Balanced / Stronger" width="380">
+  <img src="preview.png" alt="Omavoice panel: Meeting, Podcast, Clean, selected mic with Before and After meters" width="380">
+  <img src="docs/preview-tune.png" alt="Preset tuning: engine picker, Voice looks, Body / Presence / Air, Softer / Balanced / Stronger" width="380">
 </p>
 
 Pick **Omavoice** in Zoom, Google Meet, OBS, or a browser. The plugin sits under those apps as a PipeWire source, so you do not configure each one. USB mics attach themselves when you plug them in.
@@ -35,7 +35,7 @@ An independent [MIT](LICENSE)-licensed plugin by [GigaSolo](https://github.com/g
 | **Does** | Monitor-mode AEC + denoise + compressor | High-pass + denoise + compressor | High-pass only |
 | **Keeps** | Your voice on a laptop with speakers | Speech that sounds finished | Applause, keys, and music |
 
-Right-click the mark to toggle. Open the panel to switch presets and pick a microphone. Each mic row shows a live level; the selected row adds a hairline of what Omavoice is sending. The chevron on that row opens **Output** (what the call hears) and **Input** (this mic into Omavoice), −12…+12 dB, without restarting the host. PRESET tune picks the denoise engine and shows which one is running.
+Right-click the mark to toggle. Open the panel to switch presets and pick a microphone. The selected mic row shows a live level and a hairline of what Omavoice is sending. Other rows stay quiet so a Bluetooth headset is not grabbed. PRESET tune picks the denoise engine, a Voice look (Neutral / Warm / Clear / Bright) with Body / Presence / Air knobs, and shows which engine is running. On Clean, Voice is visible and disabled.
 
 In the app itself, choose **Omavoice** as the microphone and turn *its* noise cancellation off. Two denoisers stacked sound hollow.
 
@@ -80,7 +80,7 @@ omarchy pkg aur add libdeep_filter_ladspa-bin
 | Action | How |
 | --- | --- |
 | Open or close the panel | Left-click the mark |
-| Tune a preset | Settings on PRESET: engine picker, then Softer / Balanced / Stronger |
+| Tune a preset | Settings on PRESET: engine, Voice look, then Softer / Balanced / Stronger |
 | Automatic microphone | AUTOMATIC on the MICROPHONE header |
 | Toggle Omavoice | Right-click, or `o` |
 | Reload processing | Reload next to on/off, or `r` |
@@ -108,7 +108,7 @@ The host is a dedicated PipeWire client, the same isolation Omarchy uses for spe
 
 ## While it's running
 
-Meeting echo cancel can use CPU while speakers play, even with no call. AEC nodes are passive and suspend after a few idle seconds; if the session sink is playing, the monitor may still run. After meters and `pw-cat` run only while the panel is open. Disable the plugin to stop the host. Restore goes back to the microphone Omavoice replaced, not to Omavoice itself.
+Meeting echo cancel can use CPU while a call is capturing Omavoice, because it monitors the default sink (speakers or headphones). With no listener the host suspends. Disable the plugin to stop it. Restore goes back to the microphone Omavoice replaced, not to Omavoice itself.
 
 ## Update and remove
 
