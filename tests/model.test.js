@@ -142,7 +142,7 @@ test("eqTrimForPreset reads only the active preset schema keys", () => {
   assert.equal(Model.eqTrimForPreset("meeting", { meetingEqPresenceDb: "nope" }).pres, 0)
 })
 
-test("eqBandRange is the look ±6 so the thumb matches the biquad", () => {
+test("eqBandRange is the look ±6 clamp for Voice writes", () => {
   assert.deepEqual(Model.eqBandRange("neutral", "body"), { min: -6, max: 6 })
   assert.deepEqual(Model.eqBandRange("warm", "body"), { min: -4, max: 8 })
   assert.deepEqual(Model.eqBandRange("clear", "body"), { min: -8.5, max: 3.5 })

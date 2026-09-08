@@ -150,6 +150,7 @@ Panel {
   }
 
   function setEqCurve(value) {
+    if (service.preset === "clean") return
     var prefix = service.preset === "podcast" ? "podcastEq" : "meetingEq"
     var patch = {}
     patch[prefix] = Model.normalizeEqCurve(value, "neutral")
@@ -166,6 +167,7 @@ Panel {
   }
 
   function setEqTrimDb(band, value) {
+    if (service.preset === "clean") return
     var trim = Model.snapEqTrimDb(Model.snapEqBandDb(service.eqCurve || "neutral", band, value) - eqCurveBase(band))
     var prefix = service.preset === "podcast" ? "podcastEq" : "meetingEq"
     var key = prefix + "BodyDb"
@@ -273,6 +275,8 @@ Panel {
       value: persisted
     }
 
+    onPersistedChanged: if (!gainSlider.dragging) held = persisted
+
     function snapHeld(v) {
       var s = Model.snapGainDb(v)
       if (s < minimum) s = minimum
@@ -330,8 +334,13 @@ Panel {
 
   component VoiceRow: GainRow {
     required property string band
-    minimum: Model.eqBandRange(service.eqCurve || "neutral", band).min
-    maximum: Model.eqBandRange(service.eqCurve || "neutral", band).max
+    // Fixed ±12 so changing a look moves the thumb. Writes still clamp to look ±6.
+    function snapHeld(v) {
+      var s = Model.snapEqBandDb(service.eqCurve || "neutral", band, v)
+      if (s < minimum) s = minimum
+      if (s > maximum) s = maximum
+      return s
+    }
   }
 
   function launchSetup() {
@@ -1143,101 +1152,115 @@ Panel {
           Column {
             width: parent.width
             spacing: Style.space(8)
-            visible: service.preset !== "clean"
 
-            Text {
-              text: "Voice"
-              color: root.foreground
-              font.family: root.fontFamily
-              font.pixelSize: Style.font.subtitle
-              font.bold: true
-            }
-
-            Row {
+            Item {
               width: parent.width
-              spacing: Style.space(6)
+              implicitHeight: Math.max(voiceTitle.implicitHeight, voiceDisabled.implicitHeight)
 
-              Repeater {
-                model: [
-                  { value: "neutral", label: "Neutral" },
-                  { value: "warm", label: "Warm" },
-                  { value: "clear", label: "Clear" },
-                  { value: "bright", label: "Bright" }
-                ]
-                CursorSurface {
-                  required property var modelData
-                  width: Math.floor((parent.width - Style.space(6) * 3) / 4)
-                  implicitHeight: Style.space(32)
-                  foreground: root.foreground
-                  MouseArea {
-                    id: eqHit
-                    anchors.fill: parent
-                    hoverEnabled: true
-                    cursorShape: Qt.PointingHandCursor
-                    onClicked: root.setEqCurve(modelData.value)
-                  }
-                  PanelToolTip {
-                    visible: eqHit.containsMouse
-                    text: Model.eqCurveHint(modelData.value)
-                    fontFamily: root.fontFamily
-                  }
-                  Rectangle {
-                    anchors.fill: parent
-                    radius: Style.cornerRadius
-                    color: service.eqCurve === modelData.value
-                      ? (bar ? Style.selectedFillFor(bar.foreground, Color.accent) : Color.accent)
-                      : "transparent"
-                    border.width: 1
-                    border.color: Qt.rgba(root.foreground.r, root.foreground.g, root.foreground.b, 0.18)
-                  }
-                  Text {
-                    anchors.centerIn: parent
-                    text: modelData.label
-                    color: root.foreground
-                    font.family: root.fontFamily
-                    font.pixelSize: Style.font.caption
-                    font.bold: service.eqCurve === modelData.value
-                  }
-                }
+              Text {
+                id: voiceTitle
+                anchors.left: parent.left
+                anchors.verticalCenter: parent.verticalCenter
+                text: "Voice"
+                color: root.foreground
+                font.family: root.fontFamily
+                font.pixelSize: Style.font.subtitle
+                font.bold: true
+              }
+
+              PanelSectionHeader {
+                id: voiceDisabled
+                visible: service.preset === "clean"
+                anchors.right: parent.right
+                anchors.verticalCenter: parent.verticalCenter
+                text: "DISABLED"
+                foreground: root.foreground
+                fontFamily: root.fontFamily
               }
             }
 
-            VoiceRow {
-              title: "Body"
-              band: "body"
-              persisted: service.eqBodyDb
-              hint: "Named curve plus your trim."
-              onMoved: function(v) { root.previewEqBand("body", v) }
-              onReleased: function(v) { root.setEqTrimDb("body", v) }
-            }
+            Column {
+              width: parent.width
+              spacing: Style.space(8)
+              enabled: service.preset !== "clean"
+              opacity: enabled ? 1 : 0.5
 
-            VoiceRow {
-              title: "Presence"
-              band: "pres"
-              persisted: service.eqPresDb
-              hint: "Named curve plus your trim."
-              onMoved: function(v) { root.previewEqBand("pres", v) }
-              onReleased: function(v) { root.setEqTrimDb("pres", v) }
-            }
+              Row {
+                width: parent.width
+                spacing: Style.space(6)
 
-            VoiceRow {
-              title: "Air"
-              band: "air"
-              persisted: service.eqAirDb
-              hint: "Named curve plus your trim."
-              onMoved: function(v) { root.previewEqBand("air", v) }
-              onReleased: function(v) { root.setEqTrimDb("air", v) }
-            }
-          }
+                Repeater {
+                  model: [
+                    { value: "neutral", label: "Neutral" },
+                    { value: "warm", label: "Warm" },
+                    { value: "clear", label: "Clear" },
+                    { value: "bright", label: "Bright" }
+                  ]
+                  CursorSurface {
+                    required property var modelData
+                    width: Math.floor((parent.width - Style.space(6) * 3) / 4)
+                    implicitHeight: Style.space(32)
+                    foreground: root.foreground
+                    MouseArea {
+                      id: eqHit
+                      anchors.fill: parent
+                      hoverEnabled: true
+                      cursorShape: Qt.PointingHandCursor
+                      onClicked: root.setEqCurve(modelData.value)
+                    }
+                    PanelToolTip {
+                      visible: eqHit.containsMouse
+                      text: Model.eqCurveHint(modelData.value)
+                      fontFamily: root.fontFamily
+                    }
+                    Rectangle {
+                      anchors.fill: parent
+                      radius: Style.cornerRadius
+                      color: (service.eqCurve || "neutral") === modelData.value
+                        ? (bar ? Style.selectedFillFor(bar.foreground, Color.accent) : Color.accent)
+                        : "transparent"
+                      border.width: 1
+                      border.color: Qt.rgba(root.foreground.r, root.foreground.g, root.foreground.b, 0.18)
+                    }
+                    Text {
+                      anchors.centerIn: parent
+                      text: modelData.label
+                      color: root.foreground
+                      font.family: root.fontFamily
+                      font.pixelSize: Style.font.caption
+                      font.bold: (service.eqCurve || "neutral") === modelData.value
+                    }
+                  }
+                }
+              }
 
-          Text {
-            width: parent.width
-            visible: service.preset === "clean"
-            text: "Clean has no voice EQ."
-            color: root.dim
-            font.family: root.fontFamily
-            font.pixelSize: Style.font.caption
-            wrapMode: Text.WordWrap
+              VoiceRow {
+                title: "Body"
+                band: "body"
+                persisted: service.eqBodyDb
+                hint: "Named curve plus your trim."
+                onMoved: function(v) { root.previewEqBand("body", v) }
+                onReleased: function(v) { root.setEqTrimDb("body", v) }
+              }
+
+              VoiceRow {
+                title: "Presence"
+                band: "pres"
+                persisted: service.eqPresDb
+                hint: "Named curve plus your trim."
+                onMoved: function(v) { root.previewEqBand("pres", v) }
+                onReleased: function(v) { root.setEqTrimDb("pres", v) }
+              }
+
+              VoiceRow {
+                title: "Air"
+                band: "air"
+                persisted: service.eqAirDb
+                hint: "Named curve plus your trim."
+                onMoved: function(v) { root.previewEqBand("air", v) }
+                onReleased: function(v) { root.setEqTrimDb("air", v) }
+              }
+            }
           }
 
           QualitySlider {
