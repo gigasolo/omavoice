@@ -29,18 +29,18 @@ Live level and engine picker. Notes is not in this release.
 
 `auto`: Meeting = RNNoise, Podcast = DeepFilterNet if present else RNNoise, Clean = none.
 
-## 0.3.0 — Voice, Bluetooth, meters (`feat/0.3-voice-eq`)
+## 0.3.0 — shipped 2026-09-08
 
-On the branch. Manifest still `0.2.0` until freeze.
+Voice looks, pinned capture, honest meters. Notes is not in this release.
 
 | Bite | Issue | Status |
 | --- | --- | --- |
-| Voice looks Neutral / Warm / Clear / Bright | #7 | **This cut.** Builtin biquads. Meeting Warm, Podcast Clear. Clean: Voice visible and disabled. |
-| Body / Presence / Air knobs | #8 | **This cut.** Fixed ±12 scale; writes clamp to look ±6. Live, no host restart. |
+| Voice looks Neutral / Warm / Clear / Bright | #7 | Shipped. Builtin biquads. Meeting Warm, Podcast Clear. Clean: Voice visible and disabled. |
+| Body / Presence / Air knobs | #8 | Shipped. Fixed ±12 scale; writes clamp to look ±6. Live, no host restart. |
 | One Input / Output for every preset | — | **Out of 0.3.** Isolated mixers do not move live. Before/After meters stay. |
-| Do not grab unselected Bluetooth | — | **This cut.** Capture pinned to the named target; meters only the selected row; unpinned BT does not beat the builtin mic. |
-| Restore the pinned mic on disable | — | **This cut.** |
-| Hover matches across Preset, mics, Engine, Voice | — | **This cut.** Highlight clears when the cursor leaves. |
+| Do not grab unselected Bluetooth | — | Shipped. Capture pinned to the named target; meters only the selected row; unpinned BT does not beat the builtin mic. |
+| Restore the pinned mic on disable | — | Shipped. |
+| Hover matches across Preset, mics, Engine, Voice | — | Shipped. Highlight clears when the cursor leaves. |
 
 NVIDIA, Speex, and Notes stay out of 0.3.
 
