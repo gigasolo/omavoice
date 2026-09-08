@@ -337,3 +337,14 @@ test("statusText reports the live preset and device", () => {
   assert.match(text, /Meeting/)
   assert.match(text, /QUALCOMM/)
 })
+
+test("statusText names the preset while the host is starting", () => {
+  const text = Model.statusText({
+    enabled: true,
+    running: false,
+    busy: true,
+    preset: "podcast",
+    targetName: usb.name
+  })
+  assert.equal(text, "Starting Podcast…")
+})

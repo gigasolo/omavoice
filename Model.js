@@ -489,7 +489,7 @@ function statusText(state) {
   }
   if (!state.targetName) return "No microphone"
   if (state.running) return presetLabel(state.preset) + " · " + friendlyDeviceLabel(state.targetLabel || state.targetName)
-  if (state.busy) return "Starting…"
+  if (state.busy) return "Starting " + presetLabel(state.preset) + "…"
   return "Idle"
 }
 

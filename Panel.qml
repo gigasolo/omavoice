@@ -617,7 +617,6 @@ Panel {
               anchors.right: parent.right
               anchors.verticalCenter: parent.verticalCenter
               checked: service.enabled
-              busy: service.busy && !service.running
               hasCursor: header.ringVisible
               foreground: root.foreground
               onHovered: function(on) { if (on) header.focusHero() }
@@ -730,10 +729,13 @@ Panel {
                 CursorSurface {
                   required property var modelData
                   required property int index
+                  readonly property bool isCurrent: service.preset === modelData.value
                   width: Math.floor((parent.width - Style.space(6) * 2) / 3)
                   implicitHeight: Style.space(36)
                   hasCursor: root.cursorActive && root.focusSection === "presets" && root.presetIndex === index
                   foreground: root.foreground
+                  opacity: isCurrent && service.busy ? 0.55 : 1
+                  Behavior on opacity { NumberAnimation { duration: 120 } }
                   MouseArea {
                     anchors.fill: parent
                     hoverEnabled: true
@@ -748,7 +750,7 @@ Panel {
                   Rectangle {
                     anchors.fill: parent
                     radius: Style.cornerRadius
-                    color: service.preset === modelData.value
+                    color: isCurrent
                       ? (bar ? Style.selectedFillFor(bar.foreground, Color.accent) : Color.accent)
                       : "transparent"
                     border.width: 1
@@ -760,7 +762,7 @@ Panel {
                     color: root.foreground
                     font.family: root.fontFamily
                     font.pixelSize: Style.font.caption
-                    font.bold: service.preset === modelData.value
+                    font.bold: isCurrent
                   }
                 }
               }
@@ -1016,6 +1018,15 @@ Panel {
                 font.family: root.fontFamily
                 font.pixelSize: Style.font.title
                 font.bold: true
+              }
+              Text {
+                width: parent.width
+                visible: service.busy
+                text: service.statusText.toUpperCase()
+                color: root.dim
+                font.family: root.fontFamily
+                font.pixelSize: Style.font.bodySmall
+                elide: Text.ElideRight
               }
             }
           }
