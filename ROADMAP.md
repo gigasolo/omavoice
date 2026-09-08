@@ -33,7 +33,7 @@ Ship in this order. Each row is one PR.
 
 | Bite | Issue | Why this size |
 | --- | --- | --- |
-| Voice EQ looks | #7 | Neutral / Warm / Clear / Bright via builtin biquads. No new package. Off on Clean. **This cut (`feat/0.3-voice-eq`).** |
+| Voice EQ looks | #7 | Neutral / Warm / Clear / Bright via builtin biquads. No new package. Visible and disabled on Clean. **This cut (`feat/0.3-voice-eq`).** |
 | Three-band trim | #8 | Body / Presence / Air on the existing tune page. Only after named curves. **This cut.** |
 | NVIDIA engine | #9 | probe Tensor GPU + AFX or linux-broadcast, then `engine = nvidia`. Do not vendor NGC blobs. Later. |
 | Speex light engine | #10 | only if a filter-chain wrapper is cheap on Omarchy. No LADSPA wrapper on Omarchy yet. Later. |
