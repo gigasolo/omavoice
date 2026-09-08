@@ -21,9 +21,10 @@ and this project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html)
   selected. Capture stays pinned to the named target (`dont-fallback`,
   `linger`, `dont-move`). The panel meters only the chosen row. Unpinned
   Bluetooth no longer beats the builtin mic.
-- Meeting suspends when nothing is listening: the published source may
-  idle, and the AEC speaker monitor unlinks unless a real client (not the
-  panel hold) is capturing Omavoice.
+- Meeting no longer `pw-link`s the default sink into `omavoice.aec.sink`
+  when a call starts. That classic AEC path, on top of `monitor.mode`,
+  sent far-end audio back to Google Meet. Echo cancel stays
+  `monitor.mode` only.
 - Disable restores the pinned microphone, not a leftover Bluetooth default.
 - Switching preset, engine, or microphone still restarts the host. The
   hero names the wait (**Starting Podcast…**, **Starting RNNoise…**,

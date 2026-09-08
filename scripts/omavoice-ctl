@@ -1,5 +1,7 @@
 #!/usr/bin/env bash
-# Live Props on omavoice.capture, and Meeting AEC monitor idle.
+# Live Props on omavoice.capture, and tear down classic AEC sink links.
+# Meeting AEC is monitor.mode only: never play the default sink into
+# omavoice.aec.sink (that loops far-end audio back to the call).
 set -euo pipefail
 
 usage() {
@@ -15,10 +17,7 @@ if [[ $cmd == aec-sync ]]; then
   exec python3 - <<'PY'
 import json, subprocess, sys
 
-def dump():
-    return json.loads(subprocess.check_output(["pw-dump"]))
-
-data = dump()
+data = json.loads(subprocess.check_output(["pw-dump"]))
 names = {}
 for obj in data:
     props = (obj.get("info") or {}).get("props") or {}
@@ -44,26 +43,11 @@ for obj in data:
     if dst == sink:
         sink_links.append(obj.get("id"))
 
+# monitor.mode already reads the default sink monitor. Never play that
+# sink into omavoice.aec.sink — that is the classic AEC path and loops
+# far-end audio into the call. Leave monitor.mode's links alone while a
+# real client is capturing; only drop sink links when idle.
 if real:
-    if sink_links:
-        sys.exit(0)
-    sink_name = None
-    for obj in data:
-        if "Metadata" not in (obj.get("type") or ""):
-            continue
-        for meta in obj.get("metadata") or []:
-            if meta.get("key") != "default.audio.sink":
-                continue
-            value = meta.get("value")
-            if isinstance(value, str):
-                try:
-                    value = json.loads(value)
-                except Exception:
-                    value = {}
-            if isinstance(value, dict):
-                sink_name = value.get("name")
-    if sink_name:
-        subprocess.call(["pw-link", sink_name, "omavoice.aec.sink"], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
     sys.exit(0)
 
 for link_id in sink_links:

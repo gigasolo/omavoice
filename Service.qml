@@ -330,6 +330,8 @@ Item {
 
   function syncAecMonitor() {
     if (!root.active || !enabled || preset !== "meeting" || !afterNodeName) return
+    // monitor.mode is the echo reference. Do not play the default sink
+    // into omavoice.aec.sink — that loops far-end audio into the call.
     Quickshell.execDetached([scriptPath("omavoice-ctl"), "aec-sync"])
   }
 
