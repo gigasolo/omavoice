@@ -99,9 +99,6 @@ Item {
   readonly property real eqBodyDb: eqBands.body
   readonly property real eqPresDb: eqBands.pres
   readonly property real eqAirDb: eqBands.air
-  property bool gainPreview: false
-  property real previewCaptureDb: 0
-  property real previewOutputDb: 0
   property bool eqPreview: false
   property var previewEqTrim: ({ body: 0, pres: 0, air: 0 })
   property int hostAttempts: 0
@@ -210,12 +207,6 @@ Item {
     startDebounce.restart()
   }
 
-  function rebuildHost() {
-    hostKey = ""
-    hostAttempts = 0
-    syncHost()
-  }
-
   function startHostNow() {
     if (!root.active || !enabled || !targetName) return
     if (!probed) return
@@ -223,7 +214,7 @@ Item {
       if (!lastError) lastError = Model.hostErrorText("bind")
       return
     }
-    var key = preset + "\0" + engine + "\0" + targetName + "\0" + pluginDir + "\0" + String(captureGainDb) + "\0" + String(outputGainDb)
+    var key = preset + "\0" + engine + "\0" + targetName + "\0" + pluginDir
     if (hostProcess.running && hostKey === key) return
     if (meterHoldProcess.running) meterHoldProcess.running = false
     meterHoldTarget = ""
@@ -246,16 +237,6 @@ Item {
   function applyLiveControls() {
     if (!root.active || !enabled) return
     liveDebounce.restart()
-  }
-
-  function previewGains(captureDb, outputDb) {
-    previewCaptureDb = Model.clampGainDb(captureDb)
-    previewOutputDb = Model.clampGainDb(outputDb)
-    gainPreview = true
-  }
-
-  function clearGainPreview() {
-    gainPreview = false
   }
 
   function previewEqGains(bodyDb, presDb, airDb) {
@@ -435,8 +416,6 @@ Item {
   onPresetChanged: { hostAttempts = 0; syncHost() }
   onEngineChanged: { hostAttempts = 0; syncHost() }
   onQualityChanged: applyLiveControls()
-  onOutputGainDbChanged: { hostAttempts = 0; syncHost() }
-  onCaptureGainDbChanged: { hostAttempts = 0; syncHost() }
   onEqCurveChanged: applyLiveControls()
   onEqBodyDbChanged: applyLiveControls()
   onEqPresDbChanged: applyLiveControls()

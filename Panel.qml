@@ -23,7 +23,6 @@ Panel {
   property int phraseIndex: 0
   property bool tuneOpen: false
   property bool pendingTuneOpen: false
-  property bool levelOpen: false
 
   readonly property var sharedService: bar && bar.shell && typeof bar.shell.serviceFor === "function"
     ? bar.shell.serviceFor(moduleName) : null
@@ -151,18 +150,6 @@ Panel {
     return (n > 0 ? "+" : "") + n.toFixed(1)
   }
 
-  function setOutputGainDb(value) {
-    var db = Model.snapGainDb(value)
-    persistSettings({
-      outputGainDb: db,
-      meetingOutputGainDb: db,
-      podcastOutputGainDb: db,
-      cleanOutputGainDb: db
-    })
-    if (service && typeof service.clearGainPreview === "function") service.clearGainPreview()
-    if (service && typeof service.rebuildHost === "function") service.rebuildHost()
-  }
-
   function setEngine(value) {
     persistSettings({ engine: Model.normalizeEngine(value) })
   }
@@ -204,18 +191,6 @@ Panel {
     var next = { body: t.body, pres: t.pres, air: t.air }
     next[band] = Model.snapEqTrimDb(Model.snapEqBandDb(service.eqCurve || "neutral", band, value) - eqCurveBase(band))
     service.previewEqGains(next.body, next.pres, next.air)
-  }
-
-  function setCaptureGainDb(value) {
-    var db = Model.snapGainDb(value)
-    persistSettings({
-      captureGainDb: db,
-      meetingCaptureGainDb: db,
-      podcastCaptureGainDb: db,
-      cleanCaptureGainDb: db
-    })
-    if (service && typeof service.clearGainPreview === "function") service.clearGainPreview()
-    if (service && typeof service.rebuildHost === "function") service.rebuildHost()
   }
 
   component QualitySlider: Column {
@@ -434,7 +409,6 @@ Panel {
     if (!opened) {
       tuneOpen = false
       pendingTuneOpen = false
-      levelOpen = false
       if (cardRotation) cardRotation.angle = 0
       if (typeof service.setMeterHold === "function") service.setMeterHold(false)
       return
@@ -446,15 +420,6 @@ Panel {
     if (panelFlick) panelFlick.contentY = 0
     if (typeof service.setMeterHold === "function") service.setMeterHold(true)
     Qt.callLater(function() { keyCatcher.forceActiveFocus() })
-  }
-
-  readonly property real levelPreview: {
-    if (!service || !service.gainPreview) return 1
-    var po = Model.gainDbToLinear(service.previewOutputDb)
-    var pc = Model.gainDbToLinear(service.previewCaptureDb)
-    var o = Model.gainDbToLinear(service.outputGainDb)
-    var c = Model.gainDbToLinear(service.captureGainDb)
-    return (po / Math.max(o, 0.0001)) * (pc / Math.max(c, 0.0001))
   }
 
   readonly property string meterEpoch: {
@@ -908,6 +873,15 @@ Panel {
                   fill: root.bar ? Style.hoverFillFor(root.bar.foreground, Color.accent) : "transparent"
                   currentFill: root.bar ? Style.selectedFillFor(root.bar.foreground, Color.accent) : "transparent"
 
+                  PwNodePeakMonitor {
+                    id: rowPeak
+                    node: {
+                      var _ = service.nodes
+                      return service.nodeNamed ? service.nodeNamed(modelData.name) : null
+                    }
+                    enabled: root.opened && root.metersArmed && sourceRow.isActive && !!node
+                  }
+
                   Column {
                     id: sourceInner
                     anchors.left: parent.left
@@ -952,76 +926,24 @@ Panel {
                         Rectangle {
                           anchors.fill: parent
                           color: Util.alpha(root.foreground, 0.18)
-                          visible: sourceRow.isActive
 
                           Rectangle {
                             height: parent.height
-                            width: parent.width * Math.max(0, Math.min(1, afterPeakMonitor.peak * root.levelPreview))
+                            width: parent.width * Math.max(0, Math.min(1, rowPeak.peak))
+                            color: sourceRow.isActive
+                              ? Util.alpha(root.foreground, 0.40)
+                              : Util.alpha(root.foreground, 0.55)
+                            Behavior on width { NumberAnimation { duration: 70 } }
+                          }
+
+                          Rectangle {
+                            visible: sourceRow.isActive && !!service.afterNode
+                            height: Math.max(2, Math.ceil(parent.height * 0.4))
+                            width: parent.width * Math.max(0, Math.min(1, afterPeakMonitor.peak))
+                            anchors.verticalCenter: parent.verticalCenter
                             color: root.foreground
                             Behavior on width { NumberAnimation { duration: 70 } }
                           }
-                        }
-                      }
-
-                      MouseArea {
-                        id: levelHit
-                        visible: sourceRow.isActive
-                        Layout.alignment: Qt.AlignVCenter
-                        implicitWidth: Style.space(22)
-                        implicitHeight: Style.space(22)
-                        hoverEnabled: true
-                        cursorShape: Qt.PointingHandCursor
-                        onClicked: root.levelOpen = !root.levelOpen
-
-                        Text {
-                          anchors.centerIn: parent
-                          // 󰅂 is right in this font (clock "next month"). Dropdown uses 󰅀 for down.
-                          text: root.levelOpen ? "󰅀" : "󰅁"
-                          color: root.dim
-                          font.family: root.fontFamily
-                          font.pixelSize: Style.font.body
-                        }
-
-                        PanelToolTip {
-                          visible: levelHit.containsMouse
-                          text: "Level"
-                          fontFamily: root.fontFamily
-                        }
-                      }
-                    }
-
-                    Item {
-                      id: levelDrawer
-                      width: parent.width
-                      visible: sourceRow.isActive
-                      height: sourceRow.isActive && root.levelOpen ? levelInner.implicitHeight : 0
-                      clip: true
-                      Behavior on height { NumberAnimation { duration: 160; easing.type: Easing.OutCubic } }
-
-                      Column {
-                        id: levelInner
-                        width: parent.width
-                        spacing: Style.space(8)
-
-                        GainRow {
-                          title: "Output"
-                          persisted: service.outputGainDb
-                          onMoved: function(v) {
-                            if (service && typeof service.previewGains === "function")
-                              service.previewGains(service.captureGainDb, v)
-                          }
-                          onReleased: function(v) { root.setOutputGainDb(v) }
-                        }
-
-                        GainRow {
-                          title: "Input"
-                          persisted: service.captureGainDb
-                          hint: "Before noise suppression."
-                          onMoved: function(v) {
-                            if (service && typeof service.previewGains === "function")
-                              service.previewGains(v, service.outputGainDb)
-                          }
-                          onReleased: function(v) { root.setCaptureGainDb(v) }
                         }
                       }
                     }
@@ -1030,7 +952,6 @@ Panel {
                   MouseArea {
                     anchors.left: parent.left
                     anchors.right: parent.right
-                    anchors.rightMargin: sourceRow.isActive ? Style.space(8) + Style.space(10) + Style.space(22) : 0
                     anchors.top: parent.top
                     height: sourceMeterRow.height + Style.space(8)
                     hoverEnabled: true

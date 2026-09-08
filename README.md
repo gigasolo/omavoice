@@ -17,7 +17,7 @@
 </p>
 
 <p align="center">
-  <img src="preview.png" alt="Omavoice panel: Meeting, Podcast, Clean, Output and Input on the selected mic" width="380">
+  <img src="preview.png" alt="Omavoice panel: Meeting, Podcast, Clean, selected mic with Before and After meters" width="380">
   <img src="docs/preview-tune.png" alt="Preset tuning: engine picker, Voice looks, Body / Presence / Air, Softer / Balanced / Stronger" width="380">
 </p>
 
@@ -35,7 +35,7 @@ An independent [MIT](LICENSE)-licensed plugin by [GigaSolo](https://github.com/g
 | **Does** | Monitor-mode AEC + denoise + compressor | High-pass + denoise + compressor | High-pass only |
 | **Keeps** | Your voice on a laptop with speakers | Speech that sounds finished | Applause, keys, and music |
 
-Right-click the mark to toggle. Open the panel to switch presets and pick a microphone. The selected mic row shows what Omavoice is sending. Other rows stay quiet so a Bluetooth headset is not grabbed. The chevron on that row opens **Output** (what the call hears) and **Input** (this mic into Omavoice), −12…+12 dB, shared across presets. Releasing a fader rebuilds the host so the trim is real. PRESET tune picks the denoise engine, a Voice look (Neutral / Warm / Clear / Bright) with Body / Presence / Air knobs, and shows which engine is running. On Clean, Voice is visible and disabled.
+Right-click the mark to toggle. Open the panel to switch presets and pick a microphone. The selected mic row shows a live level and a hairline of what Omavoice is sending. Other rows stay quiet so a Bluetooth headset is not grabbed. PRESET tune picks the denoise engine, a Voice look (Neutral / Warm / Clear / Bright) with Body / Presence / Air knobs, and shows which engine is running. On Clean, Voice is visible and disabled.
 
 In the app itself, choose **Omavoice** as the microphone and turn *its* noise cancellation off. Two denoisers stacked sound hollow.
 

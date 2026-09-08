@@ -29,7 +29,7 @@ Live level and engine picker. Notes is not in this release.
 
 `auto`: Meeting = RNNoise, Podcast = DeepFilterNet if present else RNNoise, Clean = none.
 
-## 0.3.0 — Voice, Bluetooth, Level (`feat/0.3-voice-eq`)
+## 0.3.0 — Voice, Bluetooth, meters (`feat/0.3-voice-eq`)
 
 On the branch. Manifest still `0.2.0` until freeze.
 
@@ -37,7 +37,7 @@ On the branch. Manifest still `0.2.0` until freeze.
 | --- | --- | --- |
 | Voice looks Neutral / Warm / Clear / Bright | #7 | **This cut.** Builtin biquads. Meeting Warm, Podcast Clear. Clean: Voice visible and disabled. |
 | Body / Presence / Air knobs | #8 | **This cut.** Fixed ±12 scale; writes clamp to look ±6. Live, no host restart. |
-| One Input / Output for every preset | — | **This cut.** Shared faders. Release bakes gain into a host restart. One Omavoice meter, not Before/After. |
+| One Input / Output for every preset | — | **Out of 0.3.** Isolated mixers do not move live. Before/After meters stay. |
 | Do not grab unselected Bluetooth | — | **This cut.** Capture pinned to the named target; meters only the selected row; unpinned BT does not beat the builtin mic. |
 | Restore the pinned mic on disable | — | **This cut.** |
 | Hover matches across Preset, mics, Engine, Voice | — | **This cut.** Highlight clears when the cursor leaves. |
@@ -52,7 +52,7 @@ NVIDIA, Speex, and Notes stay out of 0.3.
 | Notes source | #1 | Second published source: sink monitor + mic, AEC off. Not a Meeting variant. |
 | NVIDIA engine | #9 | Probe Tensor GPU + AFX or linux-broadcast, then `engine = nvidia`. Do not vendor NGC blobs. |
 | Speex light engine | #10 | Only if a filter-chain wrapper is cheap on Omarchy. No LADSPA wrapper on Omarchy yet. |
-| Per-mic Level | — | Two USBs with different trims. Today one pin, one Input, one Output. |
+| Input / Output that actually moves audio | — | Not graph-mixer Props and not a host restart on every release. Session volume or a real live DSP path. |
 | Voice Reset on the heading | — | Today: click Warm (Meeting) or Clear (Podcast) to restore that look and zero trim. |
 
 ## Constraints that stay true
@@ -60,5 +60,5 @@ NVIDIA, Speex, and Notes stay out of 0.3.
 - Isolated host. Never write `pipewire.conf.d` or stock `filter-chain.conf.d`.
 - Mono 48 kHz, `256/48000`. Do not force MONO on the AEC module.
 - One published call source named **Omavoice**. Notes, if shipped, is a second source.
-- The selected mic shows what Omavoice is sending. Input/Output bake on host start.
+- The selected mic shows Before (device) and an After hairline (Omavoice). Do not peak-monitor unselected rows.
 - Engines never stack.

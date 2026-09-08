@@ -25,17 +25,15 @@ and this project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html)
   idle, and the AEC speaker monitor unlinks unless a real client (not the
   panel hold) is capturing Omavoice.
 - Disable restores the pinned microphone, not a leftover Bluetooth default.
-- Input and Output bake into the host on release. Live `pw-cli` mixer
-  writes do not change the DSP. The selected mic shows one Omavoice
-  meter, not Before/After.
 
 ### Changed
 
-- Marketplace `preview.png` is the live panel with Output / Input open;
-  `docs/preview-tune.png` is the Voice looks page.
-- Input and Output are one pair for every preset. Meeting / Podcast / Clean
-  no longer keep separate Level trims. Level faders persist the last dragged
-  value; they must not rebind to the old dB when the slider drops dragging.
+- Marketplace `preview.png` is the live panel; `docs/preview-tune.png` is
+  the Voice looks page.
+- Input / Output faders are out of this cut. Isolated filter-chain mixer
+  writes do not drive the DSP, and restarting the host on release is the
+  wrong product. The selected mic keeps Before (device) and After
+  (Omavoice) meters so noise suppression is visible.
 
 ## [0.2.0] — 2026-09-06
 
