@@ -55,9 +55,23 @@ echo "$meeting_good" | grep -q '"VAD Threshold (%)" = 70.0' || fail "meeting goo
 echo "$meeting_good" | grep -q '"VAD Grace Period (ms)" = 500' || fail "meeting good grace must be 500"
 echo "$meeting_best" | grep -q '"VAD Threshold (%)" = 85.0' || fail "meeting best VAD must be 85"
 echo "$meeting_best" | grep -q '"VAD Grace Period (ms)" = 250' || fail "meeting best grace must be 250"
-echo "$meeting" | grep -A12 'node.name = "omavoice.capture"' | grep -q 'node.dont-fallback' \
-  && fail "dont-fallback destroys omavoice when the mic is not visible yet"
-echo "$meeting" | grep -A12 'node.name = "omavoice.capture"' | grep -q 'stream.dont-remix = true' \
+echo "$meeting" | grep -A16 'node.name = "omavoice.capture"' | grep -q 'node.dont-fallback = true' \
+  || fail "meeting capture must not fall back onto bluetooth"
+echo "$meeting" | grep -A16 'node.name = "omavoice.capture"' | grep -q 'node.linger = true' \
+  || fail "meeting capture must linger so dont-fallback does not destroy omavoice"
+echo "$meeting" | grep -A16 'node.name = "omavoice.capture"' | grep -q 'node.dont-move = true' \
+  || fail "meeting capture must not be dragged onto bluetooth"
+echo "$meeting" | grep -A16 'node.name = "omavoice.capture"' | grep -q 'Stream/Input/Audio/Internal' \
+  && fail "meeting capture Internal hides omavoice from the session"
+echo "$podcast" | grep -A16 'node.name = "omavoice.capture"' | grep -q 'node.dont-fallback' \
+  && fail "podcast capture dont-fallback destroys omavoice when the mic is not visible yet"
+echo "$clean" | grep -A16 'node.name = "omavoice.capture"' | grep -q 'node.dont-fallback' \
+  && fail "clean capture dont-fallback destroys omavoice when the mic is not visible yet"
+echo "$meeting" | grep -A12 'node.name = "omavoice.aec.capture"' | grep -q 'node.linger = true' \
+  || fail "AEC capture must linger on the named mic"
+echo "$meeting" | grep -A12 'node.name = "omavoice.aec.capture"' | grep -q 'node.dont-move = true' \
+  || fail "AEC capture must not be dragged onto bluetooth"
+echo "$meeting" | grep -A16 'node.name = "omavoice.capture"' | grep -q 'stream.dont-remix = true' \
   || fail "omavoice.capture must not remix"
 echo "$meeting" | grep -A16 'media.class = Audio/Source' | grep -q 'node.virtual = true' \
   || fail "omavoice source must be node.virtual"

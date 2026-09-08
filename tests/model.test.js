@@ -89,10 +89,27 @@ test("pickSource uses a remembered BT headset when default is already omavoice",
   assert.equal(picked.name, bluez.name)
 })
 
-test("pickSource prefers bluetooth over builtin when nothing is remembered", () => {
+test("pickSource prefers builtin over unpinned bluetooth", () => {
   const fallback = Model.pickFallbackName("omavoice", "")
   const picked = Model.pickSource([builtin, bluez], "", fallback)
-  assert.equal(picked.name, bluez.name)
+  assert.equal(picked.name, builtin.name)
+})
+
+test("bluetoothAddress normalizes colon and underscore MACs", () => {
+  assert.equal(Model.bluetoothAddress("bluez_input.A0:0C:E2:D0:C3:81"), "A0:0C:E2:D0:C3:81")
+  assert.equal(Model.bluetoothAddress("bluez_input.A0_0C_E2_D0_C3_81.0"), "A0:0C:E2:D0:C3:81")
+  assert.equal(Model.bluetoothAddress(builtin.name), "")
+})
+
+test("dedupeCaptureSources keeps one bluez row per address", () => {
+  const twin = { name: "bluez_input.A0_0C_E2_D0_C3_81.headset-head-unit", description: bluez.description }
+  const rows = Model.dedupeCaptureSources([builtin, bluez, twin], "")
+  assert.equal(rows.length, 2)
+  assert.equal(rows[0].name, builtin.name)
+  assert.equal(rows[1].name, bluez.name)
+  const preferred = Model.dedupeCaptureSources([bluez, twin], twin.name)
+  assert.equal(preferred.length, 1)
+  assert.equal(preferred[0].name, twin.name)
 })
 
 test("eqCurveParams matches the 0.3 voice table", () => {

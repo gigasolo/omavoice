@@ -85,6 +85,37 @@ function sourceKind(name) {
   return "other"
 }
 
+function bluetoothAddress(name) {
+  var value = String(name || "")
+  if (value.indexOf("bluez_input.") !== 0) return ""
+  var rest = value.slice("bluez_input.".length)
+  var match = rest.match(/^([0-9A-Fa-f]{2}[:_]){5}[0-9A-Fa-f]{2}/)
+  if (!match) return ""
+  return match[0].toUpperCase().replace(/_/g, ":")
+}
+
+function dedupeCaptureSources(list, preferName) {
+  var rows = Array.isArray(list) ? list : []
+  var prefer = String(preferName || "")
+  var out = []
+  var slot = {}
+  for (var i = 0; i < rows.length; i++) {
+    var row = rows[i]
+    var addr = bluetoothAddress(row && row.name)
+    if (!addr) {
+      out.push(row)
+      continue
+    }
+    if (slot[addr] === undefined) {
+      slot[addr] = out.length
+      out.push(row)
+      continue
+    }
+    if (String(row.name || "") === prefer) out[slot[addr]] = row
+  }
+  return out
+}
+
 function friendlyDeviceLabel(text) {
   var label = String(text || "").trim()
   label = label.replace(/^sof-soundwire\s+/i, "")
@@ -148,13 +179,16 @@ function pickSource(sources, pinnedName, defaultName) {
   if (usb.length > 1 && fallback && isUsbSourceName(fallback.name)) return fallback
   if (usb.length > 0) return usb[0]
   if (fallback && isCaptureSourceName(fallback.name)) return fallback
+  for (var k = 0; k < list.length; k++) {
+    if (sourceKind(list[k].name) === "builtin") return list[k]
+  }
   var bluetooth = []
   for (var b = 0; b < list.length; b++) {
-    if (String(list[b].name || "").indexOf("bluez_input.") === 0) bluetooth.push(list[b])
+    if (sourceKind(list[b].name) === "bluetooth") bluetooth.push(list[b])
   }
   if (bluetooth.length > 0) return bluetooth[0]
-  for (var k = 0; k < list.length; k++) {
-    if (isCaptureSourceName(list[k].name)) return list[k]
+  for (var n = 0; n < list.length; n++) {
+    if (isCaptureSourceName(list[n].name)) return list[n]
   }
   return null
 }
@@ -435,6 +469,8 @@ if (typeof module !== "undefined") {
     isUsbSourceName: isUsbSourceName,
     isCaptureSourceName: isCaptureSourceName,
     sourceKind: sourceKind,
+    bluetoothAddress: bluetoothAddress,
+    dedupeCaptureSources: dedupeCaptureSources,
     friendlyDeviceLabel: friendlyDeviceLabel,
     sourceSignature: sourceSignature,
     sourcesUnchanged: sourcesUnchanged,

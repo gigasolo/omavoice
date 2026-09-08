@@ -871,7 +871,7 @@ Panel {
                       var _ = service.nodes
                       return service.nodeNamed ? service.nodeNamed(modelData.name) : null
                     }
-                    enabled: root.opened && root.metersArmed && !!node
+                    enabled: root.opened && root.metersArmed && sourceRow.isActive && !!node
                   }
 
                   Column {

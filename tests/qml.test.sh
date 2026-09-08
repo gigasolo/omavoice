@@ -10,7 +10,7 @@ grep -q 'node.always-process' "$root/scripts/omavoice-run" && fail "always-proce
 grep -q 'id: rowPeak' "$root/Panel.qml" || fail "each mic row needs a peak monitor"
 grep -q 'PwNodePeakMonitor' "$root/Panel.qml" || fail "Panel must use PwNodePeakMonitor"
 grep -q 'afterPeakMonitor.peak' "$root/Panel.qml" || fail "selected row must show After"
-grep -q 'enabled: root.opened && root.metersArmed && !!node' "$root/Panel.qml" || fail "row meters must rebind after graph changes"
+grep -q 'enabled: root.opened && root.metersArmed && sourceRow.isActive && !!node' "$root/Panel.qml" || fail "row meters must run only on the selected mic"
 grep -q 'onAfterNodeNameChanged' "$root/Service.qml" || fail "hold must wait for the bound Omavoice name"
 grep -q 'onAfterNodeIdChanged' "$root/Service.qml" || fail "hold must retarget when omavoice is a new node"
 grep -q 'meterHoldTarget === token' "$root/Service.qml" || fail "meter hold must key the node id, not only the name omavoice"

@@ -135,7 +135,7 @@ Item {
         id: node.id
       })
     }
-    return list
+    return Model.dedupeCaptureSources(list, pinnedSource || targetName)
   }
 
   function omavoiceNode() {

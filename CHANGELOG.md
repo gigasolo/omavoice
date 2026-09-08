@@ -15,6 +15,18 @@ and this project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html)
   and disabled. Live biquads, no host restart. NVIDIA and Speex are not in
   this cut.
 
+### Fixed
+
+- Meeting no longer captures a Bluetooth headset when the laptop mic is
+  selected. Capture stays pinned to the named target (`dont-fallback`,
+  `linger`, `dont-move`). The panel meters only the chosen row. Unpinned
+  Bluetooth no longer beats the builtin mic.
+
+### Changed
+
+- Marketplace `preview.png` is the live panel with Output / Input open;
+  `docs/preview-tune.png` is the Voice looks page.
+
 ## [0.2.0] — 2026-09-06
 
 Live level and engine picker. Notes is not in this release.

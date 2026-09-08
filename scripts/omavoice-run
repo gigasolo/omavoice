@@ -220,6 +220,8 @@ if [[ $use_aec -eq 1 ]]; then
                 node.name = "omavoice.aec.capture"
                 node.passive = true
                 node.dont-fallback = true
+                node.linger = true
+                node.dont-move = true
                 stream.dont-remix = true
                 target.object = "$target"
                 session.suspend-timeout-seconds = 3
@@ -258,6 +260,10 @@ EOF
 }
 
 graph_tail() {
+  local capture_pin=""
+  if [[ $capture_target == omavoice.aec ]]; then
+    capture_pin=$'                node.dont-fallback = true\n                node.linger = true\n                node.dont-move = true'
+  fi
   cat <<EOF
                 ]
 $1
@@ -266,6 +272,7 @@ $1
                 node.name = "omavoice.capture"
                 node.passive = true
                 stream.dont-remix = true
+$capture_pin
                 audio.rate = 48000
                 audio.position = [ MONO ]
                 node.latency = 256/48000
