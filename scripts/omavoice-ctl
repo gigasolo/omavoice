@@ -3,7 +3,7 @@
 set -euo pipefail
 
 usage() {
-  echo "Usage: omavoice-ctl set [KEY VALUE ...] | aec-sync" >&2
+  echo "Usage: omavoice-ctl set [--id N] [KEY VALUE ...] | aec-sync" >&2
   exit 2
 }
 
@@ -83,16 +83,36 @@ node_id() {
   '
 }
 
-id=$(node_id "omavoice.capture")
+allowed_key() {
+  case $1 in
+    "preamp:Gain 1"|"outgain:Gain 1"|"hp:Freq"|"eq_body:Gain"|"eq_pres:Gain"|"eq_air:Gain") return 0 ;;
+    "denoise:VAD Threshold (%)"|"denoise:VAD Grace Period (ms)"|"denoise:Attenuation Limit (dB)") return 0 ;;
+    *) return 1 ;;
+  esac
+}
+
+id=""
+if [[ ${1:-} == --id ]]; then
+  id=${2:-}
+  shift 2
+  [[ $id =~ ^[0-9]+$ ]] || usage
+fi
+
 if [[ -z $id ]]; then
-  id=$(node_id "omavoice")
+  id=$(node_id "omavoice.capture")
+  if [[ -z $id ]]; then
+    id=$(node_id "omavoice")
+  fi
 fi
 [[ -n $id ]] || exit 1
 [[ $# -gt 0 ]] || exit 0
 (( $# % 2 == 0 )) || usage
 
 params=""
+numeric='^[0-9eE.+-]+$'
 while [[ $# -gt 0 ]]; do
+  allowed_key "$1" || usage
+  [[ $2 =~ $numeric ]] || usage
   params+=" \"$1\" $2"
   shift 2
 done

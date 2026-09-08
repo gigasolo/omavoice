@@ -38,7 +38,7 @@ Item {
       var name = String(n.name || "")
       // PwNode.name is constant. Tracking while empty freezes After unbound.
       if (!name) continue
-      if (n.isStream && name !== Model.NODE_NAME) continue
+      if (n.isStream && name !== Model.NODE_NAME && name !== Model.CAPTURE_NAME) continue
       list.push(n)
     }
     return list
@@ -68,6 +68,14 @@ Item {
   readonly property string afterNodeId: {
     var node = afterNode
     return node && node.id !== undefined ? String(node.id) : ""
+  }
+  readonly property string captureNodeId: {
+    for (var i = 0; i < trackedNodes.length; i++) {
+      var n = trackedNodes[i]
+      if (n && String(n.name || "") === Model.CAPTURE_NAME && n.id !== undefined)
+        return String(n.id)
+    }
+    return ""
   }
 
   readonly property string pluginDir: manifest && manifest.__sourceDir ? String(manifest.__sourceDir) : Qt.resolvedUrl(".").toString().replace(/^file:\/\//, "").replace(/\/$/, "")
@@ -264,6 +272,9 @@ Item {
     var cap = gainPreview ? previewCaptureDb : captureGainDb
     var out = gainPreview ? previewOutputDb : outputGainDb
     var args = [scriptPath("omavoice-ctl"), "set"]
+    if (captureNodeId) {
+      args.push("--id", captureNodeId)
+    }
     args.push("preamp:Gain 1", String(Model.gainDbToLinear(cap)))
     args.push("outgain:Gain 1", String(Model.gainDbToLinear(out)))
     var qp = Model.qualityParams(preset, quality)

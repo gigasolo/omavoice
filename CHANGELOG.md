@@ -25,6 +25,8 @@ and this project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html)
   idle, and the AEC speaker monitor unlinks unless a real client (not the
   panel hold) is capturing Omavoice.
 - Disable restores the pinned microphone, not a leftover Bluetooth default.
+- Live faders pass a cached `omavoice.capture` id to `omavoice-ctl` and reject
+  non-numeric Props values.
 
 ### Changed
 

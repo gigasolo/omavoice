@@ -1,4 +1,5 @@
 var NODE_NAME = "omavoice"
+var CAPTURE_NAME = "omavoice.capture"
 var NODE_DESCRIPTION = "Omavoice"
 var PRESETS = ["meeting", "podcast", "clean"]
 var QUALITIES = ["good", "better", "best"]
@@ -466,6 +467,7 @@ function statusText(state) {
 if (typeof module !== "undefined") {
   module.exports = {
     NODE_NAME: NODE_NAME,
+    CAPTURE_NAME: CAPTURE_NAME,
     NODE_DESCRIPTION: NODE_DESCRIPTION,
     PRESETS: PRESETS,
     QUALITIES: QUALITIES,
