@@ -146,7 +146,7 @@ Panel {
   }
 
   function setOutputGainDb(value) {
-    persistSettings({ outputGainDb: Model.snapGainDb(value) })
+    persistSettings(Model.sharedGainPatch("output", value))
     if (service && typeof service.clearGainPreview === "function") service.clearGainPreview()
   }
 
@@ -194,7 +194,7 @@ Panel {
   }
 
   function setCaptureGainDb(value) {
-    persistSettings({ captureGainDb: Model.snapGainDb(value) })
+    persistSettings(Model.sharedGainPatch("capture", value))
     if (service && typeof service.clearGainPreview === "function") service.clearGainPreview()
   }
 

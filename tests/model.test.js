@@ -259,6 +259,13 @@ test("clampGainDb and gainDbToLinear convert output trim", () => {
   assert.equal(Model.outputGainDbForPreset("podcast", { outputGainDb: 2 }), 2)
   assert.equal(Model.outputGainDbForPreset("clean", { outputGainDb: 2 }), 2)
   assert.equal(Model.outputGainDbForPreset("clean", {}), 0)
+  assert.deepEqual(Model.sharedGainPatch("output", 2), {
+    outputGainDb: 2,
+    meetingOutputGainDb: 2,
+    podcastOutputGainDb: 2,
+    cleanOutputGainDb: 2
+  })
+  assert.equal(Model.sharedGainPatch("capture", 1.24).meetingCaptureGainDb, 1)
 })
 
 test("qualityParams matches the dump VAD / DFN tables", () => {

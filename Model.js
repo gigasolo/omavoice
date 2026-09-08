@@ -412,6 +412,24 @@ function captureGainDbForPreset(preset, values) {
   return gainDbFromKeys(values || {}, ["captureGainDb", first, "meetingCaptureGainDb", "podcastCaptureGainDb", "cleanCaptureGainDb"])
 }
 
+function sharedGainPatch(kind, db) {
+  var n = snapGainDb(db)
+  if (kind === "capture") {
+    return {
+      captureGainDb: n,
+      meetingCaptureGainDb: n,
+      podcastCaptureGainDb: n,
+      cleanCaptureGainDb: n
+    }
+  }
+  return {
+    outputGainDb: n,
+    meetingOutputGainDb: n,
+    podcastOutputGainDb: n,
+    cleanOutputGainDb: n
+  }
+}
+
 function qualityParams(preset, quality) {
   var kind = normalizePreset(preset)
   var level = normalizeQuality(quality)
@@ -527,6 +545,7 @@ if (typeof module !== "undefined") {
     gainDbToLinear: gainDbToLinear,
     outputGainDbForPreset: outputGainDbForPreset,
     captureGainDbForPreset: captureGainDbForPreset,
+    sharedGainPatch: sharedGainPatch,
     qualityParams: qualityParams,
     setupGuide: setupGuide,
     hostErrorText: hostErrorText,
