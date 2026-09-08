@@ -55,18 +55,18 @@ echo "$meeting_good" | grep -q '"VAD Threshold (%)" = 70.0' || fail "meeting goo
 echo "$meeting_good" | grep -q '"VAD Grace Period (ms)" = 500' || fail "meeting good grace must be 500"
 echo "$meeting_best" | grep -q '"VAD Threshold (%)" = 85.0' || fail "meeting best VAD must be 85"
 echo "$meeting_best" | grep -q '"VAD Grace Period (ms)" = 250' || fail "meeting best grace must be 250"
-echo "$meeting" | grep -A10 'node.name = "omavoice.capture"' | grep -q 'node.dont-fallback = true' \
-  || fail "omavoice.capture must not fall back to another mic"
+echo "$meeting" | grep -A12 'node.name = "omavoice.capture"' | grep -q 'node.dont-fallback' \
+  && fail "dont-fallback destroys omavoice when the mic is not visible yet"
 echo "$meeting" | grep -A12 'node.name = "omavoice.capture"' | grep -q 'stream.dont-remix = true' \
   || fail "omavoice.capture must not remix"
 echo "$meeting" | grep -A16 'media.class = Audio/Source' | grep -q 'node.virtual = true' \
   || fail "omavoice source must be node.virtual"
 echo "$meeting" | grep -A16 'media.class = Audio/Source' | grep -q 'media.role = Communication' \
   || fail "omavoice source must be Communication"
-echo "$meeting" | grep -A16 'media.class = Audio/Source' | grep -q 'node.always-process = true' \
-  || fail "omavoice source must keep processing or After has no node to bind"
 echo "$meeting" | grep -A16 'media.class = Audio/Source' | grep -q 'session.suspend-timeout-seconds = 0' \
   || fail "omavoice source must not idle-destroy after 3s"
+echo "$meeting" | grep -A16 'media.class = Audio/Source' | grep -q 'node.always-process' \
+  && fail "always-process makes capture fail target-not-found and destroys After"
 echo "$meeting" | grep -A16 'media.class = Audio/Source' | grep -q 'stream.dont-remix = true' \
   || fail "omavoice source must not remix"
 echo "$meeting" | grep -q 'audio.position = \[ MONO \]' || fail "meeting must be mono"

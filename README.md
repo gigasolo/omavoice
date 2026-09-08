@@ -108,7 +108,7 @@ The host is a dedicated PipeWire client, the same isolation Omarchy uses for spe
 
 ## While it's running
 
-Meeting echo cancel can use CPU while speakers play, even with no call. The Omavoice source stays processing while the host is on so After can bind after a reload. Disable the plugin to stop the host. Restore goes back to the microphone Omavoice replaced, not to Omavoice itself.
+Meeting echo cancel can use CPU while speakers play, even with no call. Disable the plugin to stop the host. Restore goes back to the microphone Omavoice replaced, not to Omavoice itself.
 
 ## Update and remove
 

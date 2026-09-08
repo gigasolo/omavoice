@@ -265,7 +265,6 @@ $1
             capture.props = {
                 node.name = "omavoice.capture"
                 node.passive = true
-                node.dont-fallback = true
                 stream.dont-remix = true
                 audio.rate = 48000
                 audio.position = [ MONO ]
@@ -277,7 +276,6 @@ $1
                 node.description = "Omavoice"
                 media.class = Audio/Source
                 node.virtual = true
-                node.always-process = true
                 media.role = Communication
                 session.suspend-timeout-seconds = 0
                 stream.dont-remix = true

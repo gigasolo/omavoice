@@ -168,7 +168,7 @@ Item {
     var next = snapshotSources()
     if (Model.shouldDeferSourcePick(targetName, hasUnboundNodes)) {
       if (next.length > 0 && !Model.sourcesUnchanged(sources, next)) sources = next
-      syncHost()
+      if (!hostProcess.running) syncHost()
       return
     }
     if (!Model.sourcesUnchanged(sources, next)) sources = next
@@ -176,11 +176,12 @@ Item {
     var picked = Model.pickSource(sources, pinnedSource, fallback)
     var nextName = picked ? String(picked.name) : ""
     var nextLabel = picked ? String(picked.description || picked.name) : ""
-    if (nextName !== targetName || nextLabel !== targetLabel) {
+    var pickChanged = nextName !== targetName || nextLabel !== targetLabel
+    if (pickChanged) {
       targetName = nextName
       targetLabel = nextLabel
     }
-    syncHost()
+    if (pickChanged || !hostProcess.running) syncHost()
   }
 
   function syncHost() {
@@ -209,7 +210,7 @@ Item {
       return
     }
     var key = preset + "\0" + engine + "\0" + targetName + "\0" + pluginDir
-    if (hostProcess.running && hostKey === key && afterNodeName) return
+    if (hostProcess.running && hostKey === key) return
     if (meterHoldProcess.running) meterHoldProcess.running = false
     meterHoldTarget = ""
     hostAttempts += 1

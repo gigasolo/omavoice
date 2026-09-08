@@ -6,7 +6,7 @@ fail() { echo "qml.test: $*" >&2; exit 1; }
 
 grep -q 'id: afterPeakMonitor' "$root/Panel.qml" || fail "Panel needs afterPeakMonitor"
 grep -q 'PwNode.name is constant' "$root/Service.qml" || fail "tracker must not bind omavoice while name is empty"
-grep -q 'node.always-process = true' "$root/scripts/omavoice-run" || fail "host must keep omavoice processing for After"
+grep -q 'node.always-process' "$root/scripts/omavoice-run" && fail "always-process destroys the source when capture target is not ready"
 grep -q 'id: rowPeak' "$root/Panel.qml" || fail "each mic row needs a peak monitor"
 grep -q 'PwNodePeakMonitor' "$root/Panel.qml" || fail "Panel must use PwNodePeakMonitor"
 grep -q 'afterPeakMonitor.peak' "$root/Panel.qml" || fail "selected row must show After"
@@ -43,7 +43,8 @@ grep -q 'pipewire.sec.pid' "$root/scripts/omavoice-run" || fail "host must requi
 grep -q 'pw-cli destroy' "$root/scripts/omavoice-run" || fail "leftover omavoice nodes must be destroyed by id"
 grep -q 'leftover omavoice nodes still in the session' "$root/scripts/omavoice-run" && fail "do not fail the host start because Meeting AEC names linger"
 grep -q 'id: hostBindWatch' "$root/Service.qml" || fail "empty host must restart until the omavoice node appears"
-grep -q 'hostKey === key && afterNodeName' "$root/Service.qml" || fail "a running Process is not a healthy host without the omavoice node"
+grep -q 'hostProcess.running && hostKey === key) return' "$root/Service.qml" || fail "do not restart the host on every PipeWire node change"
+grep -q 'pickChanged || !hostProcess.running' "$root/Service.qml" || fail "source refresh must not restart a live host"
 grep -q 'defaultSourceName === Model.NODE_NAME' "$root/Service.qml" || fail "After must bind the default source when it is omavoice"
 grep -A12 'id: hostBindWatch' "$root/Service.qml" | grep -q 'if (hostProcess.running) return' \
   || fail "bind watch must not kill a live wrapper"
