@@ -51,7 +51,7 @@ if real:
     sys.exit(0)
 
 for link_id in sink_links:
-    if link_id is None:
+    if isinstance(link_id, bool) or not isinstance(link_id, int) or link_id < 0:
         continue
     subprocess.call(["pw-cli", "destroy", str(link_id)], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
 PY
