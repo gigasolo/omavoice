@@ -538,7 +538,7 @@ omavoice_in_graph() {
 # and block the next preset. Destroy by id, do not fail the start.
 destroy_leftover_nodes() {
   pw-dump 2>/dev/null | python3 -c '
-import json, os, sys
+import json, subprocess, sys
 try:
     data = json.load(sys.stdin)
 except Exception:
@@ -549,7 +549,17 @@ for obj in data:
     props = (obj.get("info") or {}).get("props") or {}
     name = str(props.get("node.name") or "")
     if name == "omavoice" or name.startswith("omavoice.aec") or name in ("omavoice.capture", "omavoice.meter.hold"):
-        os.system("pw-cli destroy %s >/dev/null 2>&1" % obj.get("id"))
+        oid = obj.get("id")
+        if isinstance(oid, bool) or not isinstance(oid, int):
+            continue
+        if oid < 0:
+            continue
+        subprocess.run(
+            ["pw-cli", "destroy", str(oid)],
+            stdout=subprocess.DEVNULL,
+            stderr=subprocess.DEVNULL,
+            check=False,
+        )
 '
 }
 
