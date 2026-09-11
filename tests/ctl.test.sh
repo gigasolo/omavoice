@@ -56,4 +56,20 @@ set -e
 [[ $bad_val -eq 2 ]] || fail "non-numeric value must exit 2, got $bad_val"
 [[ $bad_key -eq 2 ]] || fail "unknown key must exit 2, got $bad_key"
 
+cat >"$tmpdir/pw-dump" <<'EOF'
+#!/usr/bin/env bash
+cat <<'JSON'
+[{"type":"PipeWire:Interface:Link","id":"0; touch /tmp/omavoice-pwned","info":{"props":{"link.output.node":3,"link.input.node":2}}},
+ {"type":"PipeWire:Interface:Node","id":1,"info":{"props":{"node.name":"omavoice"}}},
+ {"type":"PipeWire:Interface:Node","id":2,"info":{"props":{"node.name":"omavoice.aec.sink"}}},
+ {"type":"PipeWire:Interface:Node","id":3,"info":{"props":{"node.name":"alsa_output.pci-Speaker"}}}]
+JSON
+EOF
+chmod +x "$tmpdir/pw-dump"
+
+rm -f -- "$log" /tmp/omavoice-pwned
+"$ctl" aec-sync
+[[ -f /tmp/omavoice-pwned ]] && fail "dirty pw-dump id must not reach the shell"
+[[ -f $log ]] && fail "non-integer link id must not call pw-cli destroy"
+
 echo "ctl.test: ok"
