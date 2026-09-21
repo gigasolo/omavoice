@@ -13,7 +13,7 @@
   <a href="LICENSE"><img src="https://img.shields.io/badge/license-MIT-22c55e?style=flat-square" alt="License: MIT"></a>
   <img src="https://img.shields.io/badge/omarchy-4%20Quattro-0ea5e9?style=flat-square" alt="Omarchy 4 Quattro">
   <img src="https://img.shields.io/badge/pipewire-filter--chain-a3e635?style=flat-square" alt="PipeWire filter-chain">
-  <img src="https://img.shields.io/badge/version-0.3.1-111827?style=flat-square" alt="Version 0.3.1">
+  <img src="https://img.shields.io/badge/version-0.3.2-111827?style=flat-square" alt="Version 0.3.2">
 </p>
 
 <p align="center">
@@ -89,7 +89,7 @@ omarchy pkg aur add libdeep_filter_ladspa-bin
 | Activate | Enter |
 | Close | Escape |
 
-USB capture is preferred when it appears. Laptop mics and Bluetooth headsets stay in the picker. Pin one if you have several USB devices.
+USB capture is preferred when it appears, and stereo USB is mixed down to mono. Laptop mics and Bluetooth headsets stay in the picker. Auto stays on the USB you are using if several are plugged in; pin one if you want a specific device.
 
 ## How it sits in the graph
 

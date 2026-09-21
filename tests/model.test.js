@@ -66,6 +66,21 @@ test("pickSource uses the default when it is the only USB match among several", 
   assert.equal(picked.name, usb.name)
 })
 
+test("pickSource keeps the current USB when several are present", () => {
+  const picked = Model.pickSource([usb, usb2, builtin], "", builtin.name, usb2.name)
+  assert.equal(picked.name, usb2.name)
+})
+
+test("pickSource still prefers a USB session default over the current USB", () => {
+  const picked = Model.pickSource([usb, usb2, builtin], "", usb.name, usb2.name)
+  assert.equal(picked.name, usb.name)
+})
+
+test("pickSource still prefers pin over current USB", () => {
+  const picked = Model.pickSource([usb, usb2, builtin], usb2.name, usb.name, usb.name)
+  assert.equal(picked.name, usb2.name)
+})
+
 test("pickSource falls back to the default builtin when no USB is present", () => {
   const picked = Model.pickSource([builtin, omavoice], "", builtin.name)
   assert.equal(picked.name, builtin.name)
