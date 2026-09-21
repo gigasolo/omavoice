@@ -181,7 +181,7 @@ Item {
     }
     if (!Model.sourcesUnchanged(sources, next)) sources = next
     var fallback = Model.pickFallbackName(defaultSourceName, previousAudioSource)
-    var picked = Model.pickSource(sources, pinnedSource, fallback)
+    var picked = Model.pickSource(sources, pinnedSource, fallback, targetName)
     var nextName = picked ? String(picked.name) : ""
     var nextLabel = picked ? String(picked.description || picked.name) : ""
     var pickChanged = nextName !== targetName || nextLabel !== targetLabel

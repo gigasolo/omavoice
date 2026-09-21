@@ -156,7 +156,7 @@ function pickFallbackName(defaultName, rememberedName) {
   return ""
 }
 
-function pickSource(sources, pinnedName, defaultName) {
+function pickSource(sources, pinnedName, defaultName, preferredName) {
   var list = Array.isArray(sources) ? sources : []
   function findName(name) {
     var want = String(name || "")
@@ -176,8 +176,9 @@ function pickSource(sources, pinnedName, defaultName) {
   }
   var fallback = findName(defaultName)
   if (fallback && isUsbSourceName(fallback.name)) return fallback
+  var preferred = findName(preferredName)
+  if (preferred && isUsbSourceName(preferred.name)) return preferred
   if (usb.length === 1) return usb[0]
-  if (usb.length > 1 && fallback && isUsbSourceName(fallback.name)) return fallback
   if (usb.length > 0) return usb[0]
   if (fallback && isCaptureSourceName(fallback.name)) return fallback
   for (var k = 0; k < list.length; k++) {
