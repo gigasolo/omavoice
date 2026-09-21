@@ -222,7 +222,6 @@ if [[ $use_aec -eq 1 ]]; then
                 node.dont-fallback = true
                 node.linger = true
                 node.dont-move = true
-                stream.dont-remix = true
                 target.object = "$target"
                 session.suspend-timeout-seconds = 3
             }
@@ -271,7 +270,6 @@ $1
             capture.props = {
                 node.name = "omavoice.capture"
                 node.passive = true
-                stream.dont-remix = true
 $capture_pin
                 audio.rate = 48000
                 audio.position = [ MONO ]
