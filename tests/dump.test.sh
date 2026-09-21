@@ -72,7 +72,9 @@ echo "$meeting" | grep -A12 'node.name = "omavoice.aec.capture"' | grep -q 'node
 echo "$meeting" | grep -A12 'node.name = "omavoice.aec.capture"' | grep -q 'node.dont-move = true' \
   || fail "AEC capture must not be dragged onto bluetooth"
 echo "$meeting" | grep -A16 'node.name = "omavoice.capture"' | grep -q 'stream.dont-remix = true' \
-  || fail "omavoice.capture must not remix"
+  && fail "omavoice.capture must remix stereo USB into MONO"
+echo "$meeting" | grep -A12 'node.name = "omavoice.aec.capture"' | grep -q 'stream.dont-remix = true' \
+  && fail "AEC capture must remix stereo USB into MONO"
 echo "$meeting" | grep -A16 'media.class = Audio/Source' | grep -q 'node.virtual = true' \
   || fail "omavoice source must be node.virtual"
 echo "$meeting" | grep -A16 'media.class = Audio/Source' | grep -q 'media.role = Communication' \
@@ -134,6 +136,8 @@ echo "$meeting_body_trim" | grep -A5 'name = eq_body' | grep -q '"Gain" = 3.0' |
 meeting_body_clamp="$(dump meeting --eq warm --eq-body-db 12)"
 echo "$meeting_body_clamp" | grep -A5 'name = eq_body' | grep -q '"Gain" = 8.0' || fail "Warm --eq-body-db 12 must clamp trim to +8.0"
 
+echo "$podcast" | grep -A16 'node.name = "omavoice.capture"' | grep -q 'stream.dont-remix = true' \
+  && fail "podcast capture must remix stereo USB into MONO"
 echo "$podcast" | grep -q 'bq_highpass' || fail "podcast must high-pass before NS"
 echo "$podcast" | grep -q 'monitor.mode' && fail "podcast must not enable AEC this release"
 echo "$podcast" | grep -q 'audio.position = \[ MONO \]' || fail "podcast must be mono"
@@ -155,6 +159,8 @@ else
   echo "$podcast_best" | grep -q '"VAD Threshold (%)" = 90.0' || fail "podcast best VAD must be 90"
 fi
 
+echo "$clean" | grep -A16 'node.name = "omavoice.capture"' | grep -q 'stream.dont-remix = true' \
+  && fail "clean capture must remix stereo USB into MONO"
 echo "$clean" | grep -q 'bq_highpass' || fail "clean must high-pass"
 echo "$clean" | grep -q 'audio.position = \[ MONO \]' || fail "clean must be mono"
 echo "$clean" | grep -q 'node.latency = 256/48000' || fail "clean must pin 256/48000"
