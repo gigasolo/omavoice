@@ -7,6 +7,13 @@ and this project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html)
 
 ## [Unreleased]
 
+### Fixed
+
+- Stereo USB capture remixes into the MONO graph. `dont-remix` stays only
+  on the published Omavoice source.
+- Auto no longer hops between USB mics when PipeWire reorders the node
+  list. Pin and a USB session default still win.
+
 ## [0.3.1] — 2026-09-11
 
 ### Fixed
