@@ -7,10 +7,14 @@ and this project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html)
 
 ## [Unreleased]
 
+## [0.3.2] — 2026-09-21
+
+Stereo USB remix and a stable Auto pick.
+
 ### Fixed
 
 - Stereo USB capture remixes into the MONO graph. `dont-remix` stays only
-  on the published Omavoice source.
+  on the published Omavoice source, so Zoom does not stereo-expand it.
 - Auto no longer hops between USB mics when PipeWire reorders the node
   list. Pin and a USB session default still win.
 
@@ -345,7 +349,8 @@ Live level and engine picker. Notes is not in this release.
   guidance.
 - MIT license (GigaSolo LLC).
 
-[Unreleased]: https://github.com/gigasolo/omavoice/compare/v0.3.1...HEAD
+[Unreleased]: https://github.com/gigasolo/omavoice/compare/v0.3.2...HEAD
+[0.3.2]: https://github.com/gigasolo/omavoice/compare/v0.3.1...v0.3.2
 [0.3.1]: https://github.com/gigasolo/omavoice/compare/v0.3.0...v0.3.1
 [0.3.0]: https://github.com/gigasolo/omavoice/compare/v0.2.0...v0.3.0
 [0.2.0]: https://github.com/gigasolo/omavoice/compare/v0.1.24...v0.2.0
