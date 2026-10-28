@@ -22,6 +22,9 @@ Item {
   property string targetLabel: ""
 
   property string hostKey: ""
+  // Meeting loads echo cancel only while a real client captures omavoice.
+  property bool aecHeld: false
+  property double aecHeldAt: 0
   property var sources: []
   property bool promoted: false
   property bool meterHoldWanted: false
@@ -210,6 +213,12 @@ Item {
     startDebounce.restart()
   }
 
+  function chainKey() {
+    var key = preset + "\0" + engine + "\0" + targetName + "\0" + pluginDir
+    if (preset === "meeting") key += "\0" + (aecHeld ? "aec" : "idle")
+    return key
+  }
+
   function startHostNow() {
     if (!root.active || !enabled || !targetName) return
     if (!probed) return
@@ -217,7 +226,7 @@ Item {
       if (!lastError) lastError = Model.hostErrorText("bind")
       return
     }
-    var key = preset + "\0" + engine + "\0" + targetName + "\0" + pluginDir
+    var key = chainKey()
     if (hostProcess.running && hostKey === key) return
     busyReason = Model.hostSwitchReason(hostKey, key, reloading)
     if (meterHoldProcess.running) meterHoldProcess.running = false
@@ -228,6 +237,7 @@ Item {
     hostStartedAt = Date.now()
     hostProcess.running = false
     var args = [scriptPath("omavoice-run"), "--preset", preset, "--quality", quality, "--engine", engine, "--capture-gain-db", String(captureGainDb), "--output-gain-db", String(outputGainDb), "--target", targetName, "--dir", pluginDir]
+    if (preset === "meeting") args.push("--aec", aecHeld ? "on" : "off")
     if (eqCurve) {
       args.push("--eq", eqCurve)
       args.push("--eq-body-db", String(eqTrim.body))
@@ -260,6 +270,9 @@ Item {
   function writeLiveControls() {
     if (!root.active || !enabled) return
     var args = [scriptPath("omavoice-ctl"), "set"]
+    // omavoice.capture, not the published source. Empty falls through to ctl's lookup.
+    var captureId = String(captureNodeId || "")
+    if (/^[0-9]+$/.test(captureId)) args.push("--id", captureId)
     var qp = Model.qualityParams(preset, quality)
     if (engine === "rnnoise") {
       args.push("denoise:VAD Threshold (%)", String(qp.vad))
@@ -329,10 +342,25 @@ Item {
   }
 
   function syncAecMonitor() {
-    if (!root.active || !enabled || preset !== "meeting" || !afterNodeName) return
+    if (!root.active || !enabled || preset !== "meeting") return
+    if (aecSyncProcess.running) return
     // monitor.mode is the echo reference. Do not play the default sink
     // into omavoice.aec.sink — that loops far-end audio into the call.
-    Quickshell.execDetached([scriptPath("omavoice-ctl"), "aec-sync"])
+    aecSyncProcess.command = [scriptPath("omavoice-ctl"), "aec-sync"]
+    aecSyncProcess.running = true
+  }
+
+  function applyAecDecision(text) {
+    if (!root.active || !enabled || preset !== "meeting") return
+    if (!afterNodeName) return
+    var mode = String(text || "").trim()
+    if (mode !== "hold" && mode !== "release") return
+    var want = mode === "hold"
+    // The restart that loads echo cancel drops the client's link for a moment.
+    if (!want && aecHeld && (Date.now() - aecHeldAt) < 3000) return
+    if (want === aecHeld) return
+    if (want) aecHeldAt = Date.now()
+    aecHeld = want
   }
 
   function syncMeterHold() {
@@ -429,7 +457,17 @@ Item {
     hostAttempts = 0
     syncHost()
   }
-  onPresetChanged: { busyReason = "preset"; hostAttempts = 0; syncHost() }
+  onPresetChanged: {
+    busyReason = "preset"
+    hostAttempts = 0
+    aecHeld = false
+    syncHost()
+  }
+  onAecHeldChanged: {
+    if (preset !== "meeting") return
+    hostAttempts = 0
+    syncHost()
+  }
   onEngineChanged: {
     if (busyReason !== "preset" && busyReason !== "reload") busyReason = "engine"
     hostAttempts = 0
@@ -459,7 +497,7 @@ Item {
     if (afterNodeName) {
       lastError = ""
       hostAttempts = 0
-      var key = preset + "\0" + engine + "\0" + targetName + "\0" + pluginDir
+      var key = chainKey()
       if (hostKey === key) {
         busyReason = ""
         reloading = false
@@ -524,6 +562,13 @@ Item {
     interval: 500
     repeat: false
     onTriggered: root.syncAecMonitor()
+  }
+
+  Process {
+    id: aecSyncProcess
+    stdout: StdioCollector {
+      onStreamFinished: root.applyAecDecision(text)
+    }
   }
 
   Timer {

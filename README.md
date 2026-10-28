@@ -13,7 +13,7 @@
   <a href="LICENSE"><img src="https://img.shields.io/badge/license-MIT-22c55e?style=flat-square" alt="License: MIT"></a>
   <img src="https://img.shields.io/badge/omarchy-4%20Quattro-0ea5e9?style=flat-square" alt="Omarchy 4 Quattro">
   <img src="https://img.shields.io/badge/pipewire-filter--chain-a3e635?style=flat-square" alt="PipeWire filter-chain">
-  <img src="https://img.shields.io/badge/version-0.3.2-111827?style=flat-square" alt="Version 0.3.2">
+  <img src="https://img.shields.io/badge/version-0.4.0-111827?style=flat-square" alt="Version 0.4.0">
 </p>
 
 <p align="center">
@@ -67,6 +67,15 @@ omarchy plugin add "$PWD" --enable
 
 Do not symlink the checkout into `~/.config/omarchy/plugins` — Omarchy refuses plugins that contain symlinks.
 
+An agent on this machine can install it. Paste this prompt:
+
+```
+Install Omavoice from this checkout on Omarchy.
+Run `omarchy plugin add "$PWD" --enable` only after reading README.md and SECURITY.md.
+Ask before any command that needs root. The package command is `omarchy pkg add noise-suppression-for-voice`.
+When you finish, run `./tests/run` and show the output.
+```
+
 ### Optional DeepFilterNet engine
 
 ```sh
@@ -108,7 +117,21 @@ The host is a dedicated PipeWire client, the same isolation Omarchy uses for spe
 
 ## While it's running
 
-Meeting echo cancel can use CPU while a call is capturing Omavoice, because it monitors the default sink (speakers or headphones). With no listener the host suspends. Disable the plugin to stop it. Restore goes back to the microphone Omavoice replaced, not to Omavoice itself.
+Meeting echo cancel stays unloaded until a client other than the panel meter captures Omavoice. While a call is capturing it, echo cancel monitors the default sink (speakers or headphones). With no listener the host suspends. Disable the plugin to stop it. Restore goes back to the microphone Omavoice replaced, not to Omavoice itself.
+
+## With preamp
+
+[preamp](https://github.com/bjarneo/preamp) names its sink `preamp` and makes that the default output. Meeting echo cancel follows that sink, so the reference is the mix entering preamp, before its EQ, limiter, and room. The microphone still hears the speakers after those stages. Linear EQ can be adapted. A room or a limiter will not cancel cleanly.
+
+While Omavoice is the call mic, point the call at Podcast or Flat and leave room off:
+
+```sh
+preamp rule add call Zoom --preset Podcast
+```
+
+On a laptop with Omarchy speaker tuning, the volume keys change the tuning, not the speakers ([omacom/omarchy#16687](https://github.com/omacom/omarchy/pull/16687)). Playback level for the call is `preamp volume`.
+
+If the voice breaks up only when the CPU is busy, Omarchy on x86_64 often has no `rtkit`. That is the same limit preamp documents.
 
 ## Update and remove
 

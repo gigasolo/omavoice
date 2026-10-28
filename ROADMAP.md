@@ -44,11 +44,13 @@ Voice looks, pinned capture, honest meters. Notes is not in this release.
 
 NVIDIA, Speex, and Notes stay out of 0.3.
 
-## 0.4.0 — later
+## 0.4.0 — 2026-10-27
+
+Meeting idle CPU shipped in 0.4.0. The other rows stay later.
 
 | Bite | Issue | Why later |
 | --- | --- | --- |
-| Meeting idle CPU | — | AEC + RNNoise still run ~16% while Omavoice is the default source and nothing is in a call. Unlinking the speaker monitor was not enough. Needs a real idle path that does not kill After or AUTOMATIC. |
+| Meeting idle CPU | — | Shipped in the tree. Meeting starts with `--aec off` (same mic, engine, voice EQ, and compressor, no echo cancel) and loads echo cancel when a client other than the panel meter captures Omavoice. Unlinking the speaker monitor was not enough; the idle graph never creates that link. |
 | Notes source | #1 | Second published source: sink monitor + mic, AEC off. Not a Meeting variant. |
 | NVIDIA engine | #9 | Probe Tensor GPU + AFX or linux-broadcast, then `engine = nvidia`. Do not vendor NGC blobs. |
 | Speex light engine | #10 | Only if a filter-chain wrapper is cheap on Omarchy. No LADSPA wrapper on Omarchy yet. |

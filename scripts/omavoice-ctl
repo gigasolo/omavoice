@@ -17,7 +17,10 @@ if [[ $cmd == aec-sync ]]; then
   exec python3 - <<'PY'
 import json, subprocess, sys
 
-data = json.loads(subprocess.check_output(["pw-dump"]))
+try:
+    data = json.loads(subprocess.check_output(["pw-dump"]))
+except Exception:
+    sys.exit(1)
 names = {}
 for obj in data:
     props = (obj.get("info") or {}).get("props") or {}
@@ -25,8 +28,6 @@ for obj in data:
 
 voice = next((i for i, n in names.items() if n == "omavoice"), None)
 sink = next((i for i, n in names.items() if n == "omavoice.aec.sink"), None)
-if voice is None or sink is None:
-    sys.exit(0)
 
 ignore = {"omavoice.meter.hold", "quickshell"}
 real = False
@@ -36,12 +37,16 @@ for obj in data:
         continue
     props = (obj.get("info") or {}).get("props") or {}
     src, dst = props.get("link.output.node"), props.get("link.input.node")
-    if src == voice:
+    if voice is not None and src == voice:
         dest = names.get(dst) or ""
         if dest not in ignore:
             real = True
-    if dst == sink:
+    if sink is not None and dst == sink:
         sink_links.append(obj.get("id"))
+
+# hold: a client other than the panel meter is capturing omavoice.
+# release: idle. The Meeting host then runs without echo cancel.
+print("hold" if real else "release")
 
 # monitor.mode already reads the default sink monitor. Never play that
 # sink into omavoice.aec.sink — that is the classic AEC path and loops

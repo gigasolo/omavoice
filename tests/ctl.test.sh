@@ -68,8 +68,48 @@ EOF
 chmod +x "$tmpdir/pw-dump"
 
 rm -f -- "$log" /tmp/omavoice-pwned
-"$ctl" aec-sync
+release=$("$ctl" aec-sync)
+[[ $release == release ]] || fail "idle graph must print release, got ${release:-empty}"
 [[ -f /tmp/omavoice-pwned ]] && fail "dirty pw-dump id must not reach the shell"
 [[ -f $log ]] && fail "non-integer link id must not call pw-cli destroy"
+
+cat >"$tmpdir/pw-dump" <<'EOF'
+#!/usr/bin/env bash
+cat <<'JSON'
+[{"type":"PipeWire:Interface:Link","id":7,"info":{"props":{"link.output.node":1,"link.input.node":4}}},
+ {"type":"PipeWire:Interface:Node","id":1,"info":{"props":{"node.name":"omavoice"}}},
+ {"type":"PipeWire:Interface:Node","id":2,"info":{"props":{"node.name":"omavoice.aec.sink"}}},
+ {"type":"PipeWire:Interface:Node","id":4,"info":{"props":{"node.name":"zoom"}}}]
+JSON
+EOF
+chmod +x "$tmpdir/pw-dump"
+rm -f -- "$log"
+hold=$("$ctl" aec-sync)
+[[ $hold == hold ]] || fail "a real capture client must print hold, got ${hold:-empty}"
+[[ -f $log ]] && fail "hold must leave monitor links alone"
+
+cat >"$tmpdir/pw-dump" <<'EOF'
+#!/usr/bin/env bash
+cat <<'JSON'
+[{"type":"PipeWire:Interface:Link","id":7,"info":{"props":{"link.output.node":1,"link.input.node":4}}},
+ {"type":"PipeWire:Interface:Node","id":1,"info":{"props":{"node.name":"omavoice"}}},
+ {"type":"PipeWire:Interface:Node","id":4,"info":{"props":{"node.name":"omavoice.meter.hold"}}}]
+JSON
+EOF
+chmod +x "$tmpdir/pw-dump"
+meter=$("$ctl" aec-sync)
+[[ $meter == release ]] || fail "panel meter must print release, got ${meter:-empty}"
+
+cat >"$tmpdir/pw-dump" <<'EOF'
+#!/usr/bin/env bash
+cat <<'JSON'
+[{"type":"PipeWire:Interface:Link","id":7,"info":{"props":{"link.output.node":1,"link.input.node":4}}},
+ {"type":"PipeWire:Interface:Node","id":1,"info":{"props":{"node.name":"omavoice"}}},
+ {"type":"PipeWire:Interface:Node","id":4,"info":{"props":{"node.name":"quickshell"}}}]
+JSON
+EOF
+chmod +x "$tmpdir/pw-dump"
+shell=$("$ctl" aec-sync)
+[[ $shell == release ]] || fail "quickshell must print release, got ${shell:-empty}"
 
 echo "ctl.test: ok"

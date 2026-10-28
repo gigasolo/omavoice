@@ -7,6 +7,15 @@ and this project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html)
 
 ## [Unreleased]
 
+## [0.4.0] — 2026-10-27
+
+Meeting echo cancel stays unloaded until a client captures Omavoice.
+
+### Fixed
+
+- Live EQ and quality writes reuse the capture node id.
+- Meeting starts without echo cancel and loads it when a real client captures Omavoice. On this machine, with no capture client, Meeting with echo cancel was 11.1% CPU and the speaker-tuning sink was linked into `omavoice.aec.sink`. The idle graph was 0.0%, the same as Podcast and Clean. A capture client other than the panel meter prints `hold` and brings echo cancel back.
+
 ## [0.3.2] — 2026-09-21
 
 Stereo USB remix and a stable Auto pick.
@@ -349,7 +358,8 @@ Live level and engine picker. Notes is not in this release.
   guidance.
 - MIT license (GigaSolo LLC).
 
-[Unreleased]: https://github.com/gigasolo/omavoice/compare/v0.3.2...HEAD
+[Unreleased]: https://github.com/gigasolo/omavoice/compare/v0.4.0...HEAD
+[0.4.0]: https://github.com/gigasolo/omavoice/compare/v0.3.2...v0.4.0
 [0.3.2]: https://github.com/gigasolo/omavoice/compare/v0.3.1...v0.3.2
 [0.3.1]: https://github.com/gigasolo/omavoice/compare/v0.3.0...v0.3.1
 [0.3.0]: https://github.com/gigasolo/omavoice/compare/v0.2.0...v0.3.0

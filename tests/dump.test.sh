@@ -184,6 +184,14 @@ echo "$podcast_rn" | grep -q 'deep_filter' && fail "podcast RNNoise must not sta
 
 echo "$meeting" | grep -q 'noise_suppressor_mono' || fail "auto meeting must still use RNNoise"
 
+meeting_idle="$(dump meeting --aec off)"
+echo "$meeting_idle" | grep -q 'monitor.mode' && fail "meeting --aec off must not load echo cancel"
+echo "$meeting_idle" | grep -q 'node.name = "omavoice.aec.capture"' && fail "meeting --aec off must not publish AEC capture"
+echo "$meeting_idle" | grep -q 'noise_suppressor_mono' || fail "meeting --aec off keeps RNNoise"
+echo "$meeting_idle" | grep -q 'name = eq_body' || fail "meeting --aec off keeps voice EQ"
+echo "$meeting_idle" | grep -q 'lsp-plug.in/plugins/lv2/compressor_mono' || fail "meeting --aec off keeps the compressor"
+echo "$meeting_idle" | grep -q 'node.name = "omavoice"' || fail "meeting --aec off still publishes Omavoice"
+
 clean_forced="$(dump clean --engine deepfilter)"
 echo "$clean_forced" | grep -q 'bq_highpass' || fail "clean stays high-pass when engine is forced"
 echo "$clean_forced" | grep -q 'noise_suppressor' && fail "clean must not denoise when engine is forced"

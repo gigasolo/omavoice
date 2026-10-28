@@ -13,13 +13,14 @@ eq_opt=""
 eq_body_db=0
 eq_pres_db=0
 eq_air_db=0
+aec_opt="auto"
 target=""
 plugin_dir=""
 dump=0
 runtime_dir="${XDG_RUNTIME_DIR:-/tmp}/omavoice"
 
 usage() {
-  echo "Usage: omavoice-run [--dump] --preset meeting|podcast|clean [--quality good|better|best] [--engine auto|rnnoise|deepfilter|clean] [--eq neutral|warm|clear|bright] [--eq-body-db N] [--eq-pres-db N] [--eq-air-db N] [--capture-gain-db N] [--output-gain-db N] --target <node.name> --dir <plugin-dir>" >&2
+  echo "Usage: omavoice-run [--dump] --preset meeting|podcast|clean [--aec auto|on|off] [--quality good|better|best] [--engine auto|rnnoise|deepfilter|clean] [--eq neutral|warm|clear|bright] [--eq-body-db N] [--eq-pres-db N] [--eq-air-db N] [--capture-gain-db N] [--output-gain-db N] --target <node.name> --dir <plugin-dir>" >&2
   exit 2
 }
 
@@ -32,6 +33,7 @@ while [[ $# -gt 0 ]]; do
     --eq-body-db) eq_body_db="${2:-0}"; shift 2 ;;
     --eq-pres-db) eq_pres_db="${2:-0}"; shift 2 ;;
     --eq-air-db) eq_air_db="${2:-0}"; shift 2 ;;
+    --aec) aec_opt="${2:-}"; shift 2 ;;
     --capture-gain-db) capture_gain_db="${2:-0}"; shift 2 ;;
     --output-gain-db) output_gain_db="${2:-0}"; shift 2 ;;
     --target) target="${2:-}"; shift 2 ;;
@@ -45,6 +47,7 @@ done
 [[ -n $target && -n $plugin_dir ]] || usage
 [[ $target =~ ^[A-Za-z0-9._:-]+$ ]] || usage
 [[ $preset == meeting || $preset == podcast || $preset == clean ]] || usage
+[[ $aec_opt == auto || $aec_opt == on || $aec_opt == off ]] || usage
 [[ $quality == good || $quality == better || $quality == best ]] || quality=better
 
 rnnoise=""
@@ -105,7 +108,7 @@ else
 fi
 
 use_aec=0
-if [[ $preset == meeting && -n $webrtc ]]; then
+if [[ $preset == meeting && $aec_opt != off && -n $webrtc ]]; then
   use_aec=1
 fi
 
