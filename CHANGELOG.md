@@ -7,6 +7,14 @@ and this project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html)
 
 ## [Unreleased]
 
+## [0.4.1] — 2026-11-10
+
+Meeting echo cancel hears the speakers again.
+
+### Fixed
+
+- While a call captures Omavoice, echo cancel links the default sink's monitor ports into `omavoice.aec.sink` by port id. A single monitor is fed to every input. Two or more stay paired by channel. A momentary release no longer deletes that reference, so echo cancel is not left subtracting silence. The sink node is not linked, and an `omavoice*` node is not fed into the canceller.
+
 ## [0.4.0] — 2026-10-27
 
 Meeting echo cancel stays unloaded until a client captures Omavoice.
@@ -358,7 +366,8 @@ Live level and engine picker. Notes is not in this release.
   guidance.
 - MIT license (GigaSolo LLC).
 
-[Unreleased]: https://github.com/gigasolo/omavoice/compare/v0.4.0...HEAD
+[Unreleased]: https://github.com/gigasolo/omavoice/compare/v0.4.1...HEAD
+[0.4.1]: https://github.com/gigasolo/omavoice/compare/v0.4.0...v0.4.1
 [0.4.0]: https://github.com/gigasolo/omavoice/compare/v0.3.2...v0.4.0
 [0.3.2]: https://github.com/gigasolo/omavoice/compare/v0.3.1...v0.3.2
 [0.3.1]: https://github.com/gigasolo/omavoice/compare/v0.3.0...v0.3.1

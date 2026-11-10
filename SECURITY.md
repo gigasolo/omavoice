@@ -8,7 +8,7 @@ It:
 - Leftover `omavoice*` nodes are destroyed with `pw-cli` as a fixed argv
   and a non-negative integer id from `pw-dump`. IDs are not interpolated
   into a shell.
-- Meeting echo cancel uses `monitor.mode`, so it can read the session **default sink** (speakers or Bluetooth headphones) as the echo reference. It must not `pw-link` that sink into `omavoice.aec.sink`.
+- Meeting echo cancel uses `monitor.mode`. Its reference is the default sink's monitor ports, linked by port id. It must not link the sink node, and it must not link any `omavoice*` node into `omavoice.aec.sink`.
 - While the panel is open, starts a silent `pw-cat` capture of `omavoice` so the After meter can move. That hold is named `omavoice.meter.hold` and stops when the panel closes.
 - Calls `omarchy-audio-input-set-default` to make `omavoice` the default mic, and restores the pinned capture (else `previousAudioSource`) when disabled. It never stores `omavoice` as that previous source.
 - Reads PipeWire node names already visible to the session.

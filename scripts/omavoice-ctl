@@ -1,7 +1,8 @@
 #!/usr/bin/env bash
-# Live Props on omavoice.capture, and tear down classic AEC sink links.
-# Meeting AEC is monitor.mode only: never play the default sink into
-# omavoice.aec.sink (that loops far-end audio back to the call).
+# Live Props on omavoice.capture, and the Meeting echo reference.
+# The reference is the default sink's monitor ports, linked by port id.
+# Never link the sink node, and never link an omavoice* node, into
+# omavoice.aec.sink (that loops far-end audio back into the call).
 set -euo pipefail
 
 usage() {
@@ -15,50 +16,222 @@ shift
 
 if [[ $cmd == aec-sync ]]; then
   exec python3 - <<'PY'
-import json, subprocess, sys
+import json, re, subprocess, sys
+
+# A leading digit or a colon is atoi'd by pw-link into some other port.
+SAFE = re.compile(r"^[A-Za-z._][A-Za-z0-9._-]*\Z")
+
+def props_of(obj):
+    info = obj.get("info")
+    if isinstance(info, dict) and isinstance(info.get("props"), dict):
+        return info["props"]
+    props = obj.get("props")
+    return props if isinstance(props, dict) else {}
+
+def meta_items(obj):
+    info = obj.get("info")
+    if isinstance(info, dict) and isinstance(info.get("metadata"), list):
+        return info["metadata"]
+    meta = obj.get("metadata")
+    return meta if isinstance(meta, list) else []
+
+def norm_id(value):
+    if isinstance(value, bool) or value is None:
+        return None
+    if isinstance(value, int):
+        return value
+    if isinstance(value, str) and value.isdigit():
+        return int(value)
+    return None
+
+def safe_name(name):
+    return isinstance(name, str) and SAFE.fullmatch(name) is not None
+
+def sink_name_from_value(value):
+    if isinstance(value, str):
+        try:
+            value = json.loads(value)
+        except Exception:
+            return None
+    if isinstance(value, dict):
+        name = value.get("name")
+        return name if isinstance(name, str) else None
+    return None
+
+def port_direction(obj, props):
+    info = obj.get("info") if isinstance(obj.get("info"), dict) else {}
+    direction = info.get("direction")
+    if direction in ("input", "output"):
+        return direction
+    raw = props.get("port.direction")
+    if raw == "out":
+        return "output"
+    if raw == "in":
+        return "input"
+    return None
+
+def run(argv):
+    subprocess.call(argv, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
 
 try:
     data = json.loads(subprocess.check_output(["pw-dump"]))
 except Exception:
     sys.exit(1)
+
+# A Client can reuse a sink's node.name and sorts first in pw-dump.
 names = {}
+# pw-dump emits a fully numeric node.name or object.path as a JSON number.
+# pw-link matches either, so that decimal is not a safe port id. A bool is
+# an int subclass and is not an id.
+collisions = set()
 for obj in data:
-    props = (obj.get("info") or {}).get("props") or {}
-    names[obj.get("id")] = props.get("node.name")
+    if obj.get("type") != "PipeWire:Interface:Node":
+        continue
+    props = props_of(obj)
+    name = props.get("node.name")
+    names[obj.get("id")] = name if isinstance(name, str) else None
+    for value in (name, props.get("object.path")):
+        if isinstance(value, str) or (isinstance(value, int) and not isinstance(value, bool)):
+            collisions.add(str(value))
 
 voice = next((i for i, n in names.items() if n == "omavoice"), None)
-sink = next((i for i, n in names.items() if n == "omavoice.aec.sink"), None)
+aec_sink = next((i for i, n in names.items() if n == "omavoice.aec.sink"), None)
 
 ignore = {"omavoice.meter.hold", "quickshell"}
 real = False
-sink_links = []
 for obj in data:
     if obj.get("type") != "PipeWire:Interface:Link":
         continue
-    props = (obj.get("info") or {}).get("props") or {}
+    props = props_of(obj)
     src, dst = props.get("link.output.node"), props.get("link.input.node")
     if voice is not None and src == voice:
         dest = names.get(dst) or ""
         if dest not in ignore:
             real = True
-    if sink is not None and dst == sink:
-        sink_links.append(obj.get("id"))
 
 # hold: a client other than the panel meter is capturing omavoice.
 # release: idle. The Meeting host then runs without echo cancel.
 print("hold" if real else "release")
 
-# monitor.mode already reads the default sink monitor. Never play that
-# sink into omavoice.aec.sink — that is the classic AEC path and loops
-# far-end audio into the call. Leave monitor.mode's links alone while a
-# real client is capturing; only drop sink links when idle.
-if real:
+# Idle is --aec off, which removes the module. Destroying links while it
+# stays up cuts the reference during the capture-link blip.
+if not real:
     sys.exit(0)
 
-for link_id in sink_links:
+fallback = None
+sink_name = None
+for obj in data:
+    if obj.get("type") != "PipeWire:Interface:Metadata":
+        continue
+    preferred = props_of(obj).get("metadata.name") == "default"
+    for item in meta_items(obj):
+        if not isinstance(item, dict) or item.get("key") != "default.audio.sink":
+            continue
+        name = sink_name_from_value(item.get("value"))
+        if not name:
+            continue
+        if preferred:
+            sink_name = name
+            break
+        if fallback is None:
+            fallback = name
+    if sink_name:
+        break
+if sink_name is None:
+    sink_name = fallback
+
+# Our own graph is not the far end, and an unsafe name is not a sink we follow.
+if not safe_name(sink_name) or sink_name.startswith("omavoice"):
+    sys.exit(0)
+
+sink_id = norm_id(next((i for i, n in names.items() if n == sink_name), None))
+aec_id = norm_id(aec_sink)
+if sink_id is None or aec_id is None:
+    sys.exit(0)
+
+monitors = {}
+inputs = {}
+for obj in data:
+    if obj.get("type") != "PipeWire:Interface:Port":
+        continue
+    props = props_of(obj)
+    pname = props.get("port.name")
+    if not safe_name(pname):
+        continue
+    pid = norm_id(obj.get("id"))
+    if pid is None:
+        continue
+    node = norm_id(props.get("node.id"))
+    direction = port_direction(obj, props)
+    # playback_* feeds the speakers. The reference is monitor_* only.
+    if node == sink_id and pname.startswith("monitor_") and direction in (None, "output"):
+        chan = pname[len("monitor_"):]
+        if chan and chan not in monitors:
+            monitors[chan] = pid
+    elif node == aec_id and pname.startswith("input_") and direction in (None, "input"):
+        chan = pname[len("input_"):]
+        if chan and chan not in inputs:
+            inputs[chan] = pid
+
+# One monitor is the same signal on every canceller channel. Two or more
+# monitors stay on their own suffix so FL is not crossed with FR.
+pairs = []
+if len(monitors) == 1 and inputs:
+    mon_pid = next(iter(monitors.values()))
+    for chan in sorted(inputs):
+        pairs.append((mon_pid, inputs[chan]))
+else:
+    for chan in sorted(monitors):
+        inp = inputs.get(chan)
+        if inp is not None:
+            pairs.append((monitors[chan], inp))
+if not pairs:
+    sys.exit(0)
+
+desired = set(pairs)
+good = set()
+incoming = []
+for obj in data:
+    if obj.get("type") != "PipeWire:Interface:Link":
+        continue
+    props = props_of(obj)
+    if norm_id(props.get("link.input.node")) != aec_id:
+        continue
+    out_node = norm_id(props.get("link.output.node"))
+    out_port = norm_id(props.get("link.output.port"))
+    in_port = norm_id(props.get("link.input.port"))
+    if out_node == sink_id and (out_port, in_port) in desired:
+        good.add((out_port, in_port))
+    incoming.append((obj.get("id"), out_node, out_port, in_port))
+
+def callable_pair(pair):
+    # A node.name or object.path equal to the port id makes pw-link link
+    # every port of that node. Leave the input's current link.
+    if pair in good:
+        return True
+    out_id, in_id = pair
+    return str(out_id) not in collisions and str(in_id) not in collisions
+
+feed = {pair[1] for pair in desired if callable_pair(pair)}
+todo = [pair for pair in pairs if pair not in good and callable_pair(pair)]
+bad = []
+for link_id, out_node, out_port, in_port in incoming:
+    if in_port not in feed:
+        continue
+    if out_node == sink_id and (out_port, in_port) in desired:
+        continue
+    bad.append(link_id)
+
+if not todo and not bad:
+    sys.exit(0)
+
+for link_id in bad:
     if isinstance(link_id, bool) or not isinstance(link_id, int) or link_id < 0:
         continue
-    subprocess.call(["pw-cli", "destroy", str(link_id)], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+    run(["pw-cli", "destroy", str(link_id)])
+
+for out_id, in_id in todo:
+    run(["pw-link", str(out_id), str(in_id)])
 PY
 fi
 

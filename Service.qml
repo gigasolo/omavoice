@@ -123,6 +123,8 @@ Item {
 
   readonly property var defaultSource: Pipewire.defaultAudioSource
   readonly property string defaultSourceName: defaultSource && defaultSource.name ? String(defaultSource.name) : ""
+  // Switching headphones does not add a node, so the node list stays quiet.
+  readonly property var defaultSink: Pipewire.defaultAudioSink
 
   function setting(name, fallback) {
     var value = settings ? settings[name] : undefined
@@ -343,9 +345,13 @@ Item {
 
   function syncAecMonitor() {
     if (!root.active || !enabled || preset !== "meeting") return
-    if (aecSyncProcess.running) return
-    // monitor.mode is the echo reference. Do not play the default sink
-    // into omavoice.aec.sink — that loops far-end audio into the call.
+    // A sink change while this sync is in flight is not a node event.
+    if (aecSyncProcess.running) {
+      aecSyncDebounce.restart()
+      return
+    }
+    // Reference is the default sink's monitor ports. Do not link the sink
+    // node itself into omavoice.aec.sink.
     aecSyncProcess.command = [scriptPath("omavoice-ctl"), "aec-sync"]
     aecSyncProcess.running = true
   }
@@ -484,6 +490,7 @@ Item {
     refreshSources()
     aecSyncDebounce.restart()
   }
+  onDefaultSinkChanged: aecSyncDebounce.restart()
   onTargetNameChanged: {
     if (busyReason !== "preset" && busyReason !== "engine" && busyReason !== "reload")
       busyReason = "target"
